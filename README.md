@@ -22,13 +22,15 @@ Read [cache guide](src/site/markdown/cache.md) for more details.
 
 Building
 --------
-The code currently relies on un-released modifications in the core Maven project.  Two submodules are included in this git repository to allow building the needed distributions and perform integration tests using those.
+The code currently relies on un-released modifications in the core Maven project.  Two [gitmodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules) are included in this git repository to allow building the needed Maven distributions and perform integration tests using those: run `git submodule init && git submodule update` to prepare content.
 
-In order to build those distributions, you first need to launch once the `build-maven.sh` script or the following command in the `maven/maven3` and `maven/maven4` directories:
+In order to build those Maven distributions, you first need to launch once the `build-maven.sh` script or the following command in the `maven/maven3` and `maven/maven4` directories:
 ```
 mvn install -DskipTests -P versionlessMavenDist
 ```
-This will build the custom distributions of maven.
+This will build the custom distributions of Maven.
+
+Then you can build the extension like a normal Maven project.
 
 License
 -------
