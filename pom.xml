@@ -37,7 +37,7 @@ under the License.
 
     <name>Apache Maven Build Cache Extension</name>
     <inceptionYear>2021</inceptionYear>
-    <url>https://maven.apache.org/ref/caching/</url>
+    <url>https://maven.apache.org/extensions/maven-build-cache-extension/</url>
 
     <properties>
         <maven.compiler.source>1.8</maven.compiler.source>
@@ -64,7 +64,7 @@ under the License.
         <xmlunitVersion>2.6.4</xmlunitVersion>
         <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
         <!-- Control the name of the distribution and information output by mvn -->
-        <maven.site.path>ref/caching-LATEST</maven.site.path>
+        <maven.site.path>extensions/maven-build-cache-extension-LATEST</maven.site.path>
         <project.build.outputTimestamp>2021-04-05T08:12:18Z</project.build.outputTimestamp>
     </properties>
 
