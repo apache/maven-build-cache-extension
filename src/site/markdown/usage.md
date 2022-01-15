@@ -48,10 +48,10 @@ On command line:
 
 ## IDE support
 
-Cache extension is generally compatible with ides with one limitation:
+Build cache extension is generally compatible with IDEs with one limitation:
 
 * The cache doesn't restore full project state. Compiled classes and other output directories will not be restored from
-  cache if `clean` was invoked. In order to work efficiently, IDE should be configured to not use maven
+  cache if `clean` was invoked. In order to work efficiently, IDE should be configured to not use Maven
   output (`target`) directories for compilation. In that case compilation caches will be maintained by IDE leveraging
   both fast builds and fast compilation
 

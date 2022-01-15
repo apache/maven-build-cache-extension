@@ -23,7 +23,7 @@
  2021-11-11
  -----
 
-Maven Caching
+Maven Build Cache Extension
 
  Maven Incremental Build and Cache (local and remote).
 

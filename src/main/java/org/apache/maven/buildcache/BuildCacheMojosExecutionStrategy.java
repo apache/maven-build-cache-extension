@@ -53,18 +53,16 @@ import static org.apache.maven.buildcache.xml.CacheState.DISABLED;
 import static org.apache.maven.buildcache.xml.CacheState.INITIALIZED;
 
 /**
- * <p>
- * Cache-enabled version of the MojoExecutor
- * </p>
+ * Build cache-enabled version of the {@link MojosExecutionStrategy}.
  */
 @SessionScoped
 @Named
 @Priority( 10 )
 @SuppressWarnings( "unused" )
-public class CachingMojosExecutionStrategy implements MojosExecutionStrategy
+public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy
 {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger( CachingMojosExecutionStrategy.class );
+    private static final Logger LOGGER = LoggerFactory.getLogger( BuildCacheMojosExecutionStrategy.class );
 
     private final CacheController cacheController;
     private final CacheConfig cacheConfig;
@@ -73,7 +71,7 @@ public class CachingMojosExecutionStrategy implements MojosExecutionStrategy
     private final MavenPluginManager mavenPluginManager;
 
     @Inject
-    public CachingMojosExecutionStrategy(
+    public BuildCacheMojosExecutionStrategy(
             CacheController cacheController,
             CacheConfig cacheConfig,
             MojoParametersListener mojoListener,

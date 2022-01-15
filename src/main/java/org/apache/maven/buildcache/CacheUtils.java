@@ -50,7 +50,7 @@ import static org.apache.maven.artifact.Artifact.LATEST_VERSION;
 import static org.apache.maven.artifact.Artifact.SNAPSHOT_VERSION;
 
 /**
- * ProjectUtils
+ * Cache Utils
  */
 public class CacheUtils
 {

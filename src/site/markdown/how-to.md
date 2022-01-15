@@ -159,7 +159,7 @@ Add `executionControl/runAlways` section
             </goalsLists>
         </runAlways>
     </executionControl>
-``` 
+```
 
 ### I occasionally cached build with `-DskipTests=true` and tests do not run now
 

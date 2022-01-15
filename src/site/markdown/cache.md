@@ -27,7 +27,7 @@ achieved by a combination of features:
 
 Large projects usually pose scalability challenges and work with such projects require build tool which scales. Cache
 extension addresses that with incremental build execution and ability to efficiently work on sub-parts of a larger
-project without building and installing dependencies from the larger project. Though, features implemented in maven
+project without building and installing dependencies from the larger project. Though, features implemented in Maven
 should give noticeable benefits in medium and small sized projects as well.
 
 ### Cache concepts
