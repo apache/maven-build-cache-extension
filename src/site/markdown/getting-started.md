@@ -19,12 +19,12 @@
 
 To on-board incremental Maven you need to complete several steps:
 
-* Declare caching extension in your project
-* Add cache config in `.mvn` (optional) to customize default behavior
-* Validate build results and iteratively adjust config to properly reflect project specifics
+* Declare caching extension in your project (either in `pom.xml` or `.mvn/extensions.xml`)
+* Add `maven-cache-config.xml` cache config in `.mvn/` (optional) to customize default behavior
+* Validate build results and iteratively, adjust config to properly reflect project specifics
 * Setup remote cache (optional)
 
-### Declaring cache extension
+### Declaring build cache extension
 
 ```xml
 <extension>
@@ -34,11 +34,13 @@ To on-board incremental Maven you need to complete several steps:
 </extension>
 ```
 
-### Adding cache config
+either in `pom.xml`'s `<project>/<build>/<extensions>` or in `.mvn/extensions.xml`'s `<extensions>`
 
-Copy [default config `maven-build-cache-config.xml`](../resources/maven-build-cache-config.xml)
+### Adding build cache config
+
+Copy [default config `maven-cache-config.xml`](../resources/maven-cache-config.xml)
 to [`.mvn/`](https://maven.apache.org/configure.html) directory of your project.  
-To get overall understanding of cache machinery it is recommended to review the config and read comments. In typical
+To get overall understanding of cache machinery, it is recommended to review the config and read comments. In typical
 scenario you need to adjust:
 
 * Exclusions for unstable, temporary files or environment specific files
@@ -47,7 +49,7 @@ scenario you need to adjust:
   there might be edge cases.
 * remote cache location (if remote cache is used)
 
-### Adjusting cache config
+### Adjusting build cache config
 
 Having extension run usual command, like `mvn package`. Verify the caching engine is activated:
 
@@ -66,4 +68,4 @@ checks could reduce both performance and cache efficiency (hit rate).
 To leverage remote cache feature there should a shared storage provide. Any technology supported
 by [Maven Wagon](https://maven.apache.org/wagon/) will suffice. In simplest form it could be a http web server which
 supports get/put operations ([Nginx OSS](http://nginx.org/en/) with fs module or any other equivalent).
-See [Remote cache setup](remote-cache.md) for detailed description of cache setup
+See [Remote cache setup](remote-cache.md) for detailed description of cache setup.

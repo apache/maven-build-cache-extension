@@ -19,7 +19,7 @@
        xsi:schemaLocation="http://maven.apache.org/CACHE-CONFIG/1.0.0 target/generated-resources/modello/build-cache-config-1.0.0.xsd">
 
     <!--
-        Template cache configuration
+        Template Maven build cache configuration
      -->
 
     <configuration>

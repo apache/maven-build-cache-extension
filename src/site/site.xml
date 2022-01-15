@@ -48,13 +48,13 @@ under the License.
     </menu>
 
     <menu name="Reference">
-      <item name="maven-build-cache-config.xml" href="cache-config.html"/>
+      <item name="maven-cache-config.xml" href="build-cache-config.html"/>
     </menu>
 
     <menu name="Cache Internals">
-      <item name="buildinfo.xml" href="cache-build.html"/>
-      <item name="diff-*.xml" href="cache-diff.html"/>
-      <item name="cache-report.xml" href="cache-report.html"/>
+      <item name="buildinfo.xml" href="build-cache-build.html"/>
+      <item name="diff-*.xml" href="build-cache-diff.html"/>
+      <item name="cache-report.xml" href="build-cache-report.html"/>
     </menu>
 
     <menu ref="parent"/>

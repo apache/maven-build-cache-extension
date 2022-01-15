@@ -21,7 +21,7 @@ under the License.
   xsi:schemaLocation="http://codehaus-plexus.github.io/MODELLO/1.4.0 http://codehaus-plexus.github.io/modello/xsd/modello-1.4.0.xsd"
   xml.namespace="http://maven.apache.org/BUILD-CACHE-REPORT/${version}"
   xml.schemaLocation="http://maven.apache.org/xsd/build-cache-report-${version}.xsd">
-  <id>cbuild-ache-report</id>
+  <id>build-cache-report</id>
   <name>BuildCacheReport</name>
   <description><![CDATA[BuildCache report, stored in <code>build-cache-report.xml</code>
   ]]></description>
