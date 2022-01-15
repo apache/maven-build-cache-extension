@@ -23,7 +23,7 @@ under the License.
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <parent>
+    <parent><!-- TODO switch to maven-extensions:35 -->
         <groupId>org.apache.maven</groupId>
         <artifactId>maven-parent</artifactId>
         <version>34</version>
@@ -36,6 +36,7 @@ under the License.
     <packaging>jar</packaging>
 
     <name>Apache Maven Build Cache Extension</name>
+    <description>Maven Incremental Build and Cache (local and remote).</description>
     <inceptionYear>2021</inceptionYear>
     <url>https://maven.apache.org/extensions/maven-build-cache-extension/</url>
 
@@ -43,8 +44,8 @@ under the License.
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
         <classWorldsVersion>2.6.0</classWorldsVersion>
-        <maven3Version>3.9.0-SNAPSHOT</maven3Version>
-        <maven4Version>4.0.0-alpha-1-SNAPSHOT</maven4Version>
+        <maven3Version>3.9.0-SNAPSHOT</maven3Version><!-- MNG-7129-3.8.x branch, waiting for Maven API update -->
+        <maven4Version>4.0.0-alpha-1-SNAPSHOT</maven4Version><!-- MNG-7129-master branch, waiting for Maven API update -->
 
         <formatter-maven-plugin.version>2.17.0</formatter-maven-plugin.version>
         <impsort-maven-plugin.version>1.6.2</impsort-maven-plugin.version>
@@ -63,11 +64,25 @@ under the License.
         <slf4jVersion>1.7.32</slf4jVersion>
         <xmlunitVersion>2.6.4</xmlunitVersion>
         <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
-        <!-- Control the name of the distribution and information output by mvn -->
-        <maven.site.path>extensions/maven-build-cache-extension-LATEST</maven.site.path>
+
+        <maven.site.path>extensions-archives/${project.artifactId}-LATEST</maven.site.path><!-- TODO remove when switching parent to maven-extensions:35 -->
         <project.build.outputTimestamp>2021-04-05T08:12:18Z</project.build.outputTimestamp>
     </properties>
 
+    <scm>
+        <connection>scm:git:https://gitbox.apache.org/repos/asf/maven-build-cache-extension.git</connection>
+        <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/maven-build-cache-extension.git</developerConnection>
+        <url>https://github.com/apache/maven-build-cache-extension/tree/${project.scm.tag}</url>
+        <tag>master</tag>
+    </scm>
+    <issueManagement>
+        <system>jira</system>
+        <url>https://issues.apache.org/jira/browse/MBUILDCACHE</url>
+    </issueManagement>
+    <ciManagement>
+        <system>Jenkins</system>
+        <url>https://ci-maven.apache.org/job/Maven/job/maven-box/job/maven-build-cache-extension/</url>
+    </ciManagement>
     <distributionManagement>
         <site>
             <id>apache.website</id>

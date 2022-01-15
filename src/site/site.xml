@@ -26,7 +26,7 @@ under the License.
 
   <body>
     <breadcrumbs>
-      <item name="Ref" href="../" />
+      <item name="Extensions" href="https://maven.apache.org/extensions/index.html" />
       <item name="Maven Build Cache Extension" href="./" />
     </breadcrumbs>
 
