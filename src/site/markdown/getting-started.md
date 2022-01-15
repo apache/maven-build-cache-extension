@@ -38,9 +38,9 @@ either in `pom.xml`'s `<project>/<build>/<extensions>` or in `.mvn/extensions.xm
 
 ### Adding build cache config
 
-Copy [default config `maven-cache-config.xml`](../resources/maven-cache-config.xml)
+Copy [default config `maven-cache-config.xml`](./maven-cache-config.xml)
 to [`.mvn/`](https://maven.apache.org/configure.html) directory of your project.  
-To get overall understanding of cache machinery, it is recommended to review the config and read comments. In typical
+To get overall understanding of build cache machinery, it is recommended to review the config and read comments. In typical
 scenario you need to adjust:
 
 * Exclusions for unstable, temporary files or environment specific files

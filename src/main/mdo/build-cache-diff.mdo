@@ -20,7 +20,7 @@ under the License.
 <model xmlns="http://codehaus-plexus.github.io/MODELLO/1.4.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://codehaus-plexus.github.io/MODELLO/1.4.0 http://codehaus-plexus.github.io/modello/xsd/modello-1.4.0.xsd"
   xml.namespace="http://maven.apache.org/BUILD-CACHE-DIFF/${version}"
-  xml.schemaLocation="http://maven.apache.org/xsd/build-cache-diff-${version}.xsd">
+  xml.schemaLocation="https://maven.apache.org/xsd/build-cache-diff-${version}.xsd">
   <id>build-cache-diff</id>
   <name>BuildCacheDiff</name>
   <description><![CDATA[Cache Builds Diff, stored in <code>diff-${checksum}.xml</code>

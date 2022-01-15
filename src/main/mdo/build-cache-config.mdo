@@ -20,10 +20,10 @@ under the License.
 <model xmlns="http://codehaus-plexus.github.io/MODELLO/1.4.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xsi:schemaLocation="http://codehaus-plexus.github.io/MODELLO/1.4.0 http://codehaus-plexus.github.io/modello/xsd/modello-1.4.0.xsd"
        xml.namespace="http://maven.apache.org/BUILD-CACHE-CONFIG/${version}"
-       xml.schemaLocation="http://maven.apache.org/xsd/build-cache-config-${version}.xsd">
+       xml.schemaLocation="https://maven.apache.org/xsd/build-cache-config-${version}.xsd">
     <id>build-cache-config</id>
     <name>BuildCacheConfig</name>
-    <description><![CDATA[Maven Incremental Build and Cache configuration, stored in <code>.mvn/maven-build-cache-config.xml</code>
+    <description><![CDATA[Maven Incremental Build and Cache configuration, stored in <code>.mvn/maven-cache-config.xml</code>
   ]]></description>
 
     <defaults>
