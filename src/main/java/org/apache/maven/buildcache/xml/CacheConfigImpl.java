@@ -77,14 +77,14 @@ import static org.apache.maven.buildcache.CacheUtils.getMultimoduleRoot;
 public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheConfig
 {
 
-    public static final String CONFIG_PATH_PROPERTY_NAME = "remote.cache.configPath";
-    public static final String CACHE_ENABLED_PROPERTY_NAME = "remote.cache.enabled";
-    public static final String SAVE_TO_REMOTE_PROPERTY_NAME = "remote.cache.save.enabled";
-    public static final String SAVE_NON_OVERRIDEABLE_NAME = "remote.cache.save.final";
-    public static final String FAIL_FAST_PROPERTY_NAME = "remote.cache.failFast";
-    public static final String BASELINE_BUILD_URL_PROPERTY_NAME = "remote.cache.baselineUrl";
-    public static final String LAZY_RESTORE_PROPERTY_NAME = "remote.cache.lazyRestore";
-    public static final String RESTORE_GENERATED_SOURCES_PROPERTY_NAME = "remote.cache.restoreGeneratedSources";
+    public static final String CONFIG_PATH_PROPERTY_NAME = "maven.build.cache.configPath";
+    public static final String CACHE_ENABLED_PROPERTY_NAME = "maven.build.cache.enabled";
+    public static final String SAVE_TO_REMOTE_PROPERTY_NAME = "maven.build.cache.remote.save.enabled";
+    public static final String SAVE_NON_OVERRIDEABLE_NAME = "maven.build.cache.remote.save.final";
+    public static final String FAIL_FAST_PROPERTY_NAME = "maven.build.cache.failFast";
+    public static final String BASELINE_BUILD_URL_PROPERTY_NAME = "maven.build.cache.baselineUrl";
+    public static final String LAZY_RESTORE_PROPERTY_NAME = "maven.build.cache.lazyRestore";
+    public static final String RESTORE_GENERATED_SOURCES_PROPERTY_NAME = "maven.build.cache.restoreGeneratedSources";
 
     private static final Logger LOGGER = LoggerFactory.getLogger( CacheConfigImpl.class );
 

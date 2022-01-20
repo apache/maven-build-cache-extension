@@ -116,7 +116,7 @@ public interface CacheConfig
      * allows safe to fallback ro normal execution in case of restore failure. Lazy policy restores artifacts on demand
      * minimizing need for downloading any artifacts from cache
      * <p>
-     * Use: -Dremote.cache.lazyRestore=(true|false)
+     * Use: -Dmaven.build.cache.lazyRestore=(true|false)
      */
     boolean isLazyRestore();
 

@@ -737,7 +737,7 @@ public class CacheControllerImpl implements CacheController
         {
             return true;
         }
-        String alwaysRunPlugins = project.getProperties().getProperty( "remote.cache.alwaysRunPlugins" );
+        String alwaysRunPlugins = project.getProperties().getProperty( "maven.build.cache.alwaysRunPlugins" );
         if ( alwaysRunPlugins != null )
         {
             String[] alwaysRunPluginsList = split( alwaysRunPlugins, "," );
