@@ -737,10 +737,10 @@ public class CacheControllerImpl implements CacheController
         {
             return true;
         }
-        String alwaysRunPlugins = project.getProperties().getProperty( "remote.cache.alwaysRunPlugins" );
-        if ( alwaysRunPlugins != null )
+
+        if ( StringUtils.isNotBlank( cacheConfig.getAlwaysRunPlugins() ) )
         {
-            String[] alwaysRunPluginsList = split( alwaysRunPlugins, "," );
+            String[] alwaysRunPluginsList = split( cacheConfig.getAlwaysRunPlugins(), "," );
             for ( String pluginAndGoal : alwaysRunPluginsList )
             {
                 String[] tokens = pluginAndGoal.split( ":" );

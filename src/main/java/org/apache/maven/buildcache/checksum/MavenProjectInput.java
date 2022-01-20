@@ -103,26 +103,26 @@ public class MavenProjectInput
     /**
      * property name to pass glob value. The glob to be used to list directory files in plugins scanning
      */
-    private static final String CACHE_INPUT_GLOB_NAME = "remote.cache.input.glob";
+    private static final String CACHE_INPUT_GLOB_NAME = "maven.build.cache.input.glob";
     /**
      * default glob, bbsdk/abfx specific
      */
     public static final String DEFAULT_GLOB = "{*.java,*.groovy,*.yaml,*.svcd,*.proto,*assembly.xml,assembly"
             + "*.xml,*logback.xml,*.vm,*.ini,*.jks,*.properties,*.sh,*.bat}";
     /**
-     * property name prefix to pass input files with project properties. smth like remote.cache.input.1 will be
+     * property name prefix to pass input files with project properties. smth like maven.build.cache.input.1 will be
      * accepted
      */
-    private static final String CACHE_INPUT_NAME = "remote.cache.input";
+    private static final String CACHE_INPUT_NAME = "maven.build.cache.input";
     /**
-     * property name prefix to exclude files from input. smth like remote.cache.exclude.1 should be set in project
+     * property name prefix to exclude files from input. smth like maven.build.cache.exclude.1 should be set in project
      * props
      */
-    private static final String CACHE_EXCLUDE_NAME = "remote.cache.exclude";
+    private static final String CACHE_EXCLUDE_NAME = "maven.build.cache.exclude";
     /**
      * Flag to control if we should check values from plugin configs as file system objects
      */
-    private static final String CACHE_PROCESS_PLUGINS = "remote.cache.processPlugins";
+    private static final String CACHE_PROCESS_PLUGINS = "maven.build.cache.processPlugins";
 
     private static final Logger LOGGER = LoggerFactory.getLogger( MavenProjectInput.class );
 

@@ -216,5 +216,5 @@ git reset --hard
 
 ### I want to cache interim build and override it later with final version
 
-Solution: set `-Dremote.cache.save.final=true` to nodes which produce final builds. Such builds will not be overridden
+Solution: set `-Dmaven.build.cache.remote.save.final=true` to nodes which produce final builds. Such builds will not be overridden
 and eventually will replace all interim builds

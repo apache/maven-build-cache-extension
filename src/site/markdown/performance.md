@@ -66,7 +66,7 @@ and resources wins for remote cache by avoiding requesting and downloading unnec
 line flag:
 
 ```
--Dremote.cache.lazyRestore=true";
+-Dmaven.build.cache.lazyRestore=true";
 ```
 
 Note: In case of cache corruption lazy cache cannot fallback to normal execution, it will fail instead. To heal the
@@ -79,7 +79,7 @@ depending on configuration). This could be helpful in local environment, but lik
 continuous integration. To disable add command line flag
 
 ```
--Dremote.cache.restoreGeneratedSources=false";
+-Dmaven.build.cache.restoreGeneratedSources=false";
 ```
 
 ### Disable post-processing of archives(JARs, WARs, etc) META-INF
