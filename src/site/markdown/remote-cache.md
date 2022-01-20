@@ -84,7 +84,7 @@ normally.
 Allow writes in remote cache add jvm property to designated CI builds.
 
 ```
--Dremote.cache.save.enabled=true
+-Dmaven.build.cache.remote.save.enabled=true
 ```
 
 Run the build, review log and ensure that artifacts are uploaded to remote cache. Now, rerun build and ensure that it
@@ -111,7 +111,7 @@ Copy the link to a `cbuild-ache-report.xml` and provide it to your local build a
 * Run local build. Command line should look similar to this:
 
 ```bash
-mvn verify -Dremote.cache.failFast=true -Dremote.cache.baselineUrl=https://your-cache-url/<...>/915296a3-4596-4eb5-bf37-f6e13ebe087e/build-cache-report.xml
+mvn verify -Dmaven.build.cache.failFast=true -Dmaven.build.cache.baselineUrl=https://your-cache-url/<...>/915296a3-4596-4eb5-bf37-f6e13ebe087e/build-cache-report.xml
 ```
 
 Once discrepancy between remote and local builds detected cache will fail with diagnostic info in

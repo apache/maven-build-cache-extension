@@ -43,7 +43,7 @@ Disable in config:
 ```
 On command line:
 ```
--Dremote.cache.enabled=false
+-Dmaven.build.cache.enabled=false
 ```
 
 ## IDE support
