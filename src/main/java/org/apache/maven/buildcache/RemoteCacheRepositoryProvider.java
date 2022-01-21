@@ -43,15 +43,13 @@ public class RemoteCacheRepositoryProvider implements Provider<RemoteCacheReposi
     public RemoteCacheRepositoryProvider( CacheConfig config, PlexusContainer container )
             throws ComponentLookupException
     {
+        String hint = "noop";
         if ( config.initialize() == CacheState.INITIALIZED )
         {
-            String hint = config.getTransport();
-            repository = container.lookup( RemoteCacheRepository.class, hint );
+            hint = config.getTransport();
         }
-        else
-        {
-            repository = new RemoteCacheRepositoryNoOp();
-        }
+
+        repository = container.lookup( RemoteCacheRepository.class, hint );
     }
 
     public RemoteCacheRepository get()
