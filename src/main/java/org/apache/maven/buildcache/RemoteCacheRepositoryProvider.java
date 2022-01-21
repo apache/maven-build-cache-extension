@@ -24,6 +24,7 @@ import javax.inject.Named;
 import javax.inject.Provider;
 import javax.inject.Singleton;
 import org.apache.maven.buildcache.xml.CacheConfig;
+import org.apache.maven.buildcache.xml.CacheState;
 import org.codehaus.plexus.PlexusContainer;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
 
@@ -42,9 +43,15 @@ public class RemoteCacheRepositoryProvider implements Provider<RemoteCacheReposi
     public RemoteCacheRepositoryProvider( CacheConfig config, PlexusContainer container )
             throws ComponentLookupException
     {
-        config.initialize();
-        String hint = config.getTransport();
-        repository = container.lookup( RemoteCacheRepository.class, hint );
+        if ( config.initialize() == CacheState.INITIALIZED )
+        {
+            String hint = config.getTransport();
+            repository = container.lookup( RemoteCacheRepository.class, hint );
+        }
+        else
+        {
+            repository = new RemoteCacheRepositoryNoOp();
+        }
     }
 
     public RemoteCacheRepository get()
