@@ -22,12 +22,16 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Optional;
 import javax.annotation.Nonnull;
+import javax.inject.Named;
+import org.apache.maven.SessionScoped;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.buildcache.xml.Build;
 import org.apache.maven.buildcache.xml.report.CacheReport;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.project.MavenProject;
 
+@SessionScoped
+@Named( "noop" )
 public class RemoteCacheRepositoryNoOp implements RemoteCacheRepository
 {
 
