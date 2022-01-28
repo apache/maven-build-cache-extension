@@ -55,12 +55,12 @@ under the License.
         <junitVersion>5.8.1</junitVersion>
         <mockitoVersion>3.2.0</mockitoVersion>
         <plexusUtilsVersion>3.4.1</plexusUtilsVersion>
-        <wagonVersion>3.4.3</wagonVersion>
+        <wagonVersion>3.5.2-SNAPSHOT</wagonVersion>
         <securityDispatcherVersion>2.0</securityDispatcherVersion>
         <cipherVersion>2.0</cipherVersion>
         <modelloVersion>1.11</modelloVersion>
         <jxpathVersion>1.3</jxpathVersion>
-        <resolverVersion>1.7.2</resolverVersion>
+        <resolverVersion>1.8.0-SNAPSHOT</resolverVersion>
         <slf4jVersion>1.7.32</slf4jVersion>
         <xmlunitVersion>2.6.4</xmlunitVersion>
         <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
@@ -184,7 +184,7 @@ under the License.
                 <artifactId>formatter-maven-plugin</artifactId>
                 <version>${formatter-maven-plugin.version}</version>
                 <configuration>
-                    <configFile>${maven.multiModuleProjectDirectory}/src/build/eclipse-formatter-config.xml</configFile>
+                    <configFile>config/eclipse-formatter-config.xml</configFile>
                     <skip>${format.skip}</skip>
                     <lineEnding>KEEP</lineEnding>
                     <cachedir>${project.build.directory}/cache</cachedir>
@@ -198,6 +198,13 @@ under the License.
                         <phase>process-sources</phase>
                     </execution>
                 </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.apache.maven.shared</groupId>
+                        <artifactId>maven-shared-resources</artifactId>
+                        <version>5-SNAPSHOT</version>
+                    </dependency>
+                </dependencies>
             </plugin>
             <plugin>
                 <groupId>net.revelc.code</groupId>
@@ -254,8 +261,8 @@ under the License.
                 <version>3.1.2</version>
                 <configuration>
                     <violationSeverity>info</violationSeverity>
-                    <suppressionsLocation>${maven.multiModuleProjectDirectory}/src/build/checkstyle-suppressions.xml</suppressionsLocation>
-                    <headerLocation>${maven.multiModuleProjectDirectory}/src/build/maven-header.txt</headerLocation>
+                    <violationIgnore>JavadocVariable,JavadocMethod,HiddenField</violationIgnore>
+                    <headerLocation>config/maven-header-2.txt</headerLocation>
                 </configuration>
                 <dependencies>
                     <dependency>
@@ -266,7 +273,7 @@ under the License.
                     <dependency>
                         <groupId>org.apache.maven.shared</groupId>
                         <artifactId>maven-shared-resources</artifactId>
-                        <version>3</version>
+                        <version>5-SNAPSHOT</version>
                     </dependency>
                 </dependencies>
             </plugin>
