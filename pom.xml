@@ -44,8 +44,8 @@ under the License.
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
         <classWorldsVersion>2.6.0</classWorldsVersion>
-        <maven3Version>3.9.0-SNAPSHOT</maven3Version>
-        <maven4Version>4.0.0-alpha-1-SNAPSHOT</maven4Version>
+        <maven3Version>3.8.5-SNAPSHOT</maven3Version><!-- MNG-7391-maven-3.8.x branch, waiting for MNG-7391 Maven API update -->
+        <maven4Version>4.0.0-alpha-1-SNAPSHOT</maven4Version><!-- MNG-7391-master branch, waiting for MNG-7391 Maven API update -->
 
         <formatter-maven-plugin.version>2.17.0</formatter-maven-plugin.version>
         <impsort-maven-plugin.version>1.6.2</impsort-maven-plugin.version>
@@ -55,12 +55,12 @@ under the License.
         <junitVersion>5.8.1</junitVersion>
         <mockitoVersion>3.2.0</mockitoVersion>
         <plexusUtilsVersion>3.4.1</plexusUtilsVersion>
-        <wagonVersion>3.4.3</wagonVersion>
+        <wagonVersion>3.5.2-SNAPSHOT</wagonVersion>
         <securityDispatcherVersion>2.0</securityDispatcherVersion>
         <cipherVersion>2.0</cipherVersion>
         <modelloVersion>1.11</modelloVersion>
         <jxpathVersion>1.3</jxpathVersion>
-        <resolverVersion>1.8.0</resolverVersion>
+        <resolverVersion>1.8.0-SNAPSHOT</resolverVersion>
         <slf4jVersion>1.7.32</slf4jVersion>
         <xmlunitVersion>2.6.4</xmlunitVersion>
         <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
@@ -94,14 +94,13 @@ under the License.
         <dependency>
             <groupId>org.apache.maven</groupId>
             <artifactId>maven-core</artifactId>
-            <version>${maven3Version}</version>
+            <version>${maven4Version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>org.apache.maven.resolver</groupId>
-            <artifactId>maven-resolver-transport-http</artifactId>
-            <version>${resolverVersion}</version>
-            <scope>provided</scope>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>4.5.13</version>
         </dependency>
         <dependency>
             <groupId>net.openhft</groupId>
@@ -119,9 +118,9 @@ under the License.
             <version>${commonsLangVersion}</version>
         </dependency>
         <dependency>
-            <groupId>commons-io</groupId>
+            <groupId>org.apache.commons</groupId>
             <artifactId>commons-io</artifactId>
-            <version>2.7</version>
+            <version>1.3.2</version>
         </dependency>
         <dependency>
             <groupId>javax.annotation</groupId>
@@ -134,15 +133,20 @@ under the License.
             <version>${plexusUtilsVersion}</version>
         </dependency>
         <dependency>
+            <groupId>org.apache.maven.wagon</groupId>
+            <artifactId>wagon-http</artifactId>
+            <version>${wagonVersion}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.maven.resolver</groupId>
+            <artifactId>maven-resolver-util</artifactId>
+            <version>${resolverVersion}</version>
+        </dependency>
+        <dependency>
             <groupId>com.google.code.findbugs</groupId>
             <artifactId>jsr305</artifactId>
             <version>3.0.2</version>
             <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.maven.wagon</groupId>
-            <artifactId>wagon-webdav-jackrabbit</artifactId>
-            <version>3.5.1</version>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -180,7 +184,7 @@ under the License.
                 <artifactId>formatter-maven-plugin</artifactId>
                 <version>${formatter-maven-plugin.version}</version>
                 <configuration>
-                    <configFile>${maven.multiModuleProjectDirectory}/src/build/eclipse-formatter-config.xml</configFile>
+                    <configFile>config/eclipse-formatter-config.xml</configFile>
                     <skip>${format.skip}</skip>
                     <lineEnding>KEEP</lineEnding>
                     <cachedir>${project.build.directory}/cache</cachedir>
@@ -194,6 +198,13 @@ under the License.
                         <phase>process-sources</phase>
                     </execution>
                 </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.apache.maven.shared</groupId>
+                        <artifactId>maven-shared-resources</artifactId>
+                        <version>5-SNAPSHOT</version>
+                    </dependency>
+                </dependencies>
             </plugin>
             <plugin>
                 <groupId>net.revelc.code</groupId>
@@ -250,8 +261,8 @@ under the License.
                 <version>3.1.2</version>
                 <configuration>
                     <violationSeverity>info</violationSeverity>
-                    <suppressionsLocation>${maven.multiModuleProjectDirectory}/src/build/checkstyle-suppressions.xml</suppressionsLocation>
-                    <headerLocation>${maven.multiModuleProjectDirectory}/src/build/maven-header.txt</headerLocation>
+                    <violationIgnore>JavadocVariable,JavadocMethod,HiddenField</violationIgnore>
+                    <headerLocation>config/maven-header-2.txt</headerLocation>
                 </configuration>
                 <dependencies>
                     <dependency>
@@ -262,7 +273,7 @@ under the License.
                     <dependency>
                         <groupId>org.apache.maven.shared</groupId>
                         <artifactId>maven-shared-resources</artifactId>
-                        <version>3</version>
+                        <version>5-SNAPSHOT</version>
                     </dependency>
                 </dependencies>
             </plugin>
@@ -368,11 +379,6 @@ under the License.
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-dependency-plugin</artifactId>
-                <version>2.8</version>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-install-plugin</artifactId>
                 <version>3.0.0-M1</version>
                 <executions>
@@ -384,95 +390,5 @@ under the License.
             </plugin>
         </plugins>
     </build>
-
-    <profiles>
-        <profile>
-            <id>maven3</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-dependency-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>copy-maven3-distributions</id>
-                                <phase>pre-integration-test</phase>
-                                <goals>
-                                    <goal>unpack</goal>
-                                </goals>
-                                <configuration>
-                                    <artifactItems>
-                                        <artifactItem>
-                                            <groupId>org.apache.maven</groupId>
-                                            <artifactId>apache-maven</artifactId>
-                                            <version>${maven3Version}</version>
-                                            <classifier>bin</classifier>
-                                            <type>tar.gz</type>
-                                            <overWrite>false</overWrite>
-                                            <outputDirectory>${project.build.directory}/maven3</outputDirectory>
-                                        </artifactItem>
-                                    </artifactItems>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-surefire-plugin</artifactId>
-                        <configuration>
-                            <systemProperties>
-                                <with-maven3>true</with-maven3>
-                            </systemProperties>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-        <profile>
-            <id>maven4</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-dependency-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>copy-maven4-distributions</id>
-                                <phase>pre-integration-test</phase>
-                                <goals>
-                                    <goal>unpack</goal>
-                                </goals>
-                                <configuration>
-                                    <artifactItems>
-                                        <artifactItem>
-                                            <groupId>org.apache.maven</groupId>
-                                            <artifactId>apache-maven</artifactId>
-                                            <version>${maven4Version}</version>
-                                            <classifier>bin</classifier>
-                                            <type>tar.gz</type>
-                                            <overWrite>false</overWrite>
-                                            <outputDirectory>${project.build.directory}/maven4</outputDirectory>
-                                        </artifactItem>
-                                    </artifactItems>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-surefire-plugin</artifactId>
-                        <configuration>
-                            <systemProperties>
-                                <with-maven4>true</with-maven4>
-                            </systemProperties>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
 
 </project>
