@@ -588,9 +588,16 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     @Override
     public boolean adjustMetaInfVersion()
     {
-        return Optional.ofNullable( getConfiguration().getProjectVersioning() )
-                .map( ProjectVersioning::isAdjustMetaInf )
-                .orElse( false );
+        if ( isEnabled() )
+        {
+            return Optional.ofNullable( getConfiguration().getProjectVersioning() )
+                    .map( ProjectVersioning::isAdjustMetaInf )
+                    .orElse( false );
+        }
+        else
+        {
+            return false;
+        }
     }
 
     @Nonnull
