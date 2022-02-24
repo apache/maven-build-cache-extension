@@ -25,10 +25,10 @@ import org.apache.maven.project.MavenProject;
 public interface RestoredArtifactHandler
 {
 
-    //we might store in cache artifact which was build with previous version
-    //1.0-SNAPSHOT is kept in cache but real version of project is 2.0
-    //for pom packaging this is done automatically by maven but for jar and other there might be
-    //sensitive metadata with previous version. Versions mismatch could lead errors
+    // we might store in cache artifact which was build with previous version
+    // 1.0-SNAPSHOT is kept in cache but real version of project is 2.0
+    // for pom packaging this is done automatically by maven but for jar and other there might be
+    // sensitive metadata with previous version. Versions mismatch could lead errors
     Path adjustArchiveArtifactVersion( MavenProject project, String originalArtifactVersion, Path artifactFile )
-            throws IOException;
+                    throws IOException;
 }

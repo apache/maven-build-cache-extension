@@ -36,17 +36,20 @@ public class LifecyclePhasesHelper
 {
 
     private final DefaultLifecycles defaultLifecycles;
+
     private final List<String> phases;
+
     private final String lastCleanPhase;
 
     @Inject
     public LifecyclePhasesHelper( DefaultLifecycles defaultLifecycles,
-            @Named( "clean" ) Lifecycle cleanLifecycle )
+                    @Named( "clean" )
+                    Lifecycle cleanLifecycle )
     {
         this.defaultLifecycles = Objects.requireNonNull( defaultLifecycles );
         this.phases = defaultLifecycles.getLifeCycles().stream()
-                .flatMap( lf -> lf.getPhases().stream() )
-                .collect( Collectors.toList() );
+                        .flatMap( lf -> lf.getPhases().stream() )
+                        .collect( Collectors.toList() );
         this.lastCleanPhase = CacheUtils.getLast( cleanLifecycle.getPhases() );
     }
 
@@ -64,8 +67,8 @@ public class LifecyclePhasesHelper
     }
 
     /**
-     * Check if the given phase is later than the other in maven lifecycle.
-     * Example: isLaterPhase("install", "clean") returns true;
+     * Check if the given phase is later than the other in maven lifecycle. Example: isLaterPhase("install", "clean")
+     * returns true;
      */
     public boolean isLaterPhase( String phase, String other )
     {
@@ -90,7 +93,7 @@ public class LifecyclePhasesHelper
         for ( MojoExecution mojoExecution : mojoExecutions )
         {
             if ( mojoExecution.getLifecyclePhase() == null
-                    || isLaterPhaseThanClean( mojoExecution.getLifecyclePhase() ) )
+                            || isLaterPhaseThanClean( mojoExecution.getLifecyclePhase() ) )
             {
                 break;
             }

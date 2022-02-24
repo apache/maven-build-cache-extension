@@ -33,8 +33,8 @@ import org.slf4j.LoggerFactory;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Overrides default file behavior with async file holder to restore files from cache lazy. Similar to {@link
- * org.apache.maven.project.artifact.AttachedArtifact}
+ * Overrides default file behavior with async file holder to restore files from cache lazy. Similar to
+ * {@link org.apache.maven.project.artifact.AttachedArtifact}
  */
 public class RestoredArtifact extends DefaultArtifact
 {
@@ -44,10 +44,10 @@ public class RestoredArtifact extends DefaultArtifact
     private volatile Future<File> fileFuture;
 
     public RestoredArtifact( Artifact parent, Future<File> fileFuture, String type, String classifier,
-            ArtifactHandler handler )
+                    ArtifactHandler handler )
     {
         super( parent.getGroupId(), parent.getArtifactId(), parent.getVersionRange(), parent.getScope(), type,
-                classifier, handler, parent.isOptional() );
+                        classifier, handler, parent.isOptional() );
         this.fileFuture = requireNonNull( fileFuture, "fileFuture == null" );
     }
 
@@ -65,20 +65,20 @@ public class RestoredArtifact extends DefaultArtifact
                 try
                 {
                     LOGGER.trace( "Artifact file {} is not yet retrieved, downloading directly",
-                            getDependencyConflictId() );
-                    ( ( RunnableFuture<?> ) fileFuture ).run();
+                                    getDependencyConflictId() );
+                    ( (RunnableFuture<?>) fileFuture ).run();
                 }
                 catch ( RuntimeException e )
                 {
                     throw new InvalidArtifactRTException( getGroupId(), getArtifactId(),
-                            getVersion(), getType(),
-                            "Error retrieving artifact file", e );
+                                    getVersion(), getType(),
+                                    "Error retrieving artifact file", e );
                 }
             }
             else
             {
                 LOGGER.trace( "Artifact file {} is not yet retrieved, waiting for download to complete",
-                        getDependencyConflictId() );
+                                getDependencyConflictId() );
             }
         }
 
@@ -90,13 +90,13 @@ public class RestoredArtifact extends DefaultArtifact
         {
             Thread.currentThread().interrupt();
             throw new InvalidArtifactRTException( getGroupId(), getArtifactId(),
-                    getVersion(), getType(), "Interrupted while retrieving artifact file", e );
+                            getVersion(), getType(), "Interrupted while retrieving artifact file", e );
         }
         catch ( ExecutionException e )
         {
             throw new InvalidArtifactRTException( getGroupId(), getArtifactId(),
-                    getVersion(), getType(), "Error retrieving artifact file",
-                    e.getCause() );
+                            getVersion(), getType(), "Error retrieving artifact file",
+                            e.getCause() );
         }
     }
 

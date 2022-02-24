@@ -72,10 +72,10 @@ public class BuildInfoTest
         buildInfo.setHashFunction( "SHA-256" );
         buildInfo.setGoals( Collections.singletonList( "install" ) );
         final org.apache.maven.artifact.Artifact attachedArtifact = new DefaultArtifact( "ag", "aa", "av", "as", "at",
-                "ac",
-                new DefaultArtifactHandler() );
+                        "ac",
+                        new DefaultArtifactHandler() );
         buildInfo.setAttachedArtifacts( Build.createAttachedArtifacts( Collections.singletonList( attachedArtifact ),
-                HashFactory.XX.createAlgorithm() ) );
+                        HashFactory.XX.createAlgorithm() ) );
         buildInfo.setProjectsInputInfo( main );
         buildInfo.setExecutions( createExecutions() );
 

@@ -29,7 +29,7 @@ public class HexUtilsTest
     @Test
     public void testEncodeToHex()
     {
-        //array length = 8 left padded with zeroes
+        // array length = 8 left padded with zeroes
         assertEquals( "0000000000000000", HexUtils.encode( new byte[8] ) );
         assertEquals( "00", HexUtils.encode( new byte[1] ) );
 

@@ -30,7 +30,9 @@ public class CacheResult
 {
 
     private final RestoreStatus status;
+
     private final Build build;
+
     private final CacheContext context;
 
     private CacheResult( RestoreStatus status, Build build, CacheContext context )

@@ -48,13 +48,13 @@ public class WagonProvider
     }
 
     public Wagon lookup( String roleHint )
-            throws ComponentLookupException
+                    throws ComponentLookupException
     {
         return container.lookup( Wagon.class, roleHint );
     }
 
     public void release( Wagon wagon )
-            throws ComponentLifecycleException
+                    throws ComponentLifecycleException
     {
         if ( wagon != null )
         {

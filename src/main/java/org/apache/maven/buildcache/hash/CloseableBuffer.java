@@ -122,8 +122,10 @@ public class CloseableBuffer implements AutoCloseable
     {
 
         private static final Method ATTACHMENT = getMethod( "sun.nio.ch.DirectBuffer",
-                "attachment" );
+                        "attachment" );
+
         private static final Method CLEANER = getMethod( "sun.nio.ch.DirectBuffer", "cleaner" );
+
         private static final Method CLEAN = getMethod( "sun.misc.Cleaner", "clean" );
 
         public static boolean isSupported()
@@ -159,6 +161,7 @@ public class CloseableBuffer implements AutoCloseable
 
         // Java 9: getMethod("jdk.internal.misc.Unsafe", "invokeCleaner", ByteBuffer.class);
         private static final Method INVOKE_CLEANER = getMethod( "sun.misc.Unsafe", "invokeCleaner", ByteBuffer.class );
+
         private static final Object UNSAFE = getField( "sun.misc.Unsafe", "theUnsafe" );
 
         public static boolean isSupported()
@@ -168,8 +171,7 @@ public class CloseableBuffer implements AutoCloseable
 
         /**
          * Calling the above code in JDK9+ gives a reflection warning on stderr,
-         * Unsafe.theUnsafe.invokeCleaner(byteBuffer)
-         * makes the same call, but does not print the reflection warning
+         * Unsafe.theUnsafe.invokeCleaner(byteBuffer) makes the same call, but does not print the reflection warning
          */
         @Override
         public boolean clean( ByteBuffer buffer )

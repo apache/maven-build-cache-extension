@@ -44,8 +44,11 @@ public class CacheDiff
 {
 
     private final CacheConfig config;
+
     private final Build current;
+
     private final Build baseline;
+
     private final LinkedList<Mismatch> report;
 
     public CacheDiff( Build current, Build baseline, CacheConfig config )
@@ -126,7 +129,8 @@ public class CacheDiff
 
             addNewMismatch( "source files",
                     "Remote and local cache contain different sets of input files. "
-                            + "Added files: " + currentVsBaseline + ". Removed files: " + baselineVsCurrent,
+                            + "Added files: " + currentVsBaseline + ". Removed files: "
+                            + baselineVsCurrent,
                     "To match remote and local caches should have identical file sets."
                             + " Unnecessary and transient files must be filtered out to make file sets match"
                             + " - see configuration guide" );
@@ -182,7 +186,8 @@ public class CacheDiff
                             + "Added dependencies: " + currentVsBaseline + ". Removed dependencies: "
                             + baselineVsCurrent,
                     "Remote and local builds should have identical dependencies. "
-                            + "The difference manifests changes in downstream dependencies or introduced snapshots." );
+                            + "The difference manifests changes in downstream dependencies or "
+                            + "introduced snapshots." );
             return;
         }
 
@@ -197,7 +202,8 @@ public class CacheDiff
                 addNewMismatch( dependencyKey, currentDependency.getHash(), baselineDependency.getHash(),
                         "Downstream project or snapshot changed",
                         "Find downstream project and investigate difference in the downstream project. "
-                                + "Enable fail fast mode and single threaded execution to simplify debug." );
+                                + "Enable fail fast mode and single threaded execution to "
+                                + "simplify debug." );
             }
         }
     }
@@ -238,8 +244,8 @@ public class CacheDiff
                         currentExecution.getExecutionKey(),
                         "Cached build doesn't contain plugin " + currentExecution.getExecutionKey(),
                         "Different set of plugins produces different build results. "
-                                + "Filter out non-critical plugins or make sure remote cache always run full build "
-                                + "with all plugins" );
+                                + "Filter out non-critical plugins or make sure remote cache always "
+                                + "run full build with all plugins" );
                 continue;
             }
 
@@ -283,8 +289,8 @@ public class CacheDiff
                         "Plugin: " + current.getExecutionKey()
                                 + " has mismatch in tracked property and cannot be reused",
                         "Align properties between remote and local build or remove property from tracked "
-                                + "list if mismatch could be tolerated. In some cases it is possible to add skip value "
-                                + "to ignore lax mismatch" );
+                                + "list if mismatch could be tolerated. In some cases it is possible to add "
+                                + "skip value to ignore lax mismatch" );
             }
         }
     }

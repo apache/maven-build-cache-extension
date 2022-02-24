@@ -78,23 +78,35 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
 {
 
     public static final String CONFIG_PATH_PROPERTY_NAME = "maven.build.cache.configPath";
+
     public static final String CACHE_ENABLED_PROPERTY_NAME = "maven.build.cache.enabled";
+
     public static final String SAVE_TO_REMOTE_PROPERTY_NAME = "maven.build.cache.remote.save.enabled";
+
     public static final String SAVE_NON_OVERRIDEABLE_NAME = "maven.build.cache.remote.save.final";
+
     public static final String FAIL_FAST_PROPERTY_NAME = "maven.build.cache.failFast";
+
     public static final String BASELINE_BUILD_URL_PROPERTY_NAME = "maven.build.cache.baselineUrl";
+
     public static final String LAZY_RESTORE_PROPERTY_NAME = "maven.build.cache.lazyRestore";
+
     public static final String RESTORE_GENERATED_SOURCES_PROPERTY_NAME = "maven.build.cache.restoreGeneratedSources";
+
     public static final String ALWAYS_RUN_PLUGINS = "maven.build.cache.alwaysRunPlugins";
 
     private static final Logger LOGGER = LoggerFactory.getLogger( CacheConfigImpl.class );
 
     private final XmlService xmlService;
+
     private final MavenSession session;
 
     private CacheState state;
+
     private CacheConfig cacheConfig;
+
     private HashFactory hashFactory;
+
     private List<Pattern> excludePatterns;
 
     @Inject
@@ -128,13 +140,13 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
                 else
                 {
                     configPath = getMultimoduleRoot( session ).resolve( ".mvn" )
-                            .resolve( "maven-build-cache-config.xml" );
+                                    .resolve( "maven-build-cache-config.xml" );
                 }
 
                 if ( !Files.exists( configPath ) )
                 {
                     LOGGER.info( "Cache configuration is not available at configured path {}, "
-                            + "cache is enabled with defaults", configPath );
+                                    + "cache is enabled with defaults", configPath );
                     cacheConfig = new CacheConfig();
                 }
                 else
@@ -148,7 +160,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
                     catch ( Exception e )
                     {
                         throw new IllegalArgumentException(
-                                "Cannot initialize cache because xml config is not valid or not available", e );
+                                        "Cannot initialize cache because xml config is not valid or not available", e );
                     }
                 }
                 fillWithDefaults( cacheConfig );
@@ -230,7 +242,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
             return true;
         }
         return cacheConfig.getExecutionControl() != null && cacheConfig.getExecutionControl().getReconcile() != null
-                && cacheConfig.getExecutionControl().getReconcile().isLogAllProperties();
+                        && cacheConfig.getExecutionControl().getReconcile().isLogAllProperties();
     }
 
     private GoalReconciliation findReconciliationConfig( MojoExecution mojoExecution )
@@ -253,7 +265,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
             final String goal = mojoExecution.getGoal();
 
             if ( isPluginMatch( mojoExecution.getPlugin(), goalReconciliationConfig ) && StringUtils.equals( goal,
-                    goalReconciliationConfig.getGoal() ) )
+                            goalReconciliationConfig.getGoal() ) )
             {
                 return goalReconciliationConfig;
             }
@@ -337,9 +349,9 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     private boolean isPluginMatch( Plugin plugin, CoordinatesBase pluginConfig )
     {
         return StringUtils.equals( pluginConfig.getArtifactId(),
-                plugin.getArtifactId() )
-                && ( pluginConfig.getGroupId() == null || StringUtils.equals(
-                        pluginConfig.getGroupId(), plugin.getGroupId() ) );
+                        plugin.getArtifactId() )
+                        && ( pluginConfig.getGroupId() == null || StringUtils.equals(
+                                        pluginConfig.getGroupId(), plugin.getGroupId() ) );
     }
 
     @Nonnull
@@ -366,7 +378,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
         if ( pluginScanConfig != null )
         {
             final ExecutionConfigurationScan executionScanConfig = findExecutionScanConfig( exec,
-                    pluginScanConfig.getExecutions() );
+                            pluginScanConfig.getExecutions() );
             if ( executionScanConfig != null && executionScanConfig.getDirScan() != null )
             {
                 return new PluginScanConfigImpl( executionScanConfig.getDirScan() );
@@ -377,7 +389,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     }
 
     private ExecutionConfigurationScan findExecutionScanConfig( PluginExecution execution,
-            List<ExecutionConfigurationScan> scanConfigs )
+                    List<ExecutionConfigurationScan> scanConfigs )
     {
         for ( ExecutionConfigurationScan executionScanConfig : scanConfigs )
         {
@@ -466,7 +478,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
         for ( ExecutionIdsList executionConfig : executionIds )
         {
             if ( isPluginMatch( execution.getPlugin(), executionConfig ) && executionConfig.getExecIds().contains(
-                    execution.getExecutionId() ) )
+                            execution.getExecutionId() ) )
             {
                 return true;
             }
@@ -476,7 +488,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
         for ( GoalsList pluginGoals : pluginsGoalsList )
         {
             if ( isPluginMatch( execution.getPlugin(), pluginGoals ) && pluginGoals.getGoals().contains(
-                    execution.getGoal() ) )
+                            execution.getGoal() ) )
             {
                 return true;
             }
@@ -589,8 +601,8 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     public boolean adjustMetaInfVersion()
     {
         return Optional.ofNullable( getConfiguration().getProjectVersioning() )
-                .map( ProjectVersioning::isAdjustMetaInf )
-                .orElse( false );
+                        .map( ProjectVersioning::isAdjustMetaInf )
+                        .orElse( false );
     }
 
     @Nonnull

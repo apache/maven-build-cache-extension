@@ -30,6 +30,7 @@ public class SHA implements Hash.Factory
 {
 
     private static final ThreadLocal<MessageDigest> ALGORITHM = new ThreadLocal<>();
+
     private static final ThreadLocal<MessageDigest> CHECKSUM = new ThreadLocal<>();
 
     private final String algorithm;

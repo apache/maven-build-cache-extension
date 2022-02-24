@@ -55,17 +55,21 @@ public class DefaultMultiModuleSupport implements MultiModuleSupport
     private static final Logger LOGGER = LoggerFactory.getLogger( DefaultMultiModuleSupport.class );
 
     private final ProjectBuilder projectBuilder;
+
     private final CacheConfig cacheConfig;
+
     private final MavenSession session;
 
     private volatile boolean built;
+
     private volatile Map<String, MavenProject> projectMap;
+
     private volatile Map<String, MavenProject> sessionProjectMap;
 
     @Inject
     public DefaultMultiModuleSupport( ProjectBuilder projectBuilder,
-            CacheConfig cacheConfig,
-            MavenSession session )
+                    CacheConfig cacheConfig,
+                    MavenSession session )
     {
         this.projectBuilder = projectBuilder;
         this.cacheConfig = cacheConfig;
@@ -76,14 +80,14 @@ public class DefaultMultiModuleSupport implements MultiModuleSupport
     public boolean isPartOfSession( String groupId, String artifactId, String version )
     {
         return getProjectMap( session )
-                .containsKey( KeyUtils.getProjectKey( groupId, artifactId, version ) );
+                        .containsKey( KeyUtils.getProjectKey( groupId, artifactId, version ) );
     }
 
     @Override
     public Optional<MavenProject> tryToResolveProject( String groupId, String artifactId, String version )
     {
         return Optional.ofNullable( getMultiModuleProjectsMap()
-                .get( KeyUtils.getProjectKey( groupId, artifactId, version ) ) );
+                        .get( KeyUtils.getProjectKey( groupId, artifactId, version ) ) );
     }
 
     @Override
@@ -91,7 +95,7 @@ public class DefaultMultiModuleSupport implements MultiModuleSupport
     {
         String projectKey = KeyUtils.getProjectKey( groupId, artifactId, version );
         return getProjectMap( session ).containsKey( projectKey )
-                || getMultiModuleProjectsMap().containsKey( projectKey );
+                        || getMultiModuleProjectsMap().containsKey( projectKey );
     }
 
     private Map<String, MavenProject> getProjectMap( MavenSession session )
@@ -101,8 +105,8 @@ public class DefaultMultiModuleSupport implements MultiModuleSupport
             return sessionProjectMap;
         }
         sessionProjectMap = session.getProjects().stream().collect( Collectors.toMap(
-                KeyUtils::getProjectKey,
-                Function.identity() ) );
+                        KeyUtils::getProjectKey,
+                        Function.identity() ) );
         return sessionProjectMap;
     }
 
@@ -133,9 +137,9 @@ public class DefaultMultiModuleSupport implements MultiModuleSupport
         }
 
         Optional<Discovery> multiModuleDiscovery = Optional.ofNullable( cacheConfig.getMultiModule() )
-                .map( MultiModule::getDiscovery );
+                        .map( MultiModule::getDiscovery );
 
-        //no discovery configuration, use only projects in session
+        // no discovery configuration, use only projects in session
         if ( !multiModuleDiscovery.isPresent() )
         {
             projectMap = buildProjectMap( session.getProjects() );
@@ -143,18 +147,18 @@ public class DefaultMultiModuleSupport implements MultiModuleSupport
         }
 
         Set<String> scanProfiles = new TreeSet<>(
-                multiModuleDiscovery
-                        .map( Discovery::getScanProfiles )
-                        .orElse( Collections.emptyList() ) );
+                        multiModuleDiscovery
+                                        .map( Discovery::getScanProfiles )
+                                        .orElse( Collections.emptyList() ) );
         MavenProject currentProject = session.getCurrentProject();
         File multiModulePomFile = getMultiModulePomFile( session );
 
         ProjectBuildingRequest projectBuildingRequest = currentProject.getProjectBuildingRequest();
         boolean profilesMatched = projectBuildingRequest.getActiveProfileIds().containsAll( scanProfiles );
 
-        //we are building from root with the same profiles, no need to re-scan the whole multi-module project
+        // we are building from root with the same profiles, no need to re-scan the whole multi-module project
         if ( currentProject.getFile().getAbsolutePath().equals( multiModulePomFile.getAbsolutePath() )
-                && profilesMatched )
+                        && profilesMatched )
         {
             projectMap = buildProjectMap( session.getProjects() );
             return;
@@ -163,34 +167,34 @@ public class DefaultMultiModuleSupport implements MultiModuleSupport
         long t0 = System.currentTimeMillis();
 
         ProjectBuildingRequest buildingRequest = new DefaultProjectBuildingRequest( projectBuildingRequest );
-        //clear properties because after first build request some properties could be set to profiles
-        //these properties could change effective pom when we try to rebuild whole multi module project again
-        //for example the first model build process do not resolve ${os.detected.classifier}
-        //but once build completed this property is set to profile
-        //if we try to rebuild model for the whole project here string interpolator replaces this value
-        //and effective pom could be different (depending on OS) if this property is used in pom.xml
+        // clear properties because after first build request some properties could be set to profiles
+        // these properties could change effective pom when we try to rebuild whole multi module project again
+        // for example the first model build process do not resolve ${os.detected.classifier}
+        // but once build completed this property is set to profile
+        // if we try to rebuild model for the whole project here string interpolator replaces this value
+        // and effective pom could be different (depending on OS) if this property is used in pom.xml
         buildingRequest.setProfiles(
-                buildingRequest.getProfiles().stream()
-                        .peek( it -> it.setProperties( new Properties() ) )
-                        .collect( Collectors.toList() ) );
+                        buildingRequest.getProfiles().stream()
+                                        .peek( it -> it.setProperties( new Properties() ) )
+                                        .collect( Collectors.toList() ) );
         if ( !profilesMatched )
         {
             Set<String> profiles = new LinkedHashSet<>( buildingRequest.getActiveProfileIds() );
-            //remove duplicates
+            // remove duplicates
             profiles.addAll( scanProfiles );
             buildingRequest.setActiveProfileIds( new ArrayList<>( profiles ) );
         }
         try
         {
             List<ProjectBuildingResult> buildingResults = projectBuilder.build(
-                    Collections.singletonList( multiModulePomFile ),
-                    true,
-                    buildingRequest );
+                            Collections.singletonList( multiModulePomFile ),
+                            true,
+                            buildingRequest );
             LOGGER.info( "Multi module project model calculated [activeProfiles={}, time={} ms ",
-                    buildingRequest.getActiveProfileIds(), System.currentTimeMillis() - t0 );
+                            buildingRequest.getActiveProfileIds(), System.currentTimeMillis() - t0 );
 
             List<MavenProject> projectList = buildingResults.stream().map( ProjectBuildingResult::getProject )
-                    .collect( Collectors.toList() );
+                            .collect( Collectors.toList() );
             projectMap = buildProjectMap( projectList );
 
         }
@@ -207,8 +211,8 @@ public class DefaultMultiModuleSupport implements MultiModuleSupport
     private Map<String, MavenProject> buildProjectMap( List<MavenProject> projectList )
     {
         return projectList.stream().collect( Collectors.toMap(
-                KeyUtils::getProjectKey,
-                Function.identity() ) );
+                        KeyUtils::getProjectKey,
+                        Function.identity() ) );
     }
 
     private static File getMultiModulePomFile( MavenSession session )

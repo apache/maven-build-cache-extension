@@ -47,7 +47,7 @@ public class DigestUtils
     private static final Logger LOGGER = LoggerFactory.getLogger( DigestUtils.class );
 
     private static final ThreadLocal<UniversalDetector> ENCODING_DETECTOR = ThreadLocal
-            .withInitial( () -> new UniversalDetector( null ) );
+                    .withInitial( () -> new UniversalDetector( null ) );
 
     public static DigestItem pom( HashChecksum checksum, String effectivePom )
     {
@@ -98,36 +98,37 @@ public class DigestUtils
         }
     }
 
-    // TODO add support for .gitattributes to statically configure file type before falling back to probe based content checks
+    // TODO add support for .gitattributes to statically configure file type before falling back to probe based content
+    // checks
     private static boolean isText( String contentType )
     {
         return startsWith( contentType, "text/" )
-                || containsAny( contentType, "+json", "+xml" ) // common mime type suffixes
-                || equalsAny( contentType, // some common text types
-                        "application/json",
-                        "application/rtf",
-                        "application/x-sh",
-                        "application/xml",
-                        "application/javascript",
-                        "application/sql" );
+                        || containsAny( contentType, "+json", "+xml" ) // common mime type suffixes
+                        || equalsAny( contentType, // some common text types
+                                        "application/json",
+                                        "application/rtf",
+                                        "application/x-sh",
+                                        "application/xml",
+                                        "application/javascript",
+                                        "application/sql" );
     }
 
     private static boolean isBinary( String contentType )
     {
         return startsWithAny( contentType, "image/", "audio/", "video/", "font/" )
-                || containsAny( contentType, "+zip", "+gzip" )
-                || equalsAny( contentType,
-                        "application/octet-stream",
-                        "application/java-archive",
-                        "application/x-bzip",
-                        "application/x-bzip2",
-                        "application/zip",
-                        "application/gzip",
-                        "application/x-tar",
-                        "application/msword",
-                        "application/vnd.ms-excel",
-                        "application/vnd.ms-powerpoint",
-                        "application/pdf" );
+                        || containsAny( contentType, "+zip", "+gzip" )
+                        || equalsAny( contentType,
+                                        "application/octet-stream",
+                                        "application/java-archive",
+                                        "application/x-bzip",
+                                        "application/x-bzip2",
+                                        "application/zip",
+                                        "application/gzip",
+                                        "application/x-tar",
+                                        "application/msword",
+                                        "application/vnd.ms-excel",
+                                        "application/vnd.ms-powerpoint",
+                                        "application/pdf" );
     }
 
     public static DigestItem dependency( HashChecksum checksum, String key, String hash )

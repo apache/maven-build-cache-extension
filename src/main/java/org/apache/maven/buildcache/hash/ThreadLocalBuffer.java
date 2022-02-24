@@ -21,6 +21,7 @@ package org.apache.maven.buildcache.hash;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import org.codehaus.mojo.animal_sniffer.IgnoreJRERequirement;
 
 /**
  * ThreadLocalBuffer
@@ -69,9 +70,10 @@ public class ThreadLocalBuffer
         return buffer.getBuffer().capacity();
     }
 
+    @IgnoreJRERequirement
     private static ByteBuffer clear( CloseableBuffer buffer )
     {
-        return ( ByteBuffer ) buffer.getBuffer().clear();
+        return (ByteBuffer) buffer.getBuffer().clear();
     }
 
     private static void close( CloseableBuffer buffer )

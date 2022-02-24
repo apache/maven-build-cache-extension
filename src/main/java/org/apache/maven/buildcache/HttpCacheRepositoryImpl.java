@@ -62,11 +62,13 @@ public class HttpCacheRepositoryImpl implements RemoteCacheRepository
 {
 
     public static final String BUILDINFO_XML = "buildinfo.xml";
+
     public static final String CACHE_REPORT_XML = "build-cache-report.xml";
 
     private static final Logger LOGGER = LoggerFactory.getLogger( HttpCacheRepositoryImpl.class );
 
     private final XmlService xmlService;
+
     private final CacheConfig cacheConfig;
 
     @Inject
@@ -78,17 +80,17 @@ public class HttpCacheRepositoryImpl implements RemoteCacheRepository
 
     @SuppressWarnings( "checkstyle:constantname" )
     private static final ThreadLocal<HttpClient> httpClient = ThreadLocal
-            .withInitial( HttpCacheRepositoryImpl::newHttpClient );
+                    .withInitial( HttpCacheRepositoryImpl::newHttpClient );
 
     @SuppressWarnings( "checkstyle:magicnumber" )
     private static CloseableHttpClient newHttpClient()
     {
         int timeoutSeconds = 60;
         RequestConfig config = RequestConfig.custom()
-                .setConnectTimeout( timeoutSeconds * 1000 )
-                .setConnectionRequestTimeout( timeoutSeconds * 1000 )
-                .setSocketTimeout( timeoutSeconds * 1000 )
-                .build();
+                        .setConnectTimeout( timeoutSeconds * 1000 )
+                        .setConnectionRequestTimeout( timeoutSeconds * 1000 )
+                        .setSocketTimeout( timeoutSeconds * 1000 )
+                        .build();
         return HttpClientBuilder.create().setDefaultRequestConfig( config ).build();
     }
 
@@ -98,7 +100,7 @@ public class HttpCacheRepositoryImpl implements RemoteCacheRepository
     {
         final String resourceUrl = getResourceUrl( context, BUILDINFO_XML );
         return getResourceContent( resourceUrl )
-                .map( content -> new Build( xmlService.loadBuild( content ), CacheSource.REMOTE ) );
+                        .map( content -> new Build( xmlService.loadBuild( content ), CacheSource.REMOTE ) );
     }
 
     @Nonnull
@@ -110,7 +112,7 @@ public class HttpCacheRepositoryImpl implements RemoteCacheRepository
 
     @Override
     public void saveBuildInfo( CacheResult cacheResult, Build build )
-            throws IOException
+                    throws IOException
     {
         final String resourceUrl = getResourceUrl( cacheResult.getContext(), BUILDINFO_XML );
         putToRemoteCache( new ByteArrayInputStream( xmlService.toBytes( build.getDto() ) ), resourceUrl );
@@ -121,16 +123,16 @@ public class HttpCacheRepositoryImpl implements RemoteCacheRepository
     {
         MavenProject rootProject = session.getTopLevelProject();
         final String resourceUrl = cacheConfig.getUrl() + "/" + MavenProjectInput.CACHE_IMPLEMENTATION_VERSION
-                + "/" + rootProject.getGroupId()
-                + "/" + rootProject.getArtifactId()
-                + "/" + buildId
-                + "/" + CACHE_REPORT_XML;
+                        + "/" + rootProject.getGroupId()
+                        + "/" + rootProject.getArtifactId()
+                        + "/" + buildId
+                        + "/" + CACHE_REPORT_XML;
         putToRemoteCache( new ByteArrayInputStream( xmlService.toBytes( cacheReport ) ), resourceUrl );
     }
 
     @Override
     public void saveArtifactFile( CacheResult cacheResult,
-            org.apache.maven.artifact.Artifact artifact ) throws IOException
+                    org.apache.maven.artifact.Artifact artifact ) throws IOException
     {
         final String resourceUrl = getResourceUrl( cacheResult.getContext(), CacheUtils.normalizedName( artifact ) );
         try ( InputStream inputStream = Files.newInputStream( artifact.getFile().toPath() ) )
@@ -199,13 +201,13 @@ public class HttpCacheRepositoryImpl implements RemoteCacheRepository
     public String getResourceUrl( CacheContext context, String filename )
     {
         return getResourceUrl( filename, context.getProject().getGroupId(), context.getProject().getArtifactId(),
-                context.getInputInfo().getChecksum() );
+                        context.getInputInfo().getChecksum() );
     }
 
     private String getResourceUrl( String filename, String groupId, String artifactId, String checksum )
     {
         return cacheConfig.getUrl() + "/" + MavenProjectInput.CACHE_IMPLEMENTATION_VERSION + "/" + groupId + "/"
-                + artifactId + "/" + checksum + "/" + filename;
+                        + artifactId + "/" + checksum + "/" + filename;
     }
 
     /**
@@ -234,7 +236,7 @@ public class HttpCacheRepositoryImpl implements RemoteCacheRepository
     public Optional<Build> findBaselineBuild( MavenProject project )
     {
         Optional<List<ProjectReport>> cachedProjectsHolder = findCacheInfo()
-                .map( CacheReport::getProjects );
+                        .map( CacheReport::getProjects );
 
         if ( !cachedProjectsHolder.isPresent() )
         {
@@ -243,9 +245,9 @@ public class HttpCacheRepositoryImpl implements RemoteCacheRepository
 
         final List<ProjectReport> projects = cachedProjectsHolder.get();
         final Optional<ProjectReport> projectReportHolder = projects.stream()
-                .filter( p -> project.getArtifactId().equals( p.getArtifactId() )
-                        && project.getGroupId().equals( p.getGroupId() ) )
-                .findFirst();
+                        .filter( p -> project.getArtifactId().equals( p.getArtifactId() )
+                                        && project.getGroupId().equals( p.getGroupId() ) )
+                        .findFirst();
 
         if ( !projectReportHolder.isPresent() )
         {
@@ -263,14 +265,14 @@ public class HttpCacheRepositoryImpl implements RemoteCacheRepository
         else
         {
             url = getResourceUrl( BUILDINFO_XML, project.getGroupId(),
-                    project.getArtifactId(), projectReport.getChecksum() );
+                            project.getArtifactId(), projectReport.getChecksum() );
             LOGGER.info( "Baseline project record doesn't have url, trying default location {}", url );
         }
 
         try
         {
             return getResourceContent( url )
-                    .map( content -> new Build( xmlService.loadBuild( content ), CacheSource.REMOTE ) );
+                            .map( content -> new Build( xmlService.loadBuild( content ), CacheSource.REMOTE ) );
         }
         catch ( Exception e )
         {
@@ -292,7 +294,7 @@ public class HttpCacheRepositoryImpl implements RemoteCacheRepository
             catch ( Exception e )
             {
                 LOGGER.error( "Error downloading baseline report from: {}, skipping diff.",
-                        cacheConfig.getBaselineCacheUrl(), e );
+                                cacheConfig.getBaselineCacheUrl(), e );
                 report = Optional.empty();
             }
             cacheReportSupplier.compareAndSet( null, report );

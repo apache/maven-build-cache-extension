@@ -65,18 +65,22 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy
     private static final Logger LOGGER = LoggerFactory.getLogger( BuildCacheMojosExecutionStrategy.class );
 
     private final CacheController cacheController;
+
     private final CacheConfig cacheConfig;
+
     private final MojoParametersListener mojoListener;
+
     private final LifecyclePhasesHelper lifecyclePhasesHelper;
+
     private final MavenPluginManager mavenPluginManager;
 
     @Inject
     public BuildCacheMojosExecutionStrategy(
-            CacheController cacheController,
-            CacheConfig cacheConfig,
-            MojoParametersListener mojoListener,
-            LifecyclePhasesHelper lifecyclePhasesHelper,
-            MavenPluginManager mavenPluginManager )
+                    CacheController cacheController,
+                    CacheConfig cacheConfig,
+                    MojoParametersListener mojoListener,
+                    LifecyclePhasesHelper lifecyclePhasesHelper,
+                    MavenPluginManager mavenPluginManager )
     {
         this.cacheController = cacheController;
         this.cacheConfig = cacheConfig;
@@ -86,9 +90,9 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy
     }
 
     public void execute( List<MojoExecution> mojoExecutions,
-            MavenSession session,
-            MojoExecutionRunner mojoExecutionRunner )
-            throws LifecycleExecutionException
+                    MavenSession session,
+                    MojoExecutionRunner mojoExecutionRunner )
+                    throws LifecycleExecutionException
     {
         final MavenProject project = session.getCurrentProject();
         final Source source = getSource( mojoExecutions );
@@ -121,8 +125,8 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy
             for ( MojoExecution mojoExecution : mojoExecutions )
             {
                 if ( source == Source.CLI
-                        || mojoExecution.getLifecyclePhase() == null
-                        || lifecyclePhasesHelper.isLaterPhaseThanClean( mojoExecution.getLifecyclePhase() ) )
+                                || mojoExecution.getLifecyclePhase() == null
+                                || lifecyclePhasesHelper.isLaterPhaseThanClean( mojoExecution.getLifecyclePhase() ) )
                 {
                     mojoExecutionRunner.run( mojoExecution );
                 }
@@ -138,8 +142,9 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy
         if ( cacheConfig.isFailFast() && !result.isSuccess() )
         {
             throw new LifecycleExecutionException(
-                    "Failed to restore project[" + getVersionlessProjectKey( project ) + "] from cache, failing build.",
-                    project );
+                            "Failed to restore project[" + getVersionlessProjectKey( project )
+                                            + "] from cache, failing build.",
+                            project );
         }
     }
 
@@ -160,9 +165,9 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy
     }
 
     private boolean restoreProject( CacheResult cacheResult,
-            List<MojoExecution> mojoExecutions,
-            MojoExecutionRunner mojoExecutionRunner,
-            CacheConfig cacheConfig ) throws LifecycleExecutionException
+                    List<MojoExecution> mojoExecutions,
+                    MojoExecutionRunner mojoExecutionRunner,
+                    CacheConfig cacheConfig ) throws LifecycleExecutionException
     {
         final Build build = cacheResult.getBuildInfo();
         final MavenProject project = cacheResult.getContext().getProject();
@@ -181,13 +186,13 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy
             if ( cacheController.isForcedExecution( project, cacheCandidate ) )
             {
                 LOGGER.info( "Mojo execution is forced by project property: {}",
-                        cacheCandidate.getMojoDescriptor().getFullGoalName() );
+                                cacheCandidate.getMojoDescriptor().getFullGoalName() );
                 mojoExecutionRunner.run( cacheCandidate );
             }
             else
             {
                 restored = verifyCacheConsistency( cacheCandidate, build, project, session,
-                        mojoExecutionRunner, cacheConfig );
+                                mojoExecutionRunner, cacheConfig );
                 if ( !restored )
                 {
                     break;
@@ -216,11 +221,11 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy
     }
 
     private boolean verifyCacheConsistency( MojoExecution cacheCandidate,
-            Build cachedBuild,
-            MavenProject project,
-            MavenSession session,
-            MojoExecutionRunner mojoExecutionRunner,
-            CacheConfig cacheConfig ) throws LifecycleExecutionException
+                    Build cachedBuild,
+                    MavenProject project,
+                    MavenSession session,
+                    MojoExecutionRunner mojoExecutionRunner,
+                    CacheConfig cacheConfig ) throws LifecycleExecutionException
     {
         long createdTimestamp = System.currentTimeMillis();
         boolean consistent = true;
@@ -235,10 +240,10 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy
                 final String fullGoalName = cacheCandidate.getMojoDescriptor().getFullGoalName();
 
                 if ( completedExecution != null
-                        && !isParamsMatched( cacheCandidate, mojo, completedExecution ) )
+                                && !isParamsMatched( cacheCandidate, mojo, completedExecution ) )
                 {
                     LOGGER.info( "Mojo cached parameters mismatch with actual, forcing full project build. Mojo: {}",
-                            fullGoalName );
+                                    fullGoalName );
                     consistent = false;
                 }
 
@@ -251,7 +256,7 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy
                 if ( LOGGER.isDebugEnabled() )
                 {
                     LOGGER.debug( "Checked {}, resolved mojo: {}, cached params: {}",
-                            fullGoalName, mojo, completedExecution );
+                                    fullGoalName, mojo, completedExecution );
                 }
             }
             catch ( PluginContainerException | PluginConfigurationException e )
@@ -269,15 +274,15 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy
         else
         {
             LOGGER.info( "Skipping plugin execution (cached): {}",
-                    cacheCandidate.getMojoDescriptor().getFullGoalName() );
+                            cacheCandidate.getMojoDescriptor().getFullGoalName() );
         }
 
         return consistent;
     }
 
     private boolean isParamsMatched( MojoExecution mojoExecution,
-            Mojo mojo,
-            CompletedExecution completedExecution )
+                    Mojo mojo,
+                    CompletedExecution completedExecution )
     {
         List<TrackedProperty> tracked = cacheConfig.getTrackedProperties( mojoExecution );
 
@@ -307,14 +312,14 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy
                 if ( !StringUtils.equals( currentValue, trackedProperty.getSkipValue() ) )
                 {
                     LOGGER.info( "Plugin parameter mismatch found. Parameter: {}, expected: {}, actual: {}",
-                            propertyName, expectedValue, currentValue );
+                                    propertyName, expectedValue, currentValue );
                     return false;
                 }
                 else
                 {
                     LOGGER.warn( "Cache contains plugin execution with skip flag and might be incomplete. "
-                            + "Property: {}, execution {}",
-                            propertyName, mojoExecutionKey( mojoExecution ) );
+                                    + "Property: {}, execution {}",
+                                    propertyName, mojoExecutionKey( mojoExecution ) );
                 }
             }
         }

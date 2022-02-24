@@ -40,7 +40,7 @@ public class RemoteCacheRepositoryProvider implements Provider<RemoteCacheReposi
 
     @Inject
     public RemoteCacheRepositoryProvider( CacheConfig config, PlexusContainer container )
-            throws ComponentLookupException
+                    throws ComponentLookupException
     {
         config.initialize();
         String hint = config.getTransport();

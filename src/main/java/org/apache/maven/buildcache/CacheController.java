@@ -32,14 +32,14 @@ public interface CacheController
 {
 
     CacheResult findCachedBuild( MavenSession session,
-            MavenProject project,
-            List<MojoExecution> mojoExecutions );
+                    MavenProject project,
+                    List<MojoExecution> mojoExecutions );
 
     boolean restoreProjectArtifacts( CacheResult cacheResult );
 
     void save( CacheResult cacheResult,
-            List<MojoExecution> mojoExecutions,
-            Map<String, MojoExecutionEvent> executionEvents );
+                    List<MojoExecution> mojoExecutions,
+                    Map<String, MojoExecutionEvent> executionEvents );
 
     boolean isForcedExecution( MavenProject project, MojoExecution execution );
 

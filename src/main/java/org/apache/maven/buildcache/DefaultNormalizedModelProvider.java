@@ -44,7 +44,9 @@ public class DefaultNormalizedModelProvider implements NormalizedModelProvider
     private static final String NORMALIZED_VERSION = "cache-extension-version";
 
     private final CacheConfig cacheConfig;
+
     private final MultiModuleSupport multiModuleSupport;
+
     private final ConcurrentMap<String, Model> modelCache = new ConcurrentHashMap<>();
 
     @Inject
@@ -59,26 +61,26 @@ public class DefaultNormalizedModelProvider implements NormalizedModelProvider
     {
         MavenProject validatedProject = Objects.requireNonNull( project, "project" );
         return modelCache.computeIfAbsent( BuilderCommon.getKey( validatedProject ),
-                k -> normalizedModelInner( validatedProject ) );
+                        k -> normalizedModelInner( validatedProject ) );
     }
 
     private Model normalizedModelInner( MavenProject project )
     {
-        //prefer project from multimodule than reactor because effective pom of reactor project
-        //could be built with maven local/remote dependencies but not with artifacts from cache
+        // prefer project from multimodule than reactor because effective pom of reactor project
+        // could be built with maven local/remote dependencies but not with artifacts from cache
         MavenProject projectToNormalize = multiModuleSupport.tryToResolveProject(
-                project.getGroupId(),
-                project.getArtifactId(),
-                project.getVersion() )
-                .orElse( project );
+                        project.getGroupId(),
+                        project.getArtifactId(),
+                        project.getVersion() )
+                        .orElse( project );
         Model prototype = projectToNormalize.getModel();
 
-        //TODO validate status of the model - it should be in resolved state
+        // TODO validate status of the model - it should be in resolved state
         Model resultModel = new Model();
 
         resultModel.setGroupId( prototype.getGroupId() );
         resultModel.setArtifactId( prototype.getArtifactId() );
-        //does not make sense to add project version to calculate hash
+        // does not make sense to add project version to calculate hash
         resultModel.setVersion( NORMALIZED_VERSION );
         resultModel.setModules( prototype.getModules() );
 
@@ -119,31 +121,29 @@ public class DefaultNormalizedModelProvider implements NormalizedModelProvider
         }
 
         return plugins.stream().map(
-                plugin ->
-                {
-                    Plugin copy = plugin.clone();
-                    List<String> excludeProperties = cacheConfig.getEffectivePomExcludeProperties( copy );
-                    removeBlacklistedAttributes( copy.getConfiguration(), excludeProperties );
-                    for ( PluginExecution execution : copy.getExecutions() )
-                    {
-                        removeBlacklistedAttributes( execution.getConfiguration(), excludeProperties );
-                    }
+                        plugin ->
+                        {
+                            Plugin copy = plugin.clone();
+                            List<String> excludeProperties = cacheConfig.getEffectivePomExcludeProperties( copy );
+                            removeBlacklistedAttributes( copy.getConfiguration(), excludeProperties );
+                            for ( PluginExecution execution : copy.getExecutions() )
+                            {
+                                removeBlacklistedAttributes( execution.getConfiguration(), excludeProperties );
+                            }
 
-                    copy.setDependencies(
-                            normalizeDependencies(
-                                    copy.getDependencies()
+                            copy.setDependencies( normalizeDependencies( copy.getDependencies()
                                             .stream()
                                             .sorted( DefaultNormalizedModelProvider::compareDependencies )
                                             .collect( Collectors.toList() ) ) );
-                    if ( multiModuleSupport.isPartOfMultiModule(
-                            copy.getGroupId(),
-                            copy.getArtifactId(),
-                            copy.getVersion() ) )
-                    {
-                        copy.setVersion( NORMALIZED_VERSION );
-                    }
-                    return copy;
-                } ).collect( Collectors.toList() );
+                            if ( multiModuleSupport.isPartOfMultiModule(
+                                            copy.getGroupId(),
+                                            copy.getArtifactId(),
+                                            copy.getVersion() ) )
+                            {
+                                copy.setVersion( NORMALIZED_VERSION );
+                            }
+                            return copy;
+                        } ).collect( Collectors.toList() );
     }
 
     private void removeBlacklistedAttributes( Object node, List<String> excludeProperties )

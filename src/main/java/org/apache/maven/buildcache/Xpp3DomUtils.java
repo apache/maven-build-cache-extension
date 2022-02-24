@@ -19,11 +19,10 @@
 package org.apache.maven.buildcache;
 
 /**
- * This utility class is used to work around the classloading problem described
- * in https://issues.apache.org/jira/browse/MNG-7160.
- * The simple workaround described in MNG-7160 is not possible because this
- * extension uses both the XPP3 classes and other utility classes. We thus rely on
- * reflection for all access to plugin configuration.
+ * This utility class is used to work around the classloading problem described in
+ * https://issues.apache.org/jira/browse/MNG-7160. The simple workaround described in MNG-7160 is not possible because
+ * this extension uses both the XPP3 classes and other utility classes. We thus rely on reflection for all access to
+ * plugin configuration.
  */
 public class Xpp3DomUtils
 {
@@ -32,7 +31,7 @@ public class Xpp3DomUtils
     {
         try
         {
-            return ( Object[] ) node.getClass().getMethod( "getChildren" ).invoke( node );
+            return (Object[]) node.getClass().getMethod( "getChildren" ).invoke( node );
         }
         catch ( Exception e )
         {
@@ -44,7 +43,7 @@ public class Xpp3DomUtils
     {
         try
         {
-            return ( String ) node.getClass().getMethod( "getName" ).invoke( node );
+            return (String) node.getClass().getMethod( "getName" ).invoke( node );
         }
         catch ( Exception e )
         {
@@ -56,7 +55,7 @@ public class Xpp3DomUtils
     {
         try
         {
-            return ( String ) node.getClass().getMethod( "getValue" ).invoke( node );
+            return (String) node.getClass().getMethod( "getValue" ).invoke( node );
         }
         catch ( Exception e )
         {
@@ -80,7 +79,7 @@ public class Xpp3DomUtils
     {
         try
         {
-            return ( String ) node.getClass().getMethod( "getAttribute", String.class ).invoke( node, attribute );
+            return (String) node.getClass().getMethod( "getAttribute", String.class ).invoke( node, attribute );
         }
         catch ( Exception e )
         {

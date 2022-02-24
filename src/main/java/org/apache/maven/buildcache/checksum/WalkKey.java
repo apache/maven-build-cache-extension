@@ -27,7 +27,9 @@ public class WalkKey
 {
 
     private final Path normalized;
+
     private final String glob;
+
     private final boolean recursive;
 
     public WalkKey( Path normalized, String glob, boolean recursive )
@@ -49,7 +51,7 @@ public class WalkKey
             return false;
         }
 
-        WalkKey key = ( WalkKey ) o;
+        WalkKey key = (WalkKey) o;
 
         if ( recursive != key.recursive )
         {
