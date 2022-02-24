@@ -43,24 +43,29 @@ public class DefaultProjectInputCalculator implements ProjectInputCalculator
     private static final Logger LOGGER = LoggerFactory.getLogger( DefaultProjectInputCalculator.class );
 
     private final MavenSession mavenSession;
+
     private final RemoteCacheRepository remoteCache;
+
     private final CacheConfig cacheConfig;
+
     private final RepositorySystem repoSystem;
+
     private final NormalizedModelProvider normalizedModelProvider;
+
     private final MultiModuleSupport multiModuleSupport;
 
     private final ConcurrentMap<String, ProjectsInputInfo> checkSumMap = new ConcurrentHashMap<>();
 
     private static final ThreadLocal<Set<String>> CURRENTLY_CALCULATING = ThreadLocal.withInitial(
-            LinkedHashSet::new );
+                    LinkedHashSet::new );
 
     @Inject
     public DefaultProjectInputCalculator( MavenSession mavenSession,
-            RemoteCacheRepository remoteCache,
-            CacheConfig cacheConfig,
-            RepositorySystem repoSystem,
-            NormalizedModelProvider rawModelProvider,
-            MultiModuleSupport multiModuleSupport )
+                    RemoteCacheRepository remoteCache,
+                    CacheConfig cacheConfig,
+                    RepositorySystem repoSystem,
+                    NormalizedModelProvider rawModelProvider,
+                    MultiModuleSupport multiModuleSupport )
     {
         this.mavenSession = mavenSession;
         this.remoteCache = remoteCache;
@@ -74,12 +79,12 @@ public class DefaultProjectInputCalculator implements ProjectInputCalculator
     public ProjectsInputInfo calculateInput( MavenProject project )
     {
         LOGGER.info( "Going to calculate checksum for project [groupId=" + project.getGroupId()
-                + ", artifactId=" + project.getArtifactId() + "]" );
+                        + ", artifactId=" + project.getArtifactId() + "]" );
 
         String key = BuilderCommon.getKey( project );
-        //NOTE: Do not use ConcurrentHashMap.computeIfAbsent() here because of recursive calls
-        //this could lead to runtime exception - IllegalStateException("Recursive update")
-        //in jdk 8 the result of attempt to modify items with the same hash code could lead to infinite loop
+        // NOTE: Do not use ConcurrentHashMap.computeIfAbsent() here because of recursive calls
+        // this could lead to runtime exception - IllegalStateException("Recursive update")
+        // in jdk 8 the result of attempt to modify items with the same hash code could lead to infinite loop
         ProjectsInputInfo projectsInputInfo = checkSumMap.get( key );
         if ( projectsInputInfo != null )
         {
@@ -92,27 +97,27 @@ public class DefaultProjectInputCalculator implements ProjectInputCalculator
     }
 
     private ProjectsInputInfo calculateInputInternal( String key,
-            MavenProject project )
+                    MavenProject project )
     {
         Set<String> projectsSet = CURRENTLY_CALCULATING.get();
 
         if ( !projectsSet.add( key ) )
         {
             throw new IllegalStateException( "Checksum for project is already calculating. "
-                    + "Is there a cyclic dependencies? [project=" + key
-                    + ", setOfCalculatingProjects=" + projectsSet + "]" );
+                            + "Is there a cyclic dependencies? [project=" + key
+                            + ", setOfCalculatingProjects=" + projectsSet + "]" );
         }
         try
         {
             final MavenProjectInput input = new MavenProjectInput(
-                    project,
-                    normalizedModelProvider,
-                    multiModuleSupport,
-                    this,
-                    mavenSession,
-                    cacheConfig,
-                    repoSystem,
-                    remoteCache );
+                            project,
+                            normalizedModelProvider,
+                            multiModuleSupport,
+                            this,
+                            mavenSession,
+                            cacheConfig,
+                            repoSystem,
+                            remoteCache );
             return input.calculateChecksum();
         }
         catch ( Exception e )

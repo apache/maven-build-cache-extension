@@ -78,24 +78,32 @@ public class LocalCacheRepositoryImpl implements LocalCacheRepository
 {
 
     private static final String BUILDINFO_XML = "buildinfo.xml";
+
     private static final String LOOKUPINFO_XML = "lookupinfo.xml";
+
     private static final long ONE_HOUR_MILLIS = HOURS.toMillis( 1 );
+
     private static final long ONE_MINUTE_MILLIS = MINUTES.toMillis( 1 );
+
     private static final long ONE_DAY_MILLIS = DAYS.toMillis( 1 );
+
     private static final String EMPTY = "";
 
     private static final Logger LOGGER = LoggerFactory.getLogger( LocalCacheRepositoryImpl.class );
 
     private final RemoteCacheRepository remoteRepository;
+
     private final XmlService xmlService;
+
     private final CacheConfig cacheConfig;
+
     private final Map<Pair<MavenSession, Dependency>, Optional<Build>> bestBuildCache = new ConcurrentHashMap<>();
 
     @Inject
     public LocalCacheRepositoryImpl(
-            RemoteCacheRepository remoteRepository,
-            XmlService xmlService,
-            CacheConfig cacheConfig )
+                    RemoteCacheRepository remoteRepository,
+                    XmlService xmlService,
+                    CacheConfig cacheConfig )
     {
         this.remoteRepository = remoteRepository;
         this.xmlService = xmlService;
@@ -158,11 +166,11 @@ public class LocalCacheRepositoryImpl implements LocalCacheRepository
             if ( Files.exists( lookupInfoPath ) )
             {
                 final BasicFileAttributes fileAttributes = Files.readAttributes( lookupInfoPath,
-                        BasicFileAttributes.class );
+                                BasicFileAttributes.class );
                 final long lastModified = fileAttributes.lastModifiedTime().toMillis();
                 final long created = fileAttributes.creationTime().toMillis();
                 final long now = System.currentTimeMillis();
-                //  throttle remote cache calls, maven like
+                // throttle remote cache calls, maven like
                 if ( now < created + ONE_HOUR_MILLIS && now < lastModified + ONE_MINUTE_MILLIS )
                 { // fresh file, allow lookup every minute
                     LOGGER.info( "Skipping remote lookup, last unsuccessful lookup less than 1m ago." );
@@ -243,22 +251,23 @@ public class LocalCacheRepositoryImpl implements LocalCacheRepository
         {
             final String artifactId = context.getProject().getArtifactId();
             throw new RuntimeException(
-                    "Failed to cleanup local cache of " + artifactId + " on build failure, it might be inconsistent",
-                    e );
+                            "Failed to cleanup local cache of " + artifactId
+                                            + " on build failure, it might be inconsistent",
+                            e );
         }
     }
 
     @Nonnull
     @Override
     public Optional<Build> findBestMatchingBuild(
-            MavenSession session, Dependency dependency )
+                    MavenSession session, Dependency dependency )
     {
         return bestBuildCache.computeIfAbsent( Pair.of( session, dependency ), this::findBestMatchingBuildImpl );
     }
 
     @Nonnull
     private Optional<Build> findBestMatchingBuildImpl(
-            Pair<MavenSession, Dependency> dependencySession )
+                    Pair<MavenSession, Dependency> dependencySession )
     {
         try
         {
@@ -266,7 +275,7 @@ public class LocalCacheRepositoryImpl implements LocalCacheRepository
             final Dependency dependency = dependencySession.getRight();
 
             final Path artifactCacheDir = artifactCacheDir( session, dependency.getGroupId(),
-                    dependency.getArtifactId() );
+                            dependency.getArtifactId() );
 
             final Map<Pair<String, String>, Collection<Pair<Build, Path>>> filesByVersion = new HashMap<>();
 
@@ -283,7 +292,7 @@ public class LocalCacheRepositoryImpl implements LocalCacheRepository
                         {
                             final org.apache.maven.buildcache.xml.build.Build dto = xmlService.loadBuild( file );
                             final Pair<Build, Path> buildInfoAndFile = Pair.of( new Build( dto, CacheSource.LOCAL ),
-                                    path );
+                                            path );
                             final String cachedVersion = dto.getArtifact().getVersion();
                             final String cachedBranch = getScmRef( dto.getScm() );
                             add( filesByVersion, Pair.of( cachedVersion, cachedBranch ), buildInfoAndFile );
@@ -300,7 +309,7 @@ public class LocalCacheRepositoryImpl implements LocalCacheRepository
                         {
                             // version is unusable nothing we can do here
                             LOGGER.info( "Build info is not compatible to current maven "
-                                    + "implementation: {}", file, e );
+                                            + "implementation: {}", file, e );
                         }
                     }
                     return FileVisitResult.CONTINUE;
@@ -333,12 +342,12 @@ public class LocalCacheRepositoryImpl implements LocalCacheRepository
             {
                 // ok lets take all
                 bestMatched = filesByVersion.values().stream()
-                        .flatMap( Collection::stream ).collect( Collectors.toList() );
+                                .flatMap( Collection::stream ).collect( Collectors.toList() );
             }
 
             return bestMatched.stream()
-                    .max( Comparator.comparing( p -> lastModifiedTime( p.getRight() ) ) )
-                    .map( Pair::getLeft );
+                            .max( Comparator.comparing( p -> lastModifiedTime( p.getRight() ) ) )
+                            .map( Pair::getLeft );
         }
         catch ( IOException e )
         {
@@ -388,7 +397,7 @@ public class LocalCacheRepositoryImpl implements LocalCacheRepository
 
     @Override
     public void saveBuildInfo( CacheResult cacheResult, Build build )
-            throws IOException
+                    throws IOException
     {
         final Path path = localBuildPath( cacheResult.getContext(), BUILDINFO_XML, true );
         Files.write( path, xmlService.toBytes( build.getDto() ), TRUNCATE_EXISTING, CREATE );
@@ -404,7 +413,7 @@ public class LocalCacheRepositoryImpl implements LocalCacheRepository
         Path path = getMultimoduleRoot( session ).resolve( "target" ).resolve( "maven-incremental" );
         Files.createDirectories( path );
         Files.write( path.resolve( "cache-report." + buildId + ".xml" ), xmlService.toBytes( cacheReport ),
-                TRUNCATE_EXISTING, CREATE );
+                        TRUNCATE_EXISTING, CREATE );
         if ( cacheConfig.isRemoteCacheEnabled() && cacheConfig.isSaveToRemote() )
         {
             LOGGER.info( "Saving cache report on build completion" );
@@ -414,7 +423,7 @@ public class LocalCacheRepositoryImpl implements LocalCacheRepository
 
     @Override
     public void saveArtifactFile( CacheResult cacheResult, org.apache.maven.artifact.Artifact artifact )
-            throws IOException
+                    throws IOException
     {
         // safe artifacts to cache
         File artifactFile = artifact.getFile();
@@ -430,7 +439,7 @@ public class LocalCacheRepositoryImpl implements LocalCacheRepository
     {
         final MavenProject project = context.getProject();
         final Path artifactCacheDir = artifactCacheDir( context.getSession(), project.getGroupId(),
-                project.getArtifactId() );
+                        project.getArtifactId() );
         return artifactCacheDir.resolve( context.getInputInfo().getChecksum() );
     }
 
@@ -438,7 +447,7 @@ public class LocalCacheRepositoryImpl implements LocalCacheRepository
     {
         final String localRepositoryRoot = session.getLocalRepository().getBasedir();
         final Path path = Paths.get( localRepositoryRoot, "..", "cache", CACHE_IMPLEMENTATION_VERSION, groupId,
-                artifactId ).normalize();
+                        artifactId ).normalize();
         if ( !Files.exists( path ) )
         {
             Files.createDirectories( path );

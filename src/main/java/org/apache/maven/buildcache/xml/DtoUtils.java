@@ -113,10 +113,10 @@ public class DtoUtils
     }
 
     public static void addProperty( CompletedExecution execution,
-            String propertyName,
-            Object value,
-            String baseDirPath,
-            boolean tracked )
+                    String propertyName,
+                    Object value,
+                    String baseDirPath,
+                    boolean tracked )
     {
         final PropertyValue valueType = new PropertyValue();
         valueType.setName( propertyName );
@@ -131,7 +131,8 @@ public class DtoUtils
     }
 
     public static boolean containsAllProperties(
-            @Nonnull CompletedExecution cachedExecution, List<TrackedProperty> trackedProperties )
+                    @Nonnull
+                    CompletedExecution cachedExecution, List<TrackedProperty> trackedProperties )
     {
         if ( trackedProperties == null || trackedProperties.isEmpty() )
         {

@@ -26,7 +26,9 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Stream;
+import org.apache.maven.buildcache.CacheUtils;
 import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
@@ -46,7 +48,9 @@ public class IntegrationTestExtension implements BeforeAllCallback, TestTemplate
 {
 
     private static boolean initialized;
+
     private static Path maven3;
+
     private static Path maven4;
 
     @Override
@@ -59,18 +63,16 @@ public class IntegrationTestExtension implements BeforeAllCallback, TestTemplate
     public boolean supportsTestTemplate( ExtensionContext context )
     {
         return context.getTestMethod()
-                .filter( m -> m.isAnnotationPresent( Test.class ) )
-                .isPresent();
+                        .filter( m -> m.isAnnotationPresent( Test.class ) )
+                        .isPresent();
     }
 
     @Override
     public Stream<TestTemplateInvocationContext> provideTestTemplateInvocationContexts(
-            ExtensionContext extensionContext )
+                    ExtensionContext extensionContext )
     {
         Method m = extensionContext.getRequiredTestMethod();
-        return Stream.concat( maven3 != null ? Stream.of( maven3 ) : Stream.empty(),
-                maven4 != null ? Stream.of( maven4 ) : Stream.empty() )
-                .map( p -> new MavenTemplate( m, p ) );
+        return Stream.of( maven3, maven4 ).map( p -> new MavenTemplate( m, p ) );
     }
 
     private static void buildMaven() throws Exception
@@ -79,30 +81,36 @@ public class IntegrationTestExtension implements BeforeAllCallback, TestTemplate
         {
             return;
         }
-        //        String root = Objects.requireNonNull( System.getProperty( "maven.multiModuleProjectDirectory" ),
-        //                "The 'maven.multiModuleProjectDirectory' system property need to be set" );
+        String root = Objects.requireNonNull( System.getProperty( "maven.multiModuleProjectDirectory" ),
+                        "The 'maven.multiModuleProjectDirectory' system property need to be set" );
 
         // maven3
-        if ( Boolean.getBoolean( "with-maven3" ) )
+        Path maven3Zip = Paths.get( root, "maven/maven3/apache-maven/target/apache-maven-bin.zip" );
+        if ( !Files.exists( maven3Zip ) )
         {
-            maven3 = Files.list( Paths.get( "target/maven3" ) )
-                    .filter( f -> f.getFileName().toString().startsWith( "apache-maven" ) && Files.isDirectory( f ) )
-                    .findFirst()
-                    .map( Path::toAbsolutePath )
-                    .orElseThrow( () -> new IllegalStateException( "Unable to find maven3 directory" ) );
-            maven3.resolve( "bin/mvn" ).toFile().setExecutable( true );
+            throw new IllegalStateException( "Unable to find " + maven3Zip + "\n"
+                            + "Please build the maven3 and maven4 distributions using the build-maven.sh script" );
         }
+        Path outMaven3 = Paths.get( "target/maven3" );
+        deleteDir( outMaven3 );
+        Files.createDirectories( outMaven3 );
+        CacheUtils.unzip( maven3Zip, outMaven3 );
+        maven3 = outMaven3.resolve( "apache-maven" ).toAbsolutePath();
+        maven3.resolve( "bin/mvn" ).toFile().setExecutable( true );
 
         // maven4
-        if ( Boolean.getBoolean( "with-maven4" ) )
+        Path maven4Zip = Paths.get( root, "maven/maven4/apache-maven/target/apache-maven-bin.zip" );
+        if ( !Files.exists( maven4Zip ) )
         {
-            maven4 = Files.list( Paths.get( "target/maven4" ) )
-                    .filter( f -> f.getFileName().toString().startsWith( "apache-maven" ) && Files.isDirectory( f ) )
-                    .findFirst()
-                    .map( Path::toAbsolutePath )
-                    .orElse( null );
-            maven4.resolve( "bin/mvn" ).toFile().setExecutable( true );
+            throw new IllegalStateException( "Unable to find " + maven4Zip + "\n"
+                            + "Please build the maven3 and maven4 distributions using the build-maven.sh script" );
         }
+        Path outMaven4 = Paths.get( "target/maven4" );
+        deleteDir( outMaven4 );
+        Files.createDirectories( outMaven4 );
+        CacheUtils.unzip( maven4Zip, outMaven4 );
+        maven4 = outMaven4.resolve( "apache-maven" ).toAbsolutePath();
+        maven4.resolve( "bin/mvn" ).toFile().setExecutable( true );
 
         initialized = true;
     }
@@ -151,6 +159,7 @@ public class IntegrationTestExtension implements BeforeAllCallback, TestTemplate
     {
 
         private final Method method;
+
         private final Path mavenPath;
 
         public MavenTemplate( Method method, Path mavenPath )
@@ -168,8 +177,8 @@ public class IntegrationTestExtension implements BeforeAllCallback, TestTemplate
         @Override
         public List<Extension> getAdditionalExtensions()
         {
-            return Arrays.asList( ( TestInstancePostProcessor ) this::postProcessTestInstance,
-                    new VerifierParameterResolver() );
+            return Arrays.asList( (TestInstancePostProcessor) this::postProcessTestInstance,
+                            new VerifierParameterResolver() );
         }
 
         protected void postProcessTestInstance( Object testInstance, ExtensionContext context ) throws Exception
@@ -188,7 +197,7 @@ public class IntegrationTestExtension implements BeforeAllCallback, TestTemplate
                 throw new IllegalStateException( "@IntegrationTest must be set" );
             }
             final Path testDir = Paths.get( "target/maven-tests/" + className + "/" + methodName + "/"
-                    + ( mavenPath == maven3 ? "maven3" : "maven4" ) ).toAbsolutePath();
+                            + ( mavenPath == maven3 ? "maven3" : "maven4" ) ).toAbsolutePath();
             deleteDir( testDir );
             Files.createDirectories( testDir );
             final Path testExecutionDir;
@@ -197,7 +206,7 @@ public class IntegrationTestExtension implements BeforeAllCallback, TestTemplate
             if ( !Files.exists( testSrcDir ) )
             {
                 throw new IllegalStateException( "@IntegrationTest(\"" + testSrcDir
-                        + "\") points at a path that does not exist: " + testSrcDir );
+                                + "\") points at a path that does not exist: " + testSrcDir );
             }
             testExecutionDir = testDir.resolve( "project" );
             try ( Stream<Path> files = Files.walk( testSrcDir ) )
@@ -230,16 +239,16 @@ public class IntegrationTestExtension implements BeforeAllCallback, TestTemplate
 
             @Override
             public boolean supportsParameter( ParameterContext parameterContext,
-                    ExtensionContext extensionContext )
-                    throws ParameterResolutionException
+                            ExtensionContext extensionContext )
+                            throws ParameterResolutionException
             {
                 return parameterContext.getParameter().getType() == Verifier.class;
             }
 
             @Override
             public Object resolveParameter( ParameterContext parameterContext,
-                    ExtensionContext context )
-                    throws ParameterResolutionException
+                            ExtensionContext context )
+                            throws ParameterResolutionException
             {
                 String prevMavenHome = System.getProperty( "maven.home" );
                 try
@@ -254,7 +263,7 @@ public class IntegrationTestExtension implements BeforeAllCallback, TestTemplate
                     final String className = context.getRequiredTestClass().getSimpleName();
                     String methodName = context.getRequiredTestMethod().getName();
                     final Path testDir = Paths.get( "target/mvnd-tests/" + className + "/" + methodName + "/"
-                            + ( mavenPath == maven3 ? "maven3" : "maven4" ) ).toAbsolutePath();
+                                    + ( mavenPath == maven3 ? "maven3" : "maven4" ) ).toAbsolutePath();
 
                     deleteDir( testDir );
                     Files.createDirectories( testDir );
@@ -263,7 +272,7 @@ public class IntegrationTestExtension implements BeforeAllCallback, TestTemplate
                     if ( !Files.exists( testSrcDir ) )
                     {
                         throw new IllegalStateException( "@IntegrationTest(\"" + testSrcDir
-                                + "\") points at a path that does not exist: " + testSrcDir );
+                                        + "\") points at a path that does not exist: " + testSrcDir );
                     }
 
                     final Path testExecutionDir = testDir.resolve( "project" );

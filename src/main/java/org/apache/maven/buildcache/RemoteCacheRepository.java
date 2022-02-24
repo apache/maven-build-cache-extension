@@ -36,9 +36,8 @@ public interface RemoteCacheRepository extends CacheRepository
     String CACHE_REPORT_XML = "build-cache-report.xml";
 
     /**
-     * Download an artifact to the given location.
-     * Returns <code>true</code> if success, <code>false</code> if the artifact does not exists
-     * and throws an <code>IOException</code> if a problem occurs.
+     * Download an artifact to the given location. Returns <code>true</code> if success, <code>false</code> if the
+     * artifact does not exists and throws an <code>IOException</code> if a problem occurs.
      */
     boolean getArtifactContent( CacheContext context, Artifact artifact, Path target ) throws IOException;
 

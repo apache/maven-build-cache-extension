@@ -95,11 +95,11 @@ public class CacheUtils
     public static String mojoExecutionKey( MojoExecution mojo )
     {
         return StringUtils.join( Arrays.asList(
-                StringUtils.defaultIfEmpty( mojo.getExecutionId(), "emptyExecId" ),
-                StringUtils.defaultIfEmpty( mojo.getGoal(), "emptyGoal" ),
-                StringUtils.defaultIfEmpty( mojo.getLifecyclePhase(), "emptyLifecyclePhase" ),
-                StringUtils.defaultIfEmpty( mojo.getArtifactId(), "emptyArtifactId" ),
-                StringUtils.defaultIfEmpty( mojo.getGroupId(), "emptyGroupId" ) ), ":" );
+                        StringUtils.defaultIfEmpty( mojo.getExecutionId(), "emptyExecId" ),
+                        StringUtils.defaultIfEmpty( mojo.getGoal(), "emptyGoal" ),
+                        StringUtils.defaultIfEmpty( mojo.getLifecyclePhase(), "emptyLifecyclePhase" ),
+                        StringUtils.defaultIfEmpty( mojo.getArtifactId(), "emptyArtifactId" ),
+                        StringUtils.defaultIfEmpty( mojo.getGroupId(), "emptyGroupId" ) ), ":" );
     }
 
     public static Path getMultimoduleRoot( MavenSession session )
@@ -158,7 +158,7 @@ public class CacheUtils
         SessionData data = session.getRepositorySession().getData();
         while ( true )
         {
-            T t = ( T ) data.get( key );
+            T t = (T) data.get( key );
             if ( t == null )
             {
                 t = supplier.get();
@@ -190,7 +190,7 @@ public class CacheUtils
 
                 @Override
                 public FileVisitResult visitFile( Path path, BasicFileAttributes basicFileAttributes )
-                        throws IOException
+                                throws IOException
                 {
                     final ZipEntry zipEntry = new ZipEntry( dir.relativize( path ).toString() );
                     zipOutputStream.putNextEntry( zipEntry );

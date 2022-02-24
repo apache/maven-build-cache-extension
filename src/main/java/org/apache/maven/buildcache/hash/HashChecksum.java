@@ -28,6 +28,7 @@ public class HashChecksum
 {
 
     private final Hash.Algorithm algorithm;
+
     private final Hash.Checksum checksum;
 
     HashChecksum( Hash.Algorithm algorithm, Hash.Checksum checksum )

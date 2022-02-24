@@ -28,6 +28,7 @@ public class HexUtils
 {
 
     private static final byte[] ENC_ARRAY;
+
     private static final byte[] DEC_ARRAY;
 
     static
@@ -36,12 +37,12 @@ public class HexUtils
         DEC_ARRAY = new byte[256];
         for ( byte i = 0; i < 10; i++ )
         {
-            ENC_ARRAY[i] = ( byte ) ( '0' + i );
+            ENC_ARRAY[i] = (byte) ( '0' + i );
             DEC_ARRAY['0' + i] = i;
         }
         for ( byte i = 10; i < 16; i++ )
         {
-            ENC_ARRAY[i] = ( byte ) ( 'a' + i - 10 );
+            ENC_ARRAY[i] = (byte) ( 'a' + i - 10 );
             DEC_ARRAY['a' + i - 10] = i;
             DEC_ARRAY['A' + i - 10] = i;
         }
@@ -70,7 +71,7 @@ public class HexUtils
         int idx = 0;
         for ( int i = 0; i < size; i += 2 )
         {
-            bytes[idx++] = ( byte ) ( DEC_ARRAY[hex.charAt( i )] << 4 | DEC_ARRAY[hex.charAt( i + 1 )] );
+            bytes[idx++] = (byte) ( DEC_ARRAY[hex.charAt( i )] << 4 | DEC_ARRAY[hex.charAt( i + 1 )] );
         }
         return bytes;
     }
@@ -80,7 +81,7 @@ public class HexUtils
         byte[] result = new byte[8];
         for ( int i = 7; i >= 0; i-- )
         {
-            result[i] = ( byte ) ( value & 0xFF );
+            result[i] = (byte) ( value & 0xFF );
             value >>= 8;
         }
         return result;

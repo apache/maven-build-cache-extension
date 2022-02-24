@@ -47,6 +47,7 @@ public class DefaultRestoredArtifactHandler implements RestoredArtifactHandler
 {
 
     private static final Logger LOGGER = LoggerFactory.getLogger( DefaultRestoredArtifactHandler.class );
+
     private static final String DIR_NAME = "cache-build-tmp";
 
     private final boolean adjustMetaInfVersion;
@@ -59,35 +60,35 @@ public class DefaultRestoredArtifactHandler implements RestoredArtifactHandler
 
     @Override
     public Path adjustArchiveArtifactVersion( MavenProject project, String originalArtifactVersion, Path artifactFile )
-            throws IOException
+                    throws IOException
     {
         if ( !adjustMetaInfVersion )
         {
-            //option is disabled in cache configuration, return file as is
+            // option is disabled in cache configuration, return file as is
             return artifactFile;
         }
 
         File file = artifactFile.toFile();
         if ( project.getVersion().equals( originalArtifactVersion ) || !CacheUtils.isArchive( file ) )
         {
-            //versions of artifact and building project are the same or this is not an archive, return file as is
+            // versions of artifact and building project are the same or this is not an archive, return file as is
             return artifactFile;
         }
 
         File tempDirName = Paths.get( project.getBuild().getDirectory() )
-                .normalize()
-                .resolve( DIR_NAME )
-                .toFile();
+                        .normalize()
+                        .resolve( DIR_NAME )
+                        .toFile();
         if ( tempDirName.mkdirs() )
         {
             LOGGER.debug( "Temporary directory to restore artifact was created [artifactFile={}, "
-                    + "originalVersion={}, tempDir={}]",
-                    artifactFile, originalArtifactVersion, tempDirName );
+                            + "originalVersion={}, tempDir={}]",
+                            artifactFile, originalArtifactVersion, tempDirName );
         }
 
         String currentVersion = project.getVersion();
         File tmpJarFile = File.createTempFile( artifactFile.toFile().getName(),
-                '.' + FilenameUtils.getExtension( file.getName() ), tempDirName );
+                        '.' + FilenameUtils.getExtension( file.getName() ), tempDirName );
         tmpJarFile.deleteOnExit();
         String originalImplVersion = Attributes.Name.IMPLEMENTATION_VERSION + ": " + originalArtifactVersion;
         String implVersion = Attributes.Name.IMPLEMENTATION_VERSION + ": " + currentVersion;
@@ -98,9 +99,9 @@ public class DefaultRestoredArtifactHandler implements RestoredArtifactHandler
         try ( JarFile jarFile = new JarFile( artifactFile.toFile() ) )
         {
             try ( JarOutputStream jos = new JarOutputStream(
-                    new BufferedOutputStream( new FileOutputStream( tmpJarFile ) ) ) )
+                            new BufferedOutputStream( new FileOutputStream( tmpJarFile ) ) ) )
             {
-                //Copy original jar file to the temporary one.
+                // Copy original jar file to the temporary one.
                 Enumeration<JarEntry> jarEntries = jarFile.entries();
                 byte[] buffer = new byte[1024];
                 while ( jarEntries.hasMoreElements() )
@@ -109,7 +110,8 @@ public class DefaultRestoredArtifactHandler implements RestoredArtifactHandler
                     String entryName = entry.getName();
 
                     if ( entryName.startsWith( "META-INF/maven" )
-                            && ( entryName.endsWith( "plugin.xml" ) || entryName.endsWith( "plugin-help.xml" ) ) )
+                                    && ( entryName.endsWith( "plugin.xml" )
+                                                    || entryName.endsWith( "plugin-help.xml" ) ) )
                     {
                         replaceEntry( jarFile, entry, commonXmlOriginalVersion, commonXmlVersion, jos );
                         continue;
@@ -148,7 +150,7 @@ public class DefaultRestoredArtifactHandler implements RestoredArtifactHandler
     }
 
     private static void replaceEntry( JarFile jarFile, JarEntry entry,
-            String toReplace, String replacement, JarOutputStream jos ) throws IOException
+                    String toReplace, String replacement, JarOutputStream jos ) throws IOException
     {
         String fullManifest = IOUtils.toString( jarFile.getInputStream( entry ), StandardCharsets.UTF_8.name() );
         String modified = fullManifest.replaceAll( toReplace, replacement );

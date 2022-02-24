@@ -30,15 +30,23 @@ public class SHAHashTest
 {
 
     private static final byte[] HELLO_ARRAY = "hello".getBytes( StandardCharsets.UTF_8 );
+
     private static final byte[] WORLD_ARRAY = "world".getBytes( StandardCharsets.UTF_8 );
+
     private static final String EMPTY_HASH = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+
     private static final String HELLO_HASH = "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824";
+
     private static final String WORLD_HASH = "486ea46224d1bb4fb680f34f7c9ad96a8f24ec88be73ea8e5a6c65260e9cb8a7";
+
     private static final String HELLO_CHECKSUM = "9595c9df90075148eb06860365df33584b75bff782a510c6cd4883a419833d50";
+
     private static final String WORLD_CHECKSUM = "63e5c163c81ee9a3ed99d365ff963ecea340cc455deeac7c4b63ac75b9cf4706";
+
     private static final String FULL_CHECKSUM = "7305db9b2abccd706c256db3d97e5ff48d677cfe4d3a5904afb7da0e3950e1e2";
 
     private static final HashAlgorithm ALGORITHM = SHA256.createAlgorithm();
+
     private static final HashChecksum CHECKSUM = SHA256.createChecksum( 0 );
 
     @Test

@@ -32,14 +32,23 @@ public class XXHashTest
 {
 
     private static final byte[] HELLO_ARRAY = "hello".getBytes( StandardCharsets.UTF_8 );
+
     private static final byte[] WORLD_ARRAY = "world".getBytes( StandardCharsets.UTF_8 );
+
     private static final long HELLO_LONG = 2794345569481354659L;
+
     private static final long WORLD_LONG = -1767385783675760145L;
+
     private static final String EMPTY_HASH = "ef46db3751d8e999";
+
     private static final String HELLO_HASH = "26c7827d889f6da3";
+
     private static final String WORLD_HASH = "e778fbfe66ee51ef";
+
     private static final String HELLO_CHECKSUM = "c07c10338a825a5d";
+
     private static final String WORLD_CHECKSUM = "cb21505d7a714523";
+
     private static final String FULL_CHECKSUM = "b8ca8fa824d335e9";
 
     private static final HashAlgorithm ALGORITHM = XX.createAlgorithm();

@@ -33,6 +33,7 @@ public class CacheLifecycleParticipant extends AbstractMavenLifecycleParticipant
 {
 
     private final CacheConfig cacheConfig;
+
     private final CacheController cacheController;
 
     @Inject

@@ -58,7 +58,7 @@ public class XXMM implements Hash.Factory
         public byte[] hash( Path path ) throws IOException
         {
             try ( FileChannel channel = FileChannel.open( path, READ );
-                    CloseableBuffer buffer = CloseableBuffer.mappedBuffer( channel, READ_ONLY ) )
+                            CloseableBuffer buffer = CloseableBuffer.mappedBuffer( channel, READ_ONLY ) )
             {
                 return HexUtils.toByteArray( XX.INSTANCE.hashBytes( buffer.getBuffer() ) );
             }

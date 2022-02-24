@@ -31,7 +31,9 @@ public class CacheContext
 {
 
     private final MavenProject project;
+
     private final ProjectsInputInfo inputInfo;
+
     private final MavenSession session;
 
     public CacheContext( MavenProject project, ProjectsInputInfo inputInfo, MavenSession session )

@@ -49,7 +49,7 @@ public class PluginScanConfigImpl implements PluginScanConfig
     {
         // include or exclude is a choice element, could be only obe property set
 
-        //noinspection ConstantConditions
+        // noinspection ConstantConditions
         final List<TagScanConfig> includes = dto.getIncludes();
         if ( !includes.isEmpty() )
         {

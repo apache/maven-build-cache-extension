@@ -48,13 +48,13 @@ public class KeyUtils
     public static String getArtifactKey( Artifact artifact )
     {
         return getArtifactKey( artifact.getGroupId(), artifact.getArtifactId(), artifact.getType(),
-                artifact.getClassifier(), artifact.getVersion() );
+                        artifact.getClassifier(), artifact.getVersion() );
     }
 
     public static String getVersionlessArtifactKey( org.apache.maven.artifact.Artifact artifact )
     {
         return getVersionlessArtifactKey( artifact.getGroupId(), artifact.getArtifactId(), artifact.getType(),
-                artifact.getClassifier() );
+                        artifact.getClassifier() );
     }
 
     /**
@@ -63,17 +63,17 @@ public class KeyUtils
     public static String getArtifactKey( Artifact artifact, String type )
     {
         return getArtifactKey( artifact.getGroupId(), artifact.getArtifactId(), type,
-                artifact.getClassifier(), artifact.getVersion() );
+                        artifact.getClassifier(), artifact.getVersion() );
     }
 
     public static String getArtifactKey( org.apache.maven.artifact.Artifact artifact )
     {
         return getArtifactKey( artifact.getGroupId(), artifact.getArtifactId(), artifact.getType(),
-                artifact.getClassifier(), artifact.getVersion() );
+                        artifact.getClassifier(), artifact.getVersion() );
     }
 
     public static String getArtifactKey( String groupId, String artifactId, String type,
-            String classifier, String version )
+                    String classifier, String version )
     {
         if ( classifier != null )
         {
@@ -86,7 +86,7 @@ public class KeyUtils
     }
 
     public static String getVersionlessArtifactKey( String groupId, String artifactId, String type,
-            String classifier )
+                    String classifier )
     {
         if ( classifier != null )
         {

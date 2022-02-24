@@ -47,15 +47,17 @@ public class Build
 {
 
     final org.apache.maven.buildcache.xml.build.Build dto;
+
     CacheSource source;
+
     volatile Map<String, CompletedExecution> execMap;
 
     public Build( List<String> goals,
-            Artifact artifact,
-            List<Artifact> attachedArtifacts,
-            ProjectsInputInfo projectsInputInfo,
-            List<CompletedExecution> completedExecutions,
-            String hashAlgorithm )
+                    Artifact artifact,
+                    List<Artifact> attachedArtifacts,
+                    ProjectsInputInfo projectsInputInfo,
+                    List<CompletedExecution> completedExecutions,
+                    String hashAlgorithm )
     {
         this.dto = new org.apache.maven.buildcache.xml.build.Build();
         this.dto.setCacheImplementationVersion( MavenProjectInput.CACHE_IMPLEMENTATION_VERSION );
@@ -89,7 +91,7 @@ public class Build
     }
 
     public static List<Artifact> createAttachedArtifacts( List<org.apache.maven.artifact.Artifact> artifacts,
-            HashAlgorithm algorithm ) throws IOException
+                    HashAlgorithm algorithm ) throws IOException
     {
         List<Artifact> attachedArtifacts = new ArrayList<>();
         for ( org.apache.maven.artifact.Artifact artifact : artifacts )
@@ -107,8 +109,8 @@ public class Build
     public List<MojoExecution> getMissingExecutions( List<MojoExecution> mojos )
     {
         return mojos.stream()
-                .filter( mojo -> !hasCompletedExecution( mojoExecutionKey( mojo ) ) )
-                .collect( Collectors.toList() );
+                        .filter( mojo -> !hasCompletedExecution( mojoExecutionKey( mojo ) ) )
+                        .collect( Collectors.toList() );
     }
 
     private boolean hasCompletedExecution( String mojoExecutionKey )
@@ -177,9 +179,9 @@ public class Build
     private boolean isEquals( Dependency dependency, Artifact artifact )
     {
         return Objects.equals( dependency.getGroupId(), artifact.getGroupId() )
-                && Objects.equals( dependency.getArtifactId(), artifact.getArtifactId() )
-                && Objects.equals( dependency.getType(), artifact.getType() )
-                && Objects.equals( dependency.getClassifier(), artifact.getClassifier() );
+                        && Objects.equals( dependency.getArtifactId(), artifact.getArtifactId() )
+                        && Objects.equals( dependency.getType(), artifact.getType() )
+                        && Objects.equals( dependency.getClassifier(), artifact.getClassifier() );
     }
 
     private Map<String, CompletedExecution> getExecutionMap()
@@ -195,7 +197,7 @@ public class Build
             return execMap;
         }
         execMap = executionsList.stream()
-                .collect( Collectors.toMap( CompletedExecution::getExecutionKey, v -> v ) );
+                        .collect( Collectors.toMap( CompletedExecution::getExecutionKey, v -> v ) );
         return execMap;
     }
 }

@@ -41,7 +41,8 @@ public class MojoParametersListener implements MojoExecutionListener
     private static final Logger LOGGER = LoggerFactory.getLogger( MojoParametersListener.class );
 
     @SuppressWarnings( "checkstyle:LineLength" )
-    private final ConcurrentMap<MavenProject, Map<String, MojoExecutionEvent>> projectExecutions = new ConcurrentHashMap<>();
+    private final ConcurrentMap<MavenProject, Map<String, MojoExecutionEvent>> projectExecutions =
+                    new ConcurrentHashMap<>();
 
     @Override
     public void beforeMojoExecution( MojoExecutionEvent event )
@@ -71,7 +72,7 @@ public class MojoParametersListener implements MojoExecutionListener
     @Override
     public void afterExecutionFailure( MojoExecutionEvent event )
     {
-        //do nothing
+        // do nothing
     }
 
     public Map<String, MojoExecutionEvent> getProjectExecutions( MavenProject project )

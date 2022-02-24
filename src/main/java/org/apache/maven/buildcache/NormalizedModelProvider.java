@@ -31,8 +31,8 @@ public interface NormalizedModelProvider
 {
 
     /**
-     * @param  project - the project which model will be calculated for
-     * @return         normalized model for project
+     * @param project - the project which model will be calculated for
+     * @return normalized model for project
      */
     Model normalizedModel( MavenProject project );
 

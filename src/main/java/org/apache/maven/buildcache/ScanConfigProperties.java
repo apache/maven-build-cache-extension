@@ -25,6 +25,7 @@ public class ScanConfigProperties
 {
 
     private final boolean recursive;
+
     private final String glob;
 
     public ScanConfigProperties( boolean recursive, String glob )
