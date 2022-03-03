@@ -17,8 +17,9 @@
 
 ## Overview
 
-Build cache is an extension targeted to simplify and make more efficient work with large repositories in Maven. That is
-achieved by a combination of features:
+Build cache is an extension targeted to simplify and make more efficient work with large builds in Maven.
+
+That is achieved by a combination of features:
 
 * Incremental builds over the changed project graph part only
 * Subtree support in multimodule projects (caches discovered from the larger project)
