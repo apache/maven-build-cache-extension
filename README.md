@@ -28,13 +28,15 @@ Read [cache guide](https://maven.apache.org/extensions/maven-build-cache-extensi
 
 Building
 --------
-The code currently relies on un-released modifications in the core Maven project.  Two [gitmodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules) are included in this git repository to allow building the needed Maven distributions and perform integration tests using those: run `git submodule init && git submodule update` to prepare content.
+The code currently relies on un-released modifications in the core Maven project, available both for latest 3.x and for 4.0-alpha-x SNAPSHOTS: see [MNG-7391](https://issues.apache.org/jira/browse/MNG-7391).
 
-In order to build those Maven distributions, you first need to launch once the `build-maven.sh` script or the following command in the `maven/maven3` and `maven/maven4` directories:
+Two [gitmodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules) are included in [`maven`](./maven/) directory of this Git repository to allow building the needed Maven distributions and perform integration tests using those: run `git submodule init && git submodule update` to prepare content.
+
+In order to build those Maven distributions, you first need to launch once the `build-maven.sh` script or the following command in the `maven/maven3` and `maven/maven4` (alpha) directories:
 ```
 mvn install -DskipTests -P versionlessMavenDist
 ```
-This will build the custom distributions of Maven.
+This will build the custom SNAPSHOT distributions of Maven 3 and 4-alpha.
 
 Then you can build the extension like a normal Maven project.
 
