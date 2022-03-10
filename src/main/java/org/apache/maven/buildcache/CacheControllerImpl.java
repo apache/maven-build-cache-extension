@@ -72,7 +72,6 @@ import org.apache.maven.buildcache.xml.report.CacheReport;
 import org.apache.maven.buildcache.xml.report.ProjectReport;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.execution.MojoExecutionEvent;
-import org.apache.maven.plugin.Mojo;
 import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.descriptor.Parameter;
 import org.apache.maven.project.MavenProject;
@@ -624,7 +623,7 @@ public class CacheControllerImpl implements CacheController
         List<TrackedProperty> trackedProperties = cacheConfig.getTrackedProperties( mojoExecution );
         List<PropertyName> noLogProperties = cacheConfig.getNologProperties( mojoExecution );
         List<PropertyName> forceLogProperties = cacheConfig.getLoggedProperties( mojoExecution );
-        final Mojo mojo = executionEvent.getMojo();
+        final Object mojo = executionEvent.getMojo();
 
         final File baseDir = executionEvent.getProject().getBasedir();
         final String baseDirPath = FilenameUtils.normalizeNoEndSeparator( baseDir.getAbsolutePath() ) + File.separator;
