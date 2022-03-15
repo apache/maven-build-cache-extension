@@ -26,9 +26,7 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Stream;
-import org.apache.maven.buildcache.CacheUtils;
 import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
@@ -79,35 +77,23 @@ public class IntegrationTestExtension implements BeforeAllCallback, TestTemplate
         {
             return;
         }
-        String root = Objects.requireNonNull( System.getProperty( "maven.multiModuleProjectDirectory" ),
-                "The 'maven.multiModuleProjectDirectory' system property need to be set" );
+        //        String root = Objects.requireNonNull( System.getProperty( "maven.multiModuleProjectDirectory" ),
+        //                "The 'maven.multiModuleProjectDirectory' system property need to be set" );
 
         // maven3
-        Path maven3Zip = Paths.get( root, "maven/maven3/apache-maven/target/apache-maven-bin.zip" );
-        if ( !Files.exists( maven3Zip ) )
-        {
-            throw new IllegalStateException( "Unable to find " + maven3Zip + "\n"
-                    + "Please build the maven3 and maven4 distributions using the build-maven.sh script" );
-        }
-        Path outMaven3 = Paths.get( "target/maven3" );
-        deleteDir( outMaven3 );
-        Files.createDirectories( outMaven3 );
-        CacheUtils.unzip( maven3Zip, outMaven3 );
-        maven3 = outMaven3.resolve( "apache-maven" ).toAbsolutePath();
+        maven3 = Files.list( Paths.get( "target/maven3" ) )
+                .filter( f -> f.getFileName().toString().startsWith( "apache-maven" ) && Files.isDirectory( f ) )
+                .findFirst()
+                .orElseThrow( () -> new IllegalStateException( "Unable to find maven3 directory" ) )
+                .toAbsolutePath();
         maven3.resolve( "bin/mvn" ).toFile().setExecutable( true );
 
         // maven4
-        Path maven4Zip = Paths.get( root, "maven/maven4/apache-maven/target/apache-maven-bin.zip" );
-        if ( !Files.exists( maven4Zip ) )
-        {
-            throw new IllegalStateException( "Unable to find " + maven4Zip + "\n"
-                    + "Please build the maven3 and maven4 distributions using the build-maven.sh script" );
-        }
-        Path outMaven4 = Paths.get( "target/maven4" );
-        deleteDir( outMaven4 );
-        Files.createDirectories( outMaven4 );
-        CacheUtils.unzip( maven4Zip, outMaven4 );
-        maven4 = outMaven4.resolve( "apache-maven" ).toAbsolutePath();
+        maven4 = Files.list( Paths.get( "target/maven4" ) )
+                .filter( f -> f.getFileName().toString().startsWith( "apache-maven" ) && Files.isDirectory( f ) )
+                .findFirst()
+                .orElseThrow( () -> new IllegalStateException( "Unable to find maven4 directory" ) )
+                .toAbsolutePath();
         maven4.resolve( "bin/mvn" ).toFile().setExecutable( true );
 
         initialized = true;
