@@ -82,7 +82,7 @@ public class IntegrationTestExtension implements BeforeAllCallback, TestTemplate
 
         // maven3
         maven3 = Files.list( Paths.get( "target/maven3" ) )
-                .filter( f -> f.getFileName().toString().startsWith( "apache-maven-3." ) && Files.isDirectory( f ) )
+                .filter( f -> f.getFileName().toString().startsWith( "apache-maven" ) && Files.isDirectory( f ) )
                 .findFirst()
                 .orElseThrow( () -> new IllegalStateException( "Unable to find maven3 directory" ) )
                 .toAbsolutePath();
@@ -90,7 +90,7 @@ public class IntegrationTestExtension implements BeforeAllCallback, TestTemplate
 
         // maven4
         maven4 = Files.list( Paths.get( "target/maven4" ) )
-                .filter( f -> f.getFileName().toString().startsWith( "apache-maven-4." ) && Files.isDirectory( f ) )
+                .filter( f -> f.getFileName().toString().startsWith( "apache-maven" ) && Files.isDirectory( f ) )
                 .findFirst()
                 .orElseThrow( () -> new IllegalStateException( "Unable to find maven4 directory" ) )
                 .toAbsolutePath();
