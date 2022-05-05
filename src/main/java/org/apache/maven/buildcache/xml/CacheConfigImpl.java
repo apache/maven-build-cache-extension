@@ -92,7 +92,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     private final XmlService xmlService;
     private final MavenSession session;
 
-    private CacheState state;
+    private volatile CacheState state;
     private CacheConfig cacheConfig;
     private HashFactory hashFactory;
     private List<Pattern> excludePatterns;
@@ -110,69 +110,77 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     {
         if ( state == null )
         {
-            final String enabled = getProperty( CACHE_ENABLED_PROPERTY_NAME, "true" );
-            if ( !Boolean.parseBoolean( enabled ) )
+            synchronized ( this )
             {
-                LOGGER.info( "Cache disabled by command line flag, project will be built fully and not cached" );
-                state = CacheState.DISABLED;
-            }
-            else
-            {
-                Path configPath;
-
-                String configPathText = getProperty( CONFIG_PATH_PROPERTY_NAME, null );
-                if ( StringUtils.isNotBlank( configPathText ) )
+                if ( state == null )
                 {
-                    configPath = Paths.get( configPathText );
-                }
-                else
-                {
-                    configPath = getMultimoduleRoot( session ).resolve( ".mvn" )
-                            .resolve( "maven-build-cache-config.xml" );
-                }
-
-                if ( !Files.exists( configPath ) )
-                {
-                    LOGGER.info( "Cache configuration is not available at configured path {}, "
-                            + "cache is enabled with defaults", configPath );
-                    cacheConfig = new CacheConfig();
-                }
-                else
-                {
-                    try
+                    final String enabled = getProperty( CACHE_ENABLED_PROPERTY_NAME, "true" );
+                    if ( !Boolean.parseBoolean( enabled ) )
                     {
-                        LOGGER.info( "Loading cache configuration from {}", configPath );
-                        cacheConfig = xmlService.loadCacheConfig( configPath.toFile() );
+                        LOGGER.info(
+                                "Cache disabled by command line flag, project will be built fully and not cached" );
+                        state = CacheState.DISABLED;
+                    }
+                    else
+                    {
+                        Path configPath;
+
+                        String configPathText = getProperty( CONFIG_PATH_PROPERTY_NAME, null );
+                        if ( StringUtils.isNotBlank( configPathText ) )
+                        {
+                            configPath = Paths.get( configPathText );
+                        }
+                        else
+                        {
+                            configPath = getMultimoduleRoot( session ).resolve( ".mvn" )
+                                    .resolve( "maven-build-cache-config.xml" );
+                        }
+
+                        if ( !Files.exists( configPath ) )
+                        {
+                            LOGGER.info( "Cache configuration is not available at configured path {}, "
+                                    + "cache is enabled with defaults", configPath );
+                            cacheConfig = new CacheConfig();
+                        }
+                        else
+                        {
+                            try
+                            {
+                                LOGGER.info( "Loading cache configuration from {}", configPath );
+                                cacheConfig = xmlService.loadCacheConfig( configPath.toFile() );
+                                fillWithDefaults( cacheConfig );
+                            }
+                            catch ( Exception e )
+                            {
+                                throw new IllegalArgumentException(
+                                        "Cannot initialize cache because xml config is not valid or not available", e );
+                            }
+                        }
                         fillWithDefaults( cacheConfig );
-                    }
-                    catch ( Exception e )
-                    {
-                        throw new IllegalArgumentException(
-                                "Cannot initialize cache because xml config is not valid or not available", e );
-                    }
-                }
-                fillWithDefaults( cacheConfig );
 
-                if ( !cacheConfig.getConfiguration().isEnabled() )
-                {
-                    state = CacheState.DISABLED;
-                }
-                else
-                {
-                    String hashAlgorithm = null;
-                    try
-                    {
-                        hashAlgorithm = getConfiguration().getHashAlgorithm();
-                        hashFactory = HashFactory.of( hashAlgorithm );
-                        LOGGER.info( "Using {} hash algorithm for cache", hashAlgorithm );
-                    }
-                    catch ( Exception e )
-                    {
-                        throw new IllegalArgumentException( "Unsupported hashing algorithm: " + hashAlgorithm, e );
-                    }
+                        if ( !cacheConfig.getConfiguration().isEnabled() )
+                        {
+                            state = CacheState.DISABLED;
+                        }
+                        else
+                        {
+                            String hashAlgorithm = null;
+                            try
+                            {
+                                hashAlgorithm = getConfiguration().getHashAlgorithm();
+                                hashFactory = HashFactory.of( hashAlgorithm );
+                                LOGGER.info( "Using {} hash algorithm for cache", hashAlgorithm );
+                            }
+                            catch ( Exception e )
+                            {
+                                throw new IllegalArgumentException( "Unsupported hashing algorithm: " + hashAlgorithm,
+                                        e );
+                            }
 
-                    excludePatterns = compileExcludePatterns();
-                    state = CacheState.INITIALIZED;
+                            excludePatterns = compileExcludePatterns();
+                            state = CacheState.INITIALIZED;
+                        }
+                    }
                 }
             }
         }
