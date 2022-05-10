@@ -91,7 +91,7 @@ import static org.apache.maven.buildcache.CacheResult.failure;
 import static org.apache.maven.buildcache.CacheResult.partialSuccess;
 import static org.apache.maven.buildcache.CacheResult.rebuilded;
 import static org.apache.maven.buildcache.CacheResult.success;
-import static org.apache.maven.buildcache.HttpCacheRepositoryImpl.BUILDINFO_XML;
+import static org.apache.maven.buildcache.RemoteCacheRepository.BUILDINFO_XML;
 import static org.apache.maven.buildcache.checksum.KeyUtils.getVersionlessProjectKey;
 import static org.apache.maven.buildcache.checksum.MavenProjectInput.CACHE_IMPLEMENTATION_VERSION;
 

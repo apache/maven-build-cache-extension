@@ -92,8 +92,8 @@ under the License.
                 <field xml.attribute="true">
                     <name>transport</name>
                     <type>String</type>
-                    <defaultValue>http</defaultValue>
-                    <description>The transport to use, either 'http' or 'wagon'.</description>
+                    <defaultValue>resolver</defaultValue>
+                    <description>The transport to use, currently, only 'resolver' is supported.</description>
                 </field>
                 <field xml.attribute="true">
                     <name>id</name>

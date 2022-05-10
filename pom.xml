@@ -98,9 +98,10 @@ under the License.
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpclient</artifactId>
-            <version>4.5.13</version>
+            <groupId>org.apache.maven.resolver</groupId>
+            <artifactId>maven-resolver-transport-http</artifactId>
+            <version>${resolverVersion}</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>net.openhft</groupId>
@@ -131,16 +132,6 @@ under the License.
             <groupId>org.codehaus.plexus</groupId>
             <artifactId>plexus-utils</artifactId>
             <version>${plexusUtilsVersion}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.maven.wagon</groupId>
-            <artifactId>wagon-http</artifactId>
-            <version>${wagonVersion}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.maven.resolver</groupId>
-            <artifactId>maven-resolver-util</artifactId>
-            <version>${resolverVersion}</version>
         </dependency>
         <dependency>
             <groupId>com.google.code.findbugs</groupId>

@@ -69,9 +69,7 @@ in [Servers](https://maven.apache.org/settings.html#Servers). The server should 
 TBD
 ```
 
-Beside the http server, remote cache could be configured using any storage which is supported
-by [Maven Wagon](https://maven.apache.org/wagon/). That includes a wide set of options, including SSH, FTP and many
-others. See Wagon documentation for a full list of options and other details.
+Beside the http server, remote cache could be configured using any storage which is supported by [Maven Resolver](https://maven.apache.org/resolver/). That includes a wide set of options, including SSH, FTP and many others through the use of [Maven Wagon](https://maven.apache.org/wagon/). See Wagon documentation for a full list of options and other details.
 
 ### Build selection
 
