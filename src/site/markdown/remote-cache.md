@@ -106,7 +106,7 @@ iteratively achieve working configuration.
 [INFO] [CACHE] Saved to remote cache https://your-cache-url/<...>/915296a3-4596-4eb5-bf37-f6e13ebe087e/build-cache-report.xml
 ```
 
-Copy the link to a `cbuild-ache-report.xml` and provide it to your local build as a baseline for comparison.
+Copy the link to a `build-cache-report.xml` and provide it to your local build as a baseline for comparison.
 
 * Run local build. Command line should look similar to this:
 

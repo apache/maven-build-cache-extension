@@ -26,9 +26,6 @@
         <enabled>true</enabled>
         <hashAlgorithm>SHA-256</hashAlgorithm>
         <validateXml>true</validateXml>
-        <projectDiscoveryStrategy>
-            <specificVersion>PROJECT-LOCAL</specificVersion>
-        </projectDiscoveryStrategy>
         <remote enabled="true">
             <url>http://host:port</url>
         </remote>
