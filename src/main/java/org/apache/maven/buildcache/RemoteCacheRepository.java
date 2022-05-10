@@ -32,6 +32,9 @@ import org.apache.maven.project.MavenProject;
 public interface RemoteCacheRepository extends CacheRepository
 {
 
+    String BUILDINFO_XML = "buildinfo.xml";
+    String CACHE_REPORT_XML = "build-cache-report.xml";
+
     /**
      * Download an artifact to the given location.
      * Returns <code>true</code> if success, <code>false</code> if the artifact does not exists

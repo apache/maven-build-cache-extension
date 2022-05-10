@@ -18,10 +18,10 @@
  */
 package org.apache.maven.buildcache;
 
-import java.io.ByteArrayInputStream;
+import java.io.Closeable;
+import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
+import java.net.URI;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
@@ -29,16 +29,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
 import javax.inject.Named;
-import org.apache.commons.io.IOUtils;
-import org.apache.http.HttpResponse;
-import org.apache.http.HttpStatus;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.config.RequestConfig;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPut;
-import org.apache.http.entity.InputStreamEntity;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.maven.SessionScoped;
 import org.apache.maven.buildcache.checksum.MavenProjectInput;
 import org.apache.maven.buildcache.xml.Build;
@@ -50,46 +40,69 @@ import org.apache.maven.buildcache.xml.report.CacheReport;
 import org.apache.maven.buildcache.xml.report.ProjectReport;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.project.MavenProject;
+import org.eclipse.aether.RepositorySystemSession;
+import org.eclipse.aether.repository.Authentication;
+import org.eclipse.aether.repository.Proxy;
+import org.eclipse.aether.repository.RemoteRepository;
+import org.eclipse.aether.spi.connector.transport.GetTask;
+import org.eclipse.aether.spi.connector.transport.PutTask;
+import org.eclipse.aether.spi.connector.transport.Transporter;
+import org.eclipse.aether.spi.connector.transport.TransporterProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * HTTP remote cache repository implementation.
+ * Remote cache repository implementation.
  */
 @SessionScoped
-@Named( "http" )
-public class HttpCacheRepositoryImpl implements RemoteCacheRepository
+@Named( "resolver" )
+public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeable
 {
 
-    public static final String BUILDINFO_XML = "buildinfo.xml";
-    public static final String CACHE_REPORT_XML = "build-cache-report.xml";
-
-    private static final Logger LOGGER = LoggerFactory.getLogger( HttpCacheRepositoryImpl.class );
+    private static final Logger LOGGER = LoggerFactory.getLogger( RemoteCacheRepositoryImpl.class );
 
     private final XmlService xmlService;
     private final CacheConfig cacheConfig;
+    private final Transporter transporter;
 
     @Inject
-    public HttpCacheRepositoryImpl( XmlService xmlService, CacheConfig cacheConfig )
+    public RemoteCacheRepositoryImpl(
+            XmlService xmlService,
+            CacheConfig cacheConfig,
+            MavenSession mavenSession,
+            TransporterProvider transporterProvider )
+            throws Exception
     {
         this.xmlService = xmlService;
         this.cacheConfig = cacheConfig;
+        if ( cacheConfig.isRemoteCacheEnabled() )
+        {
+            RepositorySystemSession session = mavenSession.getRepositorySession();
+            RemoteRepository repo = new RemoteRepository.Builder(
+                    cacheConfig.getId(), "cache", cacheConfig.getUrl() ).build();
+            RemoteRepository mirror = session.getMirrorSelector().getMirror( repo );
+            RemoteRepository repoOrMirror = mirror != null ? mirror : repo;
+            Proxy proxy = session.getProxySelector().getProxy( repoOrMirror );
+            Authentication auth = session.getAuthenticationSelector().getAuthentication( repoOrMirror );
+            RemoteRepository repository = new RemoteRepository.Builder( repoOrMirror )
+                    .setProxy( proxy )
+                    .setAuthentication( auth )
+                    .build();
+            this.transporter = transporterProvider.newTransporter( session, repository );
+        }
+        else
+        {
+            this.transporter = null;
+        }
     }
 
-    @SuppressWarnings( "checkstyle:constantname" )
-    private static final ThreadLocal<HttpClient> httpClient = ThreadLocal
-            .withInitial( HttpCacheRepositoryImpl::newHttpClient );
-
-    @SuppressWarnings( "checkstyle:magicnumber" )
-    private static CloseableHttpClient newHttpClient()
+    @Override
+    public void close() throws IOException
     {
-        int timeoutSeconds = 60;
-        RequestConfig config = RequestConfig.custom()
-                .setConnectTimeout( timeoutSeconds * 1000 )
-                .setConnectionRequestTimeout( timeoutSeconds * 1000 )
-                .setSocketTimeout( timeoutSeconds * 1000 )
-                .build();
-        return HttpClientBuilder.create().setDefaultRequestConfig( config ).build();
+        if ( transporter != null )
+        {
+            transporter.close();
+        }
     }
 
     @Nonnull
@@ -113,7 +126,7 @@ public class HttpCacheRepositoryImpl implements RemoteCacheRepository
             throws IOException
     {
         final String resourceUrl = getResourceUrl( cacheResult.getContext(), BUILDINFO_XML );
-        putToRemoteCache( new ByteArrayInputStream( xmlService.toBytes( build.getDto() ) ), resourceUrl );
+        putToRemoteCache( xmlService.toBytes( build.getDto() ), resourceUrl );
     }
 
     @Override
@@ -125,7 +138,7 @@ public class HttpCacheRepositoryImpl implements RemoteCacheRepository
                 + "/" + rootProject.getArtifactId()
                 + "/" + buildId
                 + "/" + CACHE_REPORT_XML;
-        putToRemoteCache( new ByteArrayInputStream( xmlService.toBytes( cacheReport ) ), resourceUrl );
+        putToRemoteCache( xmlService.toBytes( cacheReport ), resourceUrl );
     }
 
     @Override
@@ -133,10 +146,7 @@ public class HttpCacheRepositoryImpl implements RemoteCacheRepository
             org.apache.maven.artifact.Artifact artifact ) throws IOException
     {
         final String resourceUrl = getResourceUrl( cacheResult.getContext(), CacheUtils.normalizedName( artifact ) );
-        try ( InputStream inputStream = Files.newInputStream( artifact.getFile().toPath() ) )
-        {
-            putToRemoteCache( inputStream, resourceUrl );
-        }
+        putToRemoteCache( artifact.getFile(), resourceUrl );
     }
 
     /**
@@ -147,50 +157,33 @@ public class HttpCacheRepositoryImpl implements RemoteCacheRepository
     @Nonnull
     public Optional<byte[]> getResourceContent( String url ) throws IOException
     {
-        HttpGet get = new HttpGet( url );
         try
         {
             LOGGER.info( "Downloading {}", url );
-            HttpResponse response = httpClient.get().execute( get );
-            int statusCode = response.getStatusLine().getStatusCode();
-            if ( statusCode != HttpStatus.SC_OK )
-            {
-                LOGGER.info( "Cannot download {}, status code: {}", url, statusCode );
-                return Optional.empty();
-            }
-            try ( InputStream content = response.getEntity().getContent() )
-            {
-                return Optional.of( IOUtils.toByteArray( content ) );
-            }
+            GetTask task = new GetTask( new URI( url ) );
+            transporter.get( task );
+            return Optional.of( task.getDataBytes() );
         }
-        finally
+        catch ( Exception e )
         {
-            get.releaseConnection();
+            LOGGER.info( "Cannot download {}", url, e );
+            return Optional.empty();
         }
     }
 
     public boolean getResourceContent( String url, Path target ) throws IOException
     {
-        HttpGet get = new HttpGet( url );
         try
         {
             LOGGER.info( "Downloading {}", url );
-            HttpResponse response = httpClient.get().execute( get );
-            int statusCode = response.getStatusLine().getStatusCode();
-            if ( statusCode != HttpStatus.SC_OK )
-            {
-                LOGGER.info( "Cannot download {}, status code: {}", url, statusCode );
-                return false;
-            }
-            try ( InputStream content = response.getEntity().getContent() )
-            {
-                Files.copy( content, target );
-                return true;
-            }
+            GetTask task = new GetTask( new URI( url ) ).setDataFile( target.toFile() );
+            transporter.get( task );
+            return true;
         }
-        finally
+        catch ( Exception e )
         {
-            get.releaseConnection();
+            LOGGER.info( "Cannot download {}: {}", url, e.toString() );
+            return false;
         }
     }
 
@@ -208,22 +201,33 @@ public class HttpCacheRepositoryImpl implements RemoteCacheRepository
                 + artifactId + "/" + checksum + "/" + filename;
     }
 
-    /**
-     * @param instream to be closed externally
-     */
-    private void putToRemoteCache( InputStream instream, String url ) throws IOException
+    private void putToRemoteCache( byte[] bytes, String url ) throws IOException
     {
-        HttpPut httpPut = new HttpPut( url );
         try
         {
-            httpPut.setEntity( new InputStreamEntity( instream ) );
-            HttpResponse response = httpClient.get().execute( httpPut );
-            int statusCode = response.getStatusLine().getStatusCode();
-            LOGGER.info( "Saved to remote cache {}. Status: {}", url, statusCode );
+            PutTask put = new PutTask( new URI( url ) );
+            put.setDataBytes( bytes );
+            transporter.put( put );
+            LOGGER.info( "Saved to remote cache {}", url );
         }
-        finally
+        catch ( Exception e )
         {
-            httpPut.releaseConnection();
+            LOGGER.info( "Unable to save to remote cache {}", url, e );
+        }
+    }
+
+    private void putToRemoteCache( File file, String url ) throws IOException
+    {
+        try
+        {
+            PutTask put = new PutTask( new URI( url ) );
+            put.setDataFile( file );
+            transporter.put( put );
+            LOGGER.info( "Saved to remote cache {}", url );
+        }
+        catch ( Exception e )
+        {
+            LOGGER.info( "Unable to save to remote cache {}", url, e );
         }
     }
 
