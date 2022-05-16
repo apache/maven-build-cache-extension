@@ -231,7 +231,7 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
         }
     }
 
-    private final AtomicReference<Optional<CacheReport>> cacheReportSupplier = new AtomicReference<>();
+    private final AtomicReference<CacheReport> cacheReportSupplier = new AtomicReference<>();
 
     @Nonnull
     @Override
@@ -285,7 +285,7 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
 
     private Optional<CacheReport> findCacheInfo()
     {
-        Optional<CacheReport> report = cacheReportSupplier.get();
+        Optional<CacheReport> report = Optional.ofNullable( cacheReportSupplier.get() );
         if ( !report.isPresent() )
         {
             try
@@ -299,7 +299,7 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
                         cacheConfig.getBaselineCacheUrl(), e );
                 report = Optional.empty();
             }
-            cacheReportSupplier.compareAndSet( null, report );
+            cacheReportSupplier.compareAndSet( null, report.orElse( null ) );
         }
         return report;
     }
