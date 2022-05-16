@@ -25,6 +25,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macOS-latest]
         java: [11, 17]
+        maven: [maven3, maven4]
       fail-fast: false
 
     runs-on: ${{ matrix.os }}
@@ -49,5 +50,5 @@ jobs:
             ${{ runner.os }}-maven-
 
       - name: Build with Maven
-        run: mvn install -e -B -V
+        run: mvn install -e -B -V -P${{ matrix.maven }}
 

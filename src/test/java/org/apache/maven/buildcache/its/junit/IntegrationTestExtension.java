@@ -68,7 +68,9 @@ public class IntegrationTestExtension implements BeforeAllCallback, TestTemplate
             ExtensionContext extensionContext )
     {
         Method m = extensionContext.getRequiredTestMethod();
-        return Stream.of( maven3, maven4 ).map( p -> new MavenTemplate( m, p ) );
+        return Stream.concat( maven3 != null ? Stream.of( maven3 ) : Stream.empty(),
+                maven4 != null ? Stream.of( maven4 ) : Stream.empty() )
+                .map( p -> new MavenTemplate( m, p ) );
     }
 
     private static void buildMaven() throws Exception
@@ -81,20 +83,26 @@ public class IntegrationTestExtension implements BeforeAllCallback, TestTemplate
         //                "The 'maven.multiModuleProjectDirectory' system property need to be set" );
 
         // maven3
-        maven3 = Files.list( Paths.get( "target/maven3" ) )
-                .filter( f -> f.getFileName().toString().startsWith( "apache-maven" ) && Files.isDirectory( f ) )
-                .findFirst()
-                .orElseThrow( () -> new IllegalStateException( "Unable to find maven3 directory" ) )
-                .toAbsolutePath();
-        maven3.resolve( "bin/mvn" ).toFile().setExecutable( true );
+        if ( Boolean.getBoolean( "with-maven3" ) )
+        {
+            maven3 = Files.list( Paths.get( "target/maven3" ) )
+                    .filter( f -> f.getFileName().toString().startsWith( "apache-maven" ) && Files.isDirectory( f ) )
+                    .findFirst()
+                    .map( Path::toAbsolutePath )
+                    .orElseThrow( () -> new IllegalStateException( "Unable to find maven3 directory" ) );
+            maven3.resolve( "bin/mvn" ).toFile().setExecutable( true );
+        }
 
         // maven4
-        maven4 = Files.list( Paths.get( "target/maven4" ) )
-                .filter( f -> f.getFileName().toString().startsWith( "apache-maven" ) && Files.isDirectory( f ) )
-                .findFirst()
-                .orElseThrow( () -> new IllegalStateException( "Unable to find maven4 directory" ) )
-                .toAbsolutePath();
-        maven4.resolve( "bin/mvn" ).toFile().setExecutable( true );
+        if ( Boolean.getBoolean( "with-maven4" ) )
+        {
+            maven4 = Files.list( Paths.get( "target/maven4" ) )
+                    .filter( f -> f.getFileName().toString().startsWith( "apache-maven" ) && Files.isDirectory( f ) )
+                    .findFirst()
+                    .map( Path::toAbsolutePath )
+                    .orElse( null );
+            maven4.resolve( "bin/mvn" ).toFile().setExecutable( true );
+        }
 
         initialized = true;
     }
