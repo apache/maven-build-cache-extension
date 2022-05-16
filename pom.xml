@@ -44,8 +44,8 @@ under the License.
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
         <classWorldsVersion>2.6.0</classWorldsVersion>
-        <maven3Version>3.9.0-SNAPSHOT</maven3Version><!-- MNG-7391-maven-3.8.x branch, waiting for MNG-7391 Maven API update -->
-        <maven4Version>4.0.0-alpha-1-SNAPSHOT</maven4Version><!-- MNG-7391-master branch, waiting for MNG-7391 Maven API update -->
+        <maven3Version>3.9.0-SNAPSHOT</maven3Version>
+        <maven4Version>4.0.0-alpha-1-SNAPSHOT</maven4Version>
 
         <formatter-maven-plugin.version>2.17.0</formatter-maven-plugin.version>
         <impsort-maven-plugin.version>1.6.2</impsort-maven-plugin.version>
@@ -94,7 +94,7 @@ under the License.
         <dependency>
             <groupId>org.apache.maven</groupId>
             <artifactId>maven-core</artifactId>
-            <version>${maven4Version}</version>
+            <version>${maven3Version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -365,37 +365,6 @@ under the License.
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
                 <version>2.8</version>
-                <executions>
-                    <execution>
-                        <id>copy-maven-distributions</id>
-                        <phase>pre-integration-test</phase>
-                        <goals>
-                            <goal>unpack</goal>
-                        </goals>
-                        <configuration>
-                            <artifactItems>
-                                <artifactItem>
-                                    <groupId>org.apache.maven</groupId>
-                                    <artifactId>apache-maven</artifactId>
-                                    <version>${maven3Version}</version>
-                                    <classifier>bin</classifier>
-                                    <type>tar.gz</type>
-                                    <overWrite>false</overWrite>
-                                    <outputDirectory>${project.build.directory}/maven3</outputDirectory>
-                                </artifactItem>
-                                <artifactItem>
-                                    <groupId>org.apache.maven</groupId>
-                                    <artifactId>apache-maven</artifactId>
-                                    <version>${maven4Version}</version>
-                                    <classifier>bin</classifier>
-                                    <type>tar.gz</type>
-                                    <overWrite>false</overWrite>
-                                    <outputDirectory>${project.build.directory}/maven4</outputDirectory>
-                                </artifactItem>
-                            </artifactItems>
-                        </configuration>
-                    </execution>
-                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -410,5 +379,95 @@ under the License.
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>maven3</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-dependency-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>copy-maven3-distributions</id>
+                                <phase>pre-integration-test</phase>
+                                <goals>
+                                    <goal>unpack</goal>
+                                </goals>
+                                <configuration>
+                                    <artifactItems>
+                                        <artifactItem>
+                                            <groupId>org.apache.maven</groupId>
+                                            <artifactId>apache-maven</artifactId>
+                                            <version>${maven3Version}</version>
+                                            <classifier>bin</classifier>
+                                            <type>tar.gz</type>
+                                            <overWrite>false</overWrite>
+                                            <outputDirectory>${project.build.directory}/maven3</outputDirectory>
+                                        </artifactItem>
+                                    </artifactItems>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <systemProperties>
+                                <with-maven3>true</with-maven3>
+                            </systemProperties>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>maven4</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-dependency-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>copy-maven4-distributions</id>
+                                <phase>pre-integration-test</phase>
+                                <goals>
+                                    <goal>unpack</goal>
+                                </goals>
+                                <configuration>
+                                    <artifactItems>
+                                        <artifactItem>
+                                            <groupId>org.apache.maven</groupId>
+                                            <artifactId>apache-maven</artifactId>
+                                            <version>${maven4Version}</version>
+                                            <classifier>bin</classifier>
+                                            <type>tar.gz</type>
+                                            <overWrite>false</overWrite>
+                                            <outputDirectory>${project.build.directory}/maven4</outputDirectory>
+                                        </artifactItem>
+                                    </artifactItems>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <systemProperties>
+                                <with-maven4>true</with-maven4>
+                            </systemProperties>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
 </project>
