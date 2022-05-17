@@ -526,6 +526,11 @@ public class MavenProjectInput
                     LOGGER.debug( "Skipping subtree (hidden): {}", path );
                     return FileVisitResult.SKIP_SUBTREE;
                 }
+                else if ( !isReadable( path ) )
+                {
+                    LOGGER.debug( "Skipping subtree (not readable): {}", path );
+                    return FileVisitResult.SKIP_SUBTREE;
+                }
                 else if ( isFilteredOutSubpath( path ) )
                 {
                     LOGGER.debug( "Skipping subtree (blacklisted): {}", path );
@@ -648,7 +653,7 @@ public class MavenProjectInput
                         continue;
                     }
                     File file = entry.toFile();
-                    if ( file.isFile() && !isHidden( entry ) )
+                    if ( file.isFile() && !isHidden( entry ) && isReadable( entry ) )
                     {
                         collectedFiles.add( entry );
                     }
@@ -664,6 +669,11 @@ public class MavenProjectInput
     private static boolean isHidden( Path entry ) throws IOException
     {
         return Files.isHidden( entry ) || entry.toFile().getName().startsWith( "." );
+    }
+
+    private static boolean isReadable( Path entry ) throws IOException
+    {
+        return Files.isReadable( entry );
     }
 
     private boolean isFilteredOutSubpath( Path path )
