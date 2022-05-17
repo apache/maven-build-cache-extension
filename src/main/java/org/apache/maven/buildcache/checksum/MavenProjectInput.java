@@ -139,6 +139,7 @@ public class MavenProjectInput
     private final Path baseDirPath;
     private final String dirGlob;
     private final boolean processPlugins;
+    private final String tmpDir;
 
     @SuppressWarnings( "checkstyle:parameternumber" )
     public MavenProjectInput( MavenProject project,
@@ -163,6 +164,7 @@ public class MavenProjectInput
         this.dirGlob = properties.getProperty( CACHE_INPUT_GLOB_NAME, config.getDefaultGlob() );
         this.processPlugins = Boolean.parseBoolean(
                 properties.getProperty( CACHE_PROCESS_PLUGINS, config.isProcessPlugins() ) );
+        this.tmpDir = System.getProperty( "java.io.tmpdir" );
 
         org.apache.maven.model.Build build = project.getBuild();
         filteredOutPaths = new ArrayList<>( Arrays.asList( normalizedPath( build.getDirectory() ), // target by default
@@ -558,6 +560,14 @@ public class MavenProjectInput
                 LOGGER.debug( "Visiting subtree: {}", path );
                 return FileVisitResult.CONTINUE;
             }
+
+            @Override
+            public FileVisitResult visitFileFailed( Path path, IOException exc )
+                    throws IOException
+            {
+                LOGGER.debug( "Skipping subtree (exception: {}): {}", exc, path );
+                return FileVisitResult.SKIP_SUBTREE;
+            }
         } );
     }
 
@@ -613,15 +623,25 @@ public class MavenProjectInput
     private Path getPathOrNull( String text )
     {
         // small optimization to not probe not-paths
-        boolean blacklisted = isBlank( text )
-                || equalsAnyIgnoreCase( text, "true", "false", "utf-8", "null", "\\" ) // common values
+        if ( isBlank( text ) )
+        {
+            // do not even bother logging about blank/null values
+        }
+        else if ( equalsAnyIgnoreCase( text, "true", "false", "utf-8", "null", "\\" ) // common values
                 || contains( text, "*" ) // tag value is a glob or regex - unclear how to process
                 || ( contains( text, ":" ) && !contains( text, ":\\" ) )// artifactId
                 || startsWithAny( text, "com.", "org.", "io.", "java.", "javax." ) // java packages
                 || startsWithAny( text, "${env." ) // env variables in maven notation
                 || startsWithAny( text, "http:", "https:", "scm:", "ssh:", "git:", "svn:", "cp:",
-                        "classpath:" ); // urls identified by common protocols
-        if ( !blacklisted )
+                        "classpath:" ) ) // urls identified by common protocols
+        {
+            LOGGER.debug( "Skipping directory (blacklisted literal): {}", text );
+        }
+        else if ( startsWithAny( text, tmpDir ) ) // tmp dir
+        {
+            LOGGER.debug( "Skipping directory (temp dir): {}", text );
+        }
+        else
         {
             try
             {
@@ -629,9 +649,9 @@ public class MavenProjectInput
             }
             catch ( Exception ignore )
             {
+                LOGGER.debug( "Skipping directory (invalid path): {}", text );
             }
         }
-        LOGGER.debug( "{}: {}", text, blacklisted ? "skipped(blacklisted literal)" : "invalid path" );
         return null;
     }
 
