@@ -22,6 +22,7 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
@@ -133,7 +134,7 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
     public void saveCacheReport( String buildId, MavenSession session, CacheReport cacheReport ) throws IOException
     {
         MavenProject rootProject = session.getTopLevelProject();
-        final String resourceUrl = cacheConfig.getUrl() + "/" + MavenProjectInput.CACHE_IMPLEMENTATION_VERSION
+        final String resourceUrl = MavenProjectInput.CACHE_IMPLEMENTATION_VERSION
                 + "/" + rootProject.getGroupId()
                 + "/" + rootProject.getArtifactId()
                 + "/" + buildId
@@ -159,14 +160,14 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
     {
         try
         {
-            LOGGER.info( "Downloading {}", url );
+            LOGGER.info( "Downloading {}", getFullUrl( url ) );
             GetTask task = new GetTask( new URI( url ) );
             transporter.get( task );
             return Optional.of( task.getDataBytes() );
         }
         catch ( Exception e )
         {
-            LOGGER.info( "Cannot download {}", url, e );
+            LOGGER.info( "Cannot download {}", getFullUrl( url ), e );
             return Optional.empty();
         }
     }
@@ -175,14 +176,14 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
     {
         try
         {
-            LOGGER.info( "Downloading {}", url );
+            LOGGER.info( "Downloading {}", getFullUrl( url ) );
             GetTask task = new GetTask( new URI( url ) ).setDataFile( target.toFile() );
             transporter.get( task );
             return true;
         }
         catch ( Exception e )
         {
-            LOGGER.info( "Cannot download {}: {}", url, e.toString() );
+            LOGGER.info( "Cannot download {}: {}", getFullUrl( url ), e.toString() );
             return false;
         }
     }
@@ -197,22 +198,28 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
 
     private String getResourceUrl( String filename, String groupId, String artifactId, String checksum )
     {
-        return cacheConfig.getUrl() + "/" + MavenProjectInput.CACHE_IMPLEMENTATION_VERSION + "/" + groupId + "/"
+        return MavenProjectInput.CACHE_IMPLEMENTATION_VERSION + "/" + groupId + "/"
                 + artifactId + "/" + checksum + "/" + filename;
     }
 
     private void putToRemoteCache( byte[] bytes, String url ) throws IOException
     {
+        Path tmp = Files.createTempFile( "mbce-", ".tmp" );
         try
         {
+            Files.write( tmp, bytes );
             PutTask put = new PutTask( new URI( url ) );
-            put.setDataBytes( bytes );
+            put.setDataFile( tmp.toFile() );
             transporter.put( put );
-            LOGGER.info( "Saved to remote cache {}", url );
+            LOGGER.info( "Saved to remote cache {}", getFullUrl( url ) );
         }
         catch ( Exception e )
         {
-            LOGGER.info( "Unable to save to remote cache {}", url, e );
+            LOGGER.info( "Unable to save to remote cache {}", getFullUrl( url ), e );
+        }
+        finally
+        {
+            Files.deleteIfExists( tmp );
         }
     }
 
@@ -223,11 +230,11 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
             PutTask put = new PutTask( new URI( url ) );
             put.setDataFile( file );
             transporter.put( put );
-            LOGGER.info( "Saved to remote cache {}", url );
+            LOGGER.info( "Saved to remote cache {}", getFullUrl( url ) );
         }
         catch ( Exception e )
         {
-            LOGGER.info( "Unable to save to remote cache {}", url, e );
+            LOGGER.info( "Unable to save to remote cache {}", getFullUrl( url ), e );
         }
     }
 
@@ -302,6 +309,11 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
             cacheReportSupplier.compareAndSet( null, report.orElse( null ) );
         }
         return report;
+    }
+
+    private String getFullUrl( String url )
+    {
+        return cacheConfig.getUrl() + "/" + url;
     }
 
 }
