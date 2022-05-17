@@ -166,22 +166,22 @@ public class CacheControllerImpl implements CacheController
         ProjectsInputInfo inputInfo = projectInputCalculator.calculateInput( project );
 
         final CacheContext context = new CacheContext( project, inputInfo, session );
-        // local build first
-        CacheResult result = findLocalBuild( mojoExecutions, context );
+        // remote build first
+        CacheResult result = findCachedBuild( mojoExecutions, context );
 
         if ( !result.isSuccess() && result.getContext() != null )
         {
-            LOGGER.debug( "Local cache is incomplete or missing, trying remote build" );
+            LOGGER.debug( "Remote cache is incomplete or missing, trying local build" );
 
-            CacheResult remoteBuild = findCachedBuild( mojoExecutions, context );
+            CacheResult localBuild = findLocalBuild( mojoExecutions, context );
 
-            if ( remoteBuild.isSuccess() || ( remoteBuild.isPartialSuccess() && !result.isPartialSuccess() ) )
+            if ( localBuild.isSuccess() || ( localBuild.isPartialSuccess() && !result.isPartialSuccess() ) )
             {
-                result = remoteBuild;
+                result = localBuild;
             }
             else
             {
-                LOGGER.info( "Remote build was not found by checksum " + inputInfo.getChecksum() );
+                LOGGER.info( "Local build was not found by checksum " + inputInfo.getChecksum() );
             }
         }
         cacheResults.put( getVersionlessProjectKey( project ), result );
