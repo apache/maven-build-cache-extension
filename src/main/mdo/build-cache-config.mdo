@@ -388,6 +388,12 @@ under the License.
             <name>Local</name>
             <fields>
                 <field>
+                    <name>location</name>
+                    <type>String</type>
+                    <description>The base directory where the local cache is located.
+                        Defaults to {@code $\{localRepository}/../cache}.</description>
+                </field>
+                <field>
                     <name>maxBuildsCached</name>
                     <type>int</type>
                     <defaultValue>3</defaultValue>

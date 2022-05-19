@@ -148,7 +148,6 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
                             {
                                 LOGGER.info( "Loading cache configuration from {}", configPath );
                                 cacheConfig = xmlService.loadCacheConfig( configPath.toFile() );
-                                fillWithDefaults( cacheConfig );
                             }
                             catch ( Exception e )
                             {
@@ -583,6 +582,13 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     {
         checkInitializedState();
         return getLocal().getMaxBuildsCached();
+    }
+
+    @Override
+    public String getLocalRepositoryLocation()
+    {
+        checkInitializedState();
+        return getLocal().getLocation();
     }
 
     @Override

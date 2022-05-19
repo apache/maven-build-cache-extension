@@ -98,6 +98,8 @@ public interface CacheConfig
 
     int getMaxLocalBuildsCached();
 
+    String getLocalRepositoryLocation();
+
     List<String> getAttachedOutputs();
 
     boolean adjustMetaInfVersion();

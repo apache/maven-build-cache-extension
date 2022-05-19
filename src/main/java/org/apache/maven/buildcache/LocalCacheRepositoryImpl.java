@@ -436,19 +436,28 @@ public class LocalCacheRepositoryImpl implements LocalCacheRepository
 
     private Path artifactCacheDir( MavenSession session, String groupId, String artifactId ) throws IOException
     {
-        final String localRepositoryRoot = session.getLocalRepository().getBasedir();
-        final Path path = Paths.get( localRepositoryRoot, "..", "cache", CACHE_IMPLEMENTATION_VERSION, groupId,
-                artifactId ).normalize();
-        if ( !Files.exists( path ) )
-        {
-            Files.createDirectories( path );
-        }
+        final Path vga = Paths.get( CACHE_IMPLEMENTATION_VERSION, groupId, artifactId );
+        final Path path = baseDir( session ).resolve( vga );
+        Files.createDirectories( path );
         return path;
+    }
+
+    private Path baseDir( MavenSession session )
+    {
+        String loc = cacheConfig.getLocalRepositoryLocation();
+        if ( loc != null )
+        {
+            return Paths.get( loc );
+        }
+        else
+        {
+            return Paths.get( session.getLocalRepository().getBasedir() ).getParent().resolve( "build-cache" );
+        }
     }
 
     private Path remoteBuildPath( CacheContext context, String filename ) throws IOException
     {
-        return buildCacheDir( context ).resolve( filename );
+        return remoteBuildDir( context ).resolve( filename );
     }
 
     private Path localBuildPath( CacheContext context, String filename, boolean createDir ) throws IOException
@@ -459,6 +468,11 @@ public class LocalCacheRepositoryImpl implements LocalCacheRepository
             Files.createDirectories( localBuildDir );
         }
         return localBuildDir.resolve( filename );
+    }
+
+    private Path remoteBuildDir( CacheContext context ) throws IOException
+    {
+        return buildCacheDir( context ).resolve( cacheConfig.getId() );
     }
 
     private Path localBuildDir( CacheContext context ) throws IOException
