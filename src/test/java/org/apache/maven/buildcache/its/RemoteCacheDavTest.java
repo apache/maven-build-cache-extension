@@ -35,6 +35,7 @@ import org.jetbrains.annotations.NotNull;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.utility.DockerImageName;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @IntegrationTest( "src/test/projects/remote-cache-dav" )
@@ -87,10 +88,8 @@ public class RemoteCacheDavTest
             verifier.setAutoclean( false );
 
             cleanDirs( localCache, remoteCache );
-            assertTrue( Files.walk( localCache ).noneMatch( isBuildInfoXml() ),
-                    "The local cache should not contain a build" );
-            assertTrue( Files.walk( remoteCache ).noneMatch( isBuildInfoXml() ),
-                    "The remote cache should not contain a build" );
+            assertFalse( hasBuildInfoXml( localCache ), () -> error( localCache, "local", false ) );
+            assertFalse( hasBuildInfoXml( remoteCache ), () -> error( remoteCache, "remote", false ) );
 
             verifier.getCliOptions().clear();
             verifier.addCliOption( "--settings=" + settings );
@@ -103,10 +102,8 @@ public class RemoteCacheDavTest
             verifier.executeGoals( Arrays.asList( "clean", "install" ) );
             verifier.verifyErrorFreeLog();
 
-            assertTrue( Files.walk( localCache ).anyMatch( isBuildInfoXml() ),
-                    "The local cache should contain a build" );
-            assertTrue( Files.walk( remoteCache ).noneMatch( isBuildInfoXml() ),
-                    "The remote cache should not contain a build" );
+            assertTrue( hasBuildInfoXml( localCache ), () -> error( localCache, "local", true ) );
+            assertFalse( hasBuildInfoXml( remoteCache ), () -> error( remoteCache, "remote", false ) );
 
             cleanDirs( localCache, remoteCache );
 
@@ -121,10 +118,8 @@ public class RemoteCacheDavTest
             verifier.executeGoals( Arrays.asList( "clean", "install" ) );
             verifier.verifyErrorFreeLog();
 
-            assertTrue( Files.walk( localCache ).anyMatch( isBuildInfoXml() ),
-                    "The local cache should contain a build" );
-            assertTrue( Files.walk( remoteCache ).anyMatch( isBuildInfoXml() ),
-                    "The remote cache should contain a build" );
+            assertTrue( hasBuildInfoXml( localCache ), () -> error( localCache, "local", true ) );
+            assertTrue( hasBuildInfoXml( remoteCache ), () -> error( remoteCache, "remote", true ) );
 
             cleanDirs( localCache );
 
@@ -139,10 +134,8 @@ public class RemoteCacheDavTest
             verifier.executeGoals( Arrays.asList( "clean", "install" ) );
             verifier.verifyErrorFreeLog();
 
-            assertTrue( Files.walk( localCache ).anyMatch( isBuildInfoXml() ),
-                    "The local cache should contain a build" );
-            assertTrue( Files.walk( remoteCache ).anyMatch( isBuildInfoXml() ),
-                    "The remote cache should contain a build" );
+            assertTrue( hasBuildInfoXml( localCache ), () -> error( localCache, "local", true ) );
+            assertTrue( hasBuildInfoXml( remoteCache ), () -> error( remoteCache, "remote", true ) );
         }
         finally
         {
@@ -150,6 +143,26 @@ public class RemoteCacheDavTest
         }
     }
 
+    private String error( Path directory, String cache, boolean shouldHave )
+    {
+        StringBuilder sb = new StringBuilder( "The " + cache + " cache should " + ( shouldHave ? "" : "not ") + "contain a build" );
+        sb.append( "\nContents:\n" );
+        try
+        {
+            Files.walk( directory ).forEach( p -> sb.append( p ).append( "\n" ) );
+        }
+        catch ( IOException e )
+        {
+            sb.append( "Error: " ).append( e );
+        }
+        return sb.toString();
+    }
+
+    private boolean hasBuildInfoXml( Path cache ) throws IOException
+    {
+        return Files.walk( cache ).anyMatch( isBuildInfoXml() );
+    }
+    
     @NotNull
     private Predicate<Path> isBuildInfoXml()
     {
