@@ -26,6 +26,7 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import org.apache.maven.buildcache.its.junit.IntegrationTest;
 import org.apache.maven.buildcache.its.junit.IntegrationTestExtension;
 import org.apache.maven.buildcache.its.junit.Test;
@@ -81,6 +82,8 @@ public class RemoteCacheDavTest
         dav.start();
         try
         {
+            Path logDir = Paths.get( verifier.getBasedir() ).getParent();
+
             String url = ( "wagon".equals( transport ) ? "dav:" : "" ) + "http://localhost:" + dav.getFirstMappedPort();
             substitute( basedir.resolve( ".mvn/maven-build-cache-config.xml" ),
                     "url", url, "id", REPO_ID, "location", localCache.toString() );
@@ -88,8 +91,8 @@ public class RemoteCacheDavTest
             verifier.setAutoclean( false );
 
             cleanDirs( localCache, remoteCache );
-            assertFalse( hasBuildInfoXml( localCache ), () -> error( localCache, "local", false ) );
-            assertFalse( hasBuildInfoXml( remoteCache ), () -> error( remoteCache, "remote", false ) );
+            assertFalse( hasBuildInfoXml( localCache ), () -> error( localCache, logDir, "local", false ) );
+            assertFalse( hasBuildInfoXml( remoteCache ), () -> error( remoteCache, logDir, "remote", false ) );
 
             verifier.getCliOptions().clear();
             verifier.addCliOption( "--settings=" + settings );
@@ -102,8 +105,8 @@ public class RemoteCacheDavTest
             verifier.executeGoals( Arrays.asList( "clean", "install" ) );
             verifier.verifyErrorFreeLog();
 
-            assertTrue( hasBuildInfoXml( localCache ), () -> error( localCache, "local", true ) );
-            assertFalse( hasBuildInfoXml( remoteCache ), () -> error( remoteCache, "remote", false ) );
+            assertTrue( hasBuildInfoXml( localCache ), () -> error( localCache, logDir, "local", true ) );
+            assertFalse( hasBuildInfoXml( remoteCache ), () -> error( remoteCache, logDir, "remote", false ) );
 
             cleanDirs( localCache, remoteCache );
 
@@ -118,8 +121,8 @@ public class RemoteCacheDavTest
             verifier.executeGoals( Arrays.asList( "clean", "install" ) );
             verifier.verifyErrorFreeLog();
 
-            assertTrue( hasBuildInfoXml( localCache ), () -> error( localCache, "local", true ) );
-            assertTrue( hasBuildInfoXml( remoteCache ), () -> error( remoteCache, "remote", true ) );
+            assertTrue( hasBuildInfoXml( localCache ), () -> error( localCache, logDir, "local", true ) );
+            assertTrue( hasBuildInfoXml( remoteCache ), () -> error( remoteCache, logDir, "remote", true ) );
 
             cleanDirs( localCache );
 
@@ -134,8 +137,8 @@ public class RemoteCacheDavTest
             verifier.executeGoals( Arrays.asList( "clean", "install" ) );
             verifier.verifyErrorFreeLog();
 
-            assertTrue( hasBuildInfoXml( localCache ), () -> error( localCache, "local", true ) );
-            assertTrue( hasBuildInfoXml( remoteCache ), () -> error( remoteCache, "remote", true ) );
+            assertTrue( hasBuildInfoXml( localCache ), () -> error( localCache, logDir, "local", true ) );
+            assertTrue( hasBuildInfoXml( remoteCache ), () -> error( remoteCache, logDir, "remote", true ) );
         }
         finally
         {
@@ -143,13 +146,22 @@ public class RemoteCacheDavTest
         }
     }
 
-    private String error( Path directory, String cache, boolean shouldHave )
+    private String error( Path directory, Path logDir, String cache, boolean shouldHave )
     {
-        StringBuilder sb = new StringBuilder( "The " + cache + " cache should " + ( shouldHave ? "" : "not ") + "contain a build" );
-        sb.append( "\nContents:\n" );
+        StringBuilder sb = new StringBuilder(
+                "The " + cache + " cache should " + ( shouldHave ? "" : "not " ) + "contain a build\n" );
         try
         {
-            Files.walk( directory ).forEach( p -> sb.append( p ).append( "\n" ) );
+            sb.append( "Contents:\n" );
+            Files.walk( directory ).forEach( p -> sb.append( "    " ).append( p ).append( "\n" ) );
+
+            for ( Path log : Files.list( logDir )
+                    .filter( p -> p.getFileName().toString().matches( "log.*\\.txt" ) )
+                    .collect( Collectors.toList() ) )
+            {
+                sb.append( "Log file: " ).append( log ).append( "\n" );
+                Files.lines( log ).forEach( l -> sb.append( "    " ).append( l ).append( "\n" ) );
+            }
         }
         catch ( IOException e )
         {
@@ -162,7 +174,7 @@ public class RemoteCacheDavTest
     {
         return Files.walk( cache ).anyMatch( isBuildInfoXml() );
     }
-    
+
     @NotNull
     private Predicate<Path> isBuildInfoXml()
     {
