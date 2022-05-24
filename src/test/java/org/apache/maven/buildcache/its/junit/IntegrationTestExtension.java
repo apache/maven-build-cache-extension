@@ -86,7 +86,7 @@ public class IntegrationTestExtension implements BeforeAllCallback, BeforeEachCa
         {
             throw new IllegalStateException( "@IntegrationTest must be set" );
         }
-        final Path testDir = Paths.get( "target/maven-tests/" + className + "/" + methodName ).toAbsolutePath();
+        final Path testDir = Paths.get( "target/mvnd-tests/" + className + "/" + methodName ).toAbsolutePath();
         deleteDir( testDir );
         Files.createDirectories( testDir );
         final Path testExecutionDir;

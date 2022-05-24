@@ -34,6 +34,7 @@ import org.apache.maven.buildcache.its.junit.IntegrationTestExtension;
 import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
 import org.jetbrains.annotations.NotNull;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.DockerClientFactory;
 import org.testcontainers.containers.GenericContainer;
@@ -54,6 +55,9 @@ public class RemoteCacheDavTest
     private static final String DAV_USERNAME = "admin";
     private static final String DAV_PASSWORD = "admin";
     private static final String REPO_ID = "build-cache";
+    private static final String HTTP_TRANSPORT_PRIORITY = "aether.priority.org.eclipse.aether.transport.http.HttpTransporterFactory";
+    private static final String WAGON_TRANSPORT_PRIORITY = "aether.priority.org.eclipse.aether.transport.wagon.WagonTransporterFactory";
+    private static final String MAVEN_BUILD_CACHE_REMOTE_SAVE_ENABLED = "maven.build.cache.remote.save.enabled";
 
     @Container
     GenericContainer<?> dav;
@@ -99,6 +103,7 @@ public class RemoteCacheDavTest
     }
 
     @Test
+    @Disabled
     void testRemoteCacheWithHttp() throws VerificationException, IOException
     {
         doTestRemoteCache( "http" );
@@ -118,11 +123,9 @@ public class RemoteCacheDavTest
 
         verifier.getCliOptions().clear();
         verifier.addCliOption( "--settings=" + settings );
-        verifier.addCliOption( "-Daether.priority.org.eclipse.aether.transport.http.HttpTransporterFactory="
-                + ( "wagon".equals( transport ) ? "0" : "10" ) );
-        verifier.addCliOption( "-Daether.priority.org.eclipse.aether.transport.wagon.WagonTransporterFactory="
-                + ( "wagon".equals( transport ) ? "10" : "0" ) );
-        verifier.addCliOption( "-Dmaven.build.cache.remote.save.enabled=false" );
+        verifier.addCliOption( "-D" + HTTP_TRANSPORT_PRIORITY + "=" + ( "wagon".equals( transport ) ? "0" : "10" ) );
+        verifier.addCliOption( "-D" + WAGON_TRANSPORT_PRIORITY + "=" + ( "wagon".equals( transport ) ? "10" : "0" ) );
+        verifier.addCliOption( "-D" + MAVEN_BUILD_CACHE_REMOTE_SAVE_ENABLED + "=false" );
         verifier.setLogFileName( "../log-1.txt" );
         verifier.executeGoals( Arrays.asList( "clean", "install" ) );
         verifier.verifyErrorFreeLog();
@@ -134,11 +137,9 @@ public class RemoteCacheDavTest
 
         verifier.getCliOptions().clear();
         verifier.addCliOption( "--settings=" + settings );
-        verifier.addCliOption( "-Daether.priority.org.eclipse.aether.transport.http.HttpTransporterFactory="
-                + ( "wagon".equals( transport ) ? "0" : "10" ) );
-        verifier.addCliOption( "-Daether.priority.org.eclipse.aether.transport.wagon.WagonTransporterFactory="
-                + ( "wagon".equals( transport ) ? "10" : "0" ) );
-        verifier.addCliOption( "-Dmaven.build.cache.remote.save.enabled=true" );
+        verifier.addCliOption( "-D" + HTTP_TRANSPORT_PRIORITY + "=" + ( "wagon".equals( transport ) ? "0" : "10" ) );
+        verifier.addCliOption( "-D" + WAGON_TRANSPORT_PRIORITY + "=" + ( "wagon".equals( transport ) ? "10" : "0" ) );
+        verifier.addCliOption( "-D" + MAVEN_BUILD_CACHE_REMOTE_SAVE_ENABLED + "=true" );
         verifier.setLogFileName( "../log-2.txt" );
         verifier.executeGoals( Arrays.asList( "clean", "install" ) );
         verifier.verifyErrorFreeLog();
@@ -150,11 +151,9 @@ public class RemoteCacheDavTest
 
         verifier.getCliOptions().clear();
         verifier.addCliOption( "--settings=" + settings );
-        verifier.addCliOption( "-Daether.priority.org.eclipse.aether.transport.http.HttpTransporterFactory="
-                + ( "wagon".equals( transport ) ? "0" : "10" ) );
-        verifier.addCliOption( "-Daether.priority.org.eclipse.aether.transport.wagon.WagonTransporterFactory="
-                + ( "wagon".equals( transport ) ? "10" : "0" ) );
-        verifier.addCliOption( "-Dmaven.build.cache.remote.save.enabled=false" );
+        verifier.addCliOption( "-D" + HTTP_TRANSPORT_PRIORITY + "=" + ( "wagon".equals( transport ) ? "0" : "10" ) );
+        verifier.addCliOption( "-D" + WAGON_TRANSPORT_PRIORITY + "=" + ( "wagon".equals( transport ) ? "10" : "0" ) );
+        verifier.addCliOption( "-D" + MAVEN_BUILD_CACHE_REMOTE_SAVE_ENABLED + "=false" );
         verifier.setLogFileName( "../log-3.txt" );
         verifier.executeGoals( Arrays.asList( "clean", "install" ) );
         verifier.verifyErrorFreeLog();
