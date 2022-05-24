@@ -44,34 +44,35 @@ public class IntegrationTestExtension implements BeforeAllCallback, BeforeEachCa
     private static Path mavenHome;
 
     @Override
-    public void beforeAll( ExtensionContext context )
+    public void beforeAll( ExtensionContext context ) throws IOException
     {
-        String home = System.getProperty( "maven.home" );
-        if ( home != null )
-        {
-            mavenHome = Paths.get( home ).toAbsolutePath();
-            if ( !Files.exists( mavenHome ) )
-            {
-                throw new IllegalStateException( "Maven home " + mavenHome + " does not exists !" );
-            }
-        }
-        else
+        Path basedir;
+        String basedirstr = System.getProperty( "maven.basedir" );
+        if ( basedirstr == null )
         {
             if ( Files.exists( Paths.get( "target/maven3" ) ) )
             {
-                mavenHome = Paths.get( "target/maven3" );
+                basedir = Paths.get( "target/maven3" );
             }
             else if ( Files.exists( Paths.get( "target/maven4" ) ) )
             {
-                mavenHome = Paths.get( "target/maven4" );
+                basedir = Paths.get( "target/maven4" );
             }
             else
             {
                 throw new IllegalStateException( "Could not find maven home !" );
             }
         }
+        else
+        {
+            basedir = Paths.get( basedirstr );
+        }
+        mavenHome = Files.list( basedir )
+                .filter( p -> Files.exists( p.resolve( "bin/mvn" ) ) )
+                .findAny()
+                .orElseThrow( () -> new IllegalStateException( "Could not find maven home" ) );
+        System.setProperty( "maven.home", mavenHome.toString() );
         mavenHome.resolve( "bin/mvn" ).toFile().setExecutable( true );
-
     }
 
     @Override

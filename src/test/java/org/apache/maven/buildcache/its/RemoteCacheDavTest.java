@@ -34,7 +34,6 @@ import org.apache.maven.buildcache.its.junit.IntegrationTestExtension;
 import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
 import org.jetbrains.annotations.NotNull;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.DockerClientFactory;
 import org.testcontainers.containers.GenericContainer;
@@ -90,6 +89,7 @@ public class RemoteCacheDavTest
                 + "</server></servers></settings>" ).getBytes() );
 
         dav = new GenericContainer<>( DockerImageName.parse( DAV_DOCKER_IMAGE ) )
+                .withReuse( false )
                 .withExposedPorts( 80 )
                 .withEnv( "WEBDAV_USERNAME", DAV_USERNAME )
                 .withEnv( "WEBDAV_PASSWORD", DAV_PASSWORD )
@@ -103,7 +103,6 @@ public class RemoteCacheDavTest
     }
 
     @Test
-    @Disabled
     void testRemoteCacheWithHttp() throws VerificationException, IOException
     {
         doTestRemoteCache( "http" );

@@ -414,7 +414,7 @@ under the License.
                             <systemPropertyVariables>
                                 <project.version>${project.version}</project.version>
                                 <maven.multiModuleProjectDirectory>${maven.multiModuleProjectDirectory}</maven.multiModuleProjectDirectory>
-                                <maven.home>${maven.home}</maven.home>
+                                <maven.basedir>${maven.basedir}</maven.basedir>
                             </systemPropertyVariables>
                         </configuration>
                     </execution>
@@ -444,7 +444,6 @@ under the License.
                 <mavenVersion>3.9.0-SNAPSHOT</mavenVersion>
                 <maven.dir>maven3</maven.dir>
                 <maven.basedir>${project.build.directory}/${maven.dir}</maven.basedir>
-                <maven.home>${maven.basedir}/apache-maven-${mavenVersion}</maven.home>
             </properties>
         </profile>
         <profile>
@@ -453,7 +452,6 @@ under the License.
                 <mavenVersion>4.0.0-alpha-1-SNAPSHOT</mavenVersion>
                 <maven.dir>maven4</maven.dir>
                 <maven.basedir>${project.build.directory}/${maven.dir}</maven.basedir>
-                <maven.home>${maven.basedir}/apache-maven-${mavenVersion}</maven.home>
             </properties>
         </profile>
     </profiles>
