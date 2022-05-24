@@ -27,19 +27,26 @@ import java.util.Arrays;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import org.apache.maven.buildcache.its.junit.BeforeEach;
+import org.apache.maven.buildcache.its.junit.Inject;
 import org.apache.maven.buildcache.its.junit.IntegrationTest;
 import org.apache.maven.buildcache.its.junit.IntegrationTestExtension;
-import org.apache.maven.buildcache.its.junit.Test;
 import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
 import org.jetbrains.annotations.NotNull;
+import org.junit.jupiter.api.Test;
+import org.testcontainers.DockerClientFactory;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 @IntegrationTest( "src/test/projects/remote-cache-dav" )
+@Testcontainers
 public class RemoteCacheDavTest
 {
 
@@ -48,24 +55,28 @@ public class RemoteCacheDavTest
     private static final String DAV_PASSWORD = "admin";
     private static final String REPO_ID = "build-cache";
 
-    @Test
-    void testRemoteCacheWithWagon( Verifier verifier ) throws VerificationException, IOException
-    {
-        doTestRemoteCache( verifier, "wagon" );
-    }
+    @Container
+    GenericContainer<?> dav;
 
-    @Test
-    void testRemoteCacheWithHttp( Verifier verifier ) throws VerificationException, IOException
-    {
-        doTestRemoteCache( verifier, "http" );
-    }
+    @Inject
+    Verifier verifier;
 
-    protected void doTestRemoteCache( Verifier verifier, String transport ) throws VerificationException, IOException
+    Path basedir;
+    Path remoteCache;
+    Path localCache;
+    Path settings;
+    Path logDir;
+
+    @BeforeEach
+    void setup() throws IOException
     {
-        Path basedir = Paths.get( verifier.getBasedir() );
-        Path remoteCache = basedir.resolveSibling( "cache-remote" ).toAbsolutePath().normalize();
-        Path localCache = basedir.resolveSibling( "cache-local" ).toAbsolutePath().normalize();
-        Path settings = basedir.resolve( "../settings.xml" ).toAbsolutePath().normalize();
+        assumeTrue( DockerClientFactory.instance().isDockerAvailable(), "docker is not available" );
+
+        basedir = Paths.get( verifier.getBasedir() );
+        remoteCache = basedir.resolveSibling( "cache-remote" ).toAbsolutePath().normalize();
+        localCache = basedir.resolveSibling( "cache-local" ).toAbsolutePath().normalize();
+        settings = basedir.resolve( "../settings.xml" ).toAbsolutePath().normalize();
+        logDir = basedir.getParent();
 
         Files.write( settings, ( "<settings>"
                 + "<servers><server>"
@@ -74,79 +85,85 @@ public class RemoteCacheDavTest
                 + "<password>" + DAV_PASSWORD + "</password>"
                 + "</server></servers></settings>" ).getBytes() );
 
-        GenericContainer<?> dav = new GenericContainer<>( DockerImageName.parse( DAV_DOCKER_IMAGE ) )
+        dav = new GenericContainer<>( DockerImageName.parse( DAV_DOCKER_IMAGE ) )
                 .withExposedPorts( 80 )
                 .withEnv( "WEBDAV_USERNAME", DAV_USERNAME )
                 .withEnv( "WEBDAV_PASSWORD", DAV_PASSWORD )
                 .withFileSystemBind( remoteCache.toString(), "/var/webdav/public" );
-        dav.start();
-        try
-        {
-            Path logDir = Paths.get( verifier.getBasedir() ).getParent();
-
-            String url = ( "wagon".equals( transport ) ? "dav:" : "" ) + "http://localhost:" + dav.getFirstMappedPort();
-            substitute( basedir.resolve( ".mvn/maven-build-cache-config.xml" ),
-                    "url", url, "id", REPO_ID, "location", localCache.toString() );
-
-            verifier.setAutoclean( false );
-
-            cleanDirs( localCache, remoteCache );
-            assertFalse( hasBuildInfoXml( localCache ), () -> error( localCache, logDir, dav, "local", false ) );
-            assertFalse( hasBuildInfoXml( remoteCache ), () -> error( remoteCache, logDir, dav, "remote", false ) );
-
-            verifier.getCliOptions().clear();
-            verifier.addCliOption( "--settings=" + settings );
-            verifier.addCliOption( "-Daether.priority.org.eclipse.aether.transport.http.HttpTransporterFactory="
-                    + ( "wagon".equals( transport ) ? "0" : "10" ) );
-            verifier.addCliOption( "-Daether.priority.org.eclipse.aether.transport.wagon.WagonTransporterFactory="
-                    + ( "wagon".equals( transport ) ? "10" : "0" ) );
-            verifier.addCliOption( "-Dmaven.build.cache.remote.save.enabled=false" );
-            verifier.setLogFileName( "../log-1.txt" );
-            verifier.executeGoals( Arrays.asList( "clean", "install" ) );
-            verifier.verifyErrorFreeLog();
-
-            assertTrue( hasBuildInfoXml( localCache ), () -> error( localCache, logDir, dav, "local", true ) );
-            assertFalse( hasBuildInfoXml( remoteCache ), () -> error( remoteCache, logDir, dav, "remote", false ) );
-
-            cleanDirs( localCache, remoteCache );
-
-            verifier.getCliOptions().clear();
-            verifier.addCliOption( "--settings=" + settings );
-            verifier.addCliOption( "-Daether.priority.org.eclipse.aether.transport.http.HttpTransporterFactory="
-                    + ( "wagon".equals( transport ) ? "0" : "10" ) );
-            verifier.addCliOption( "-Daether.priority.org.eclipse.aether.transport.wagon.WagonTransporterFactory="
-                    + ( "wagon".equals( transport ) ? "10" : "0" ) );
-            verifier.addCliOption( "-Dmaven.build.cache.remote.save.enabled=true" );
-            verifier.setLogFileName( "../log-2.txt" );
-            verifier.executeGoals( Arrays.asList( "clean", "install" ) );
-            verifier.verifyErrorFreeLog();
-
-            assertTrue( hasBuildInfoXml( localCache ), () -> error( localCache, logDir, dav, "local", true ) );
-            assertTrue( hasBuildInfoXml( remoteCache ), () -> error( remoteCache, logDir, dav, "remote", true ) );
-
-            cleanDirs( localCache );
-
-            verifier.getCliOptions().clear();
-            verifier.addCliOption( "--settings=" + settings );
-            verifier.addCliOption( "-Daether.priority.org.eclipse.aether.transport.http.HttpTransporterFactory="
-                    + ( "wagon".equals( transport ) ? "0" : "10" ) );
-            verifier.addCliOption( "-Daether.priority.org.eclipse.aether.transport.wagon.WagonTransporterFactory="
-                    + ( "wagon".equals( transport ) ? "10" : "0" ) );
-            verifier.addCliOption( "-Dmaven.build.cache.remote.save.enabled=false" );
-            verifier.setLogFileName( "../log-3.txt" );
-            verifier.executeGoals( Arrays.asList( "clean", "install" ) );
-            verifier.verifyErrorFreeLog();
-
-            assertTrue( hasBuildInfoXml( localCache ), () -> error( localCache, logDir, dav, "local", true ) );
-            assertTrue( hasBuildInfoXml( remoteCache ), () -> error( remoteCache, logDir, dav, "remote", true ) );
-        }
-        finally
-        {
-            dav.close();
-        }
     }
 
-    private String error( Path directory, Path logDir, GenericContainer<?> container, String cache, boolean shouldHave )
+    @Test
+    void testRemoteCacheWithWagon() throws VerificationException, IOException
+    {
+        doTestRemoteCache( "wagon" );
+    }
+
+    @Test
+    void testRemoteCacheWithHttp() throws VerificationException, IOException
+    {
+        doTestRemoteCache( "http" );
+    }
+
+    protected void doTestRemoteCache( String transport ) throws VerificationException, IOException
+    {
+        String url = ( "wagon".equals( transport ) ? "dav:" : "" ) + "http://localhost:" + dav.getFirstMappedPort();
+        substitute( basedir.resolve( ".mvn/maven-build-cache-config.xml" ),
+                "url", url, "id", REPO_ID, "location", localCache.toString() );
+
+        verifier.setAutoclean( false );
+
+        cleanDirs( localCache, remoteCache );
+        assertFalse( hasBuildInfoXml( localCache ), () -> error( localCache, "local", false ) );
+        assertFalse( hasBuildInfoXml( remoteCache ), () -> error( remoteCache, "remote", false ) );
+
+        verifier.getCliOptions().clear();
+        verifier.addCliOption( "--settings=" + settings );
+        verifier.addCliOption( "-Daether.priority.org.eclipse.aether.transport.http.HttpTransporterFactory="
+                + ( "wagon".equals( transport ) ? "0" : "10" ) );
+        verifier.addCliOption( "-Daether.priority.org.eclipse.aether.transport.wagon.WagonTransporterFactory="
+                + ( "wagon".equals( transport ) ? "10" : "0" ) );
+        verifier.addCliOption( "-Dmaven.build.cache.remote.save.enabled=false" );
+        verifier.setLogFileName( "../log-1.txt" );
+        verifier.executeGoals( Arrays.asList( "clean", "install" ) );
+        verifier.verifyErrorFreeLog();
+
+        assertTrue( hasBuildInfoXml( localCache ), () -> error( localCache, "local", true ) );
+        assertFalse( hasBuildInfoXml( remoteCache ), () -> error( remoteCache, "remote", false ) );
+
+        cleanDirs( localCache, remoteCache );
+
+        verifier.getCliOptions().clear();
+        verifier.addCliOption( "--settings=" + settings );
+        verifier.addCliOption( "-Daether.priority.org.eclipse.aether.transport.http.HttpTransporterFactory="
+                + ( "wagon".equals( transport ) ? "0" : "10" ) );
+        verifier.addCliOption( "-Daether.priority.org.eclipse.aether.transport.wagon.WagonTransporterFactory="
+                + ( "wagon".equals( transport ) ? "10" : "0" ) );
+        verifier.addCliOption( "-Dmaven.build.cache.remote.save.enabled=true" );
+        verifier.setLogFileName( "../log-2.txt" );
+        verifier.executeGoals( Arrays.asList( "clean", "install" ) );
+        verifier.verifyErrorFreeLog();
+
+        assertTrue( hasBuildInfoXml( localCache ), () -> error( localCache, "local", true ) );
+        assertTrue( hasBuildInfoXml( remoteCache ), () -> error( remoteCache, "remote", true ) );
+
+        cleanDirs( localCache );
+
+        verifier.getCliOptions().clear();
+        verifier.addCliOption( "--settings=" + settings );
+        verifier.addCliOption( "-Daether.priority.org.eclipse.aether.transport.http.HttpTransporterFactory="
+                + ( "wagon".equals( transport ) ? "0" : "10" ) );
+        verifier.addCliOption( "-Daether.priority.org.eclipse.aether.transport.wagon.WagonTransporterFactory="
+                + ( "wagon".equals( transport ) ? "10" : "0" ) );
+        verifier.addCliOption( "-Dmaven.build.cache.remote.save.enabled=false" );
+        verifier.setLogFileName( "../log-3.txt" );
+        verifier.executeGoals( Arrays.asList( "clean", "install" ) );
+        verifier.verifyErrorFreeLog();
+
+        assertTrue( hasBuildInfoXml( localCache ), () -> error( localCache, "local", true ) );
+        assertTrue( hasBuildInfoXml( remoteCache ), () -> error( remoteCache, "remote", true ) );
+    }
+
+    private String error( Path directory, String cache, boolean shouldHave )
     {
         StringBuilder sb = new StringBuilder(
                 "The " + cache + " cache should " + ( shouldHave ? "" : "not " ) + "contain a build\n" );
@@ -164,7 +181,7 @@ public class RemoteCacheDavTest
             }
 
             sb.append( "Container log:\n" );
-            sb.append( container.getLogs() );
+            sb.append( dav.getLogs() );
         }
         catch ( IOException e )
         {
