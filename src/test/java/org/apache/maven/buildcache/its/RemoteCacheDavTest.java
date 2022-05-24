@@ -91,8 +91,8 @@ public class RemoteCacheDavTest
             verifier.setAutoclean( false );
 
             cleanDirs( localCache, remoteCache );
-            assertFalse( hasBuildInfoXml( localCache ), () -> error( localCache, logDir, "local", false ) );
-            assertFalse( hasBuildInfoXml( remoteCache ), () -> error( remoteCache, logDir, "remote", false ) );
+            assertFalse( hasBuildInfoXml( localCache ), () -> error( localCache, logDir, dav, "local", false ) );
+            assertFalse( hasBuildInfoXml( remoteCache ), () -> error( remoteCache, logDir, dav, "remote", false ) );
 
             verifier.getCliOptions().clear();
             verifier.addCliOption( "--settings=" + settings );
@@ -105,8 +105,8 @@ public class RemoteCacheDavTest
             verifier.executeGoals( Arrays.asList( "clean", "install" ) );
             verifier.verifyErrorFreeLog();
 
-            assertTrue( hasBuildInfoXml( localCache ), () -> error( localCache, logDir, "local", true ) );
-            assertFalse( hasBuildInfoXml( remoteCache ), () -> error( remoteCache, logDir, "remote", false ) );
+            assertTrue( hasBuildInfoXml( localCache ), () -> error( localCache, logDir, dav, "local", true ) );
+            assertFalse( hasBuildInfoXml( remoteCache ), () -> error( remoteCache, logDir, dav, "remote", false ) );
 
             cleanDirs( localCache, remoteCache );
 
@@ -121,8 +121,8 @@ public class RemoteCacheDavTest
             verifier.executeGoals( Arrays.asList( "clean", "install" ) );
             verifier.verifyErrorFreeLog();
 
-            assertTrue( hasBuildInfoXml( localCache ), () -> error( localCache, logDir, "local", true ) );
-            assertTrue( hasBuildInfoXml( remoteCache ), () -> error( remoteCache, logDir, "remote", true ) );
+            assertTrue( hasBuildInfoXml( localCache ), () -> error( localCache, logDir, dav, "local", true ) );
+            assertTrue( hasBuildInfoXml( remoteCache ), () -> error( remoteCache, logDir, dav, "remote", true ) );
 
             cleanDirs( localCache );
 
@@ -137,8 +137,8 @@ public class RemoteCacheDavTest
             verifier.executeGoals( Arrays.asList( "clean", "install" ) );
             verifier.verifyErrorFreeLog();
 
-            assertTrue( hasBuildInfoXml( localCache ), () -> error( localCache, logDir, "local", true ) );
-            assertTrue( hasBuildInfoXml( remoteCache ), () -> error( remoteCache, logDir, "remote", true ) );
+            assertTrue( hasBuildInfoXml( localCache ), () -> error( localCache, logDir, dav, "local", true ) );
+            assertTrue( hasBuildInfoXml( remoteCache ), () -> error( remoteCache, logDir, dav, "remote", true ) );
         }
         finally
         {
@@ -146,7 +146,7 @@ public class RemoteCacheDavTest
         }
     }
 
-    private String error( Path directory, Path logDir, String cache, boolean shouldHave )
+    private String error( Path directory, Path logDir, GenericContainer<?> container, String cache, boolean shouldHave )
     {
         StringBuilder sb = new StringBuilder(
                 "The " + cache + " cache should " + ( shouldHave ? "" : "not " ) + "contain a build\n" );
@@ -162,6 +162,9 @@ public class RemoteCacheDavTest
                 sb.append( "Log file: " ).append( log ).append( "\n" );
                 Files.lines( log ).forEach( l -> sb.append( "    " ).append( l ).append( "\n" ) );
             }
+
+            sb.append( "Container log:\n" );
+            sb.append( container.getLogs() );
         }
         catch ( IOException e )
         {
