@@ -25,6 +25,7 @@ import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.FileTime;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
@@ -224,10 +225,11 @@ public class RemoteCacheDavTest
 
     private void cleanDirs( Path... paths ) throws IOException
     {
+        FileAttribute<?> attrs = PosixFilePermissions.asFileAttribute( PosixFilePermissions.fromString( "rwxrwxrwx" ) );
         for ( Path path : paths )
         {
             IntegrationTestExtension.deleteDir( path );
-            Files.createDirectories( path );
+            Files.createDirectories( path, attrs );
         }
     }
 
