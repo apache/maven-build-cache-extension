@@ -225,11 +225,11 @@ public class RemoteCacheDavTest
 
     private void cleanDirs( Path... paths ) throws IOException
     {
-        FileAttribute<?> attrs = PosixFilePermissions.asFileAttribute( PosixFilePermissions.fromString( "rwxrwxrwx" ) );
         for ( Path path : paths )
         {
             IntegrationTestExtension.deleteDir( path );
-            Files.createDirectories( path, attrs );
+            Files.createDirectories( path );
+            Runtime.getRuntime().exec("chmod go+rwx " + path );
         }
     }
 
