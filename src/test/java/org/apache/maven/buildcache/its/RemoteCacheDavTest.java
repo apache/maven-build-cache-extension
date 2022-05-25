@@ -81,6 +81,8 @@ public class RemoteCacheDavTest
         settings = basedir.resolve( "../settings.xml" ).toAbsolutePath().normalize();
         logDir = basedir.getParent();
 
+        Files.createDirectories( remoteCache );
+
         Files.write( settings, ( "<settings>"
                 + "<servers><server>"
                 + "<id>" + REPO_ID + "</id>"
@@ -110,7 +112,8 @@ public class RemoteCacheDavTest
 
     protected void doTestRemoteCache( String transport ) throws VerificationException, IOException
     {
-        String url = ( "wagon".equals( transport ) ? "dav:" : "" ) + "http://localhost:" + dav.getFirstMappedPort() + "/mbce";
+        String url = ( "wagon".equals( transport ) ? "dav:" : "" ) + "http://localhost:" + dav.getFirstMappedPort()
+                + "/mbce";
         substitute( basedir.resolve( ".mvn/maven-build-cache-config.xml" ),
                 "url", url, "id", REPO_ID, "location", localCache.toString() );
 
