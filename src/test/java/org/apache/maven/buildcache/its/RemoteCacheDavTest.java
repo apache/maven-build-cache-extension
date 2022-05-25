@@ -25,7 +25,6 @@ import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.FileTime;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
@@ -229,7 +228,7 @@ public class RemoteCacheDavTest
         {
             IntegrationTestExtension.deleteDir( path );
             Files.createDirectories( path );
-            Runtime.getRuntime().exec("chmod go+rwx " + path );
+            Runtime.getRuntime().exec( "chmod go+rwx " + path );
         }
     }
 

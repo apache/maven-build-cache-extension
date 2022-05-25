@@ -31,6 +31,12 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
+      - name: Setup Docker
+        uses: docker-practice/actions-setup-docker@master
+
+      - name: Docker version
+        run: docker version
+
       - name: Checkout
         uses: actions/checkout@v2
 
@@ -50,8 +56,5 @@ jobs:
             ${{ runner.os }}-maven-
 
       - name: Build with Maven
-        uses: docker-practice/actions-setup-docker@master
-        run: |
-          docker version
-          mvn install -e -B -V -P${{ matrix.maven }}
+        run: mvn install -e -B -V -P${{ matrix.maven }}
 
