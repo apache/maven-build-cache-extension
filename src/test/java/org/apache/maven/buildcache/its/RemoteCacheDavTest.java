@@ -18,15 +18,31 @@
  */
 package org.apache.maven.buildcache.its;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.attribute.FileTime;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
+import java.util.EnumSet;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.maven.buildcache.its.junit.BeforeEach;
 import org.apache.maven.buildcache.its.junit.Inject;
 import org.apache.maven.buildcache.its.junit.IntegrationTest;
@@ -182,7 +198,11 @@ public class RemoteCacheDavTest
             }
 
             sb.append( "Container log:\n" );
-            sb.append( dav.getLogs() );
+            Stream.of( dav.getLogs().split( "\n" ) )
+                    .forEach( l -> sb.append( "    " ).append( l ).append( "\n" ) );
+
+            sb.append( "Remote cache listing:\n" );
+            ls( remoteCache, s -> sb.append( "    " ).append( s ).append( "\n" ) );
         }
         catch ( IOException e )
         {
@@ -219,5 +239,251 @@ public class RemoteCacheDavTest
             str = str.replaceAll( Pattern.quote( "${" + strings[i * 2] + "}" ), strings[i * 2 + 1] );
         }
         Files.write( path, str.getBytes( StandardCharsets.UTF_8 ) );
+    }
+
+    private static void ls( Path currentDir, Consumer<String> out ) throws IOException
+    {
+        class PathEntry implements Comparable<PathEntry>
+        {
+
+            final Path abs;
+            final Path path;
+            final Map<String, Object> attributes;
+
+            public PathEntry( Path abs, Path root )
+            {
+                this.abs = abs;
+                this.path = abs.startsWith( root ) ? root.relativize( abs ) : abs;
+                this.attributes = readAttributes( abs );
+            }
+
+            @Override
+            public int compareTo( PathEntry o )
+            {
+                return path.toString().compareTo( o.path.toString() );
+            }
+
+            boolean isNotDirectory()
+            {
+                return is( "isRegularFile" ) || is( "isSymbolicLink" ) || is( "isOther" );
+            }
+
+            boolean isDirectory()
+            {
+                return is( "isDirectory" );
+            }
+
+            private boolean is( String attr )
+            {
+                Object d = attributes.get( attr );
+                return d instanceof Boolean && ( Boolean ) d;
+            }
+
+            String display()
+            {
+                String suffix;
+                String link = "";
+                if ( is( "isSymbolicLink" ) )
+                {
+                    suffix = "@";
+                    try
+                    {
+                        Path l = Files.readSymbolicLink( abs );
+                        link = " -> " + l.toString();
+                    }
+                    catch ( IOException e )
+                    {
+                        // ignore
+                    }
+                }
+                else if ( is( "isDirectory" ) )
+                {
+                    suffix = "/";
+                }
+                else if ( is( "isExecutable" ) )
+                {
+                    suffix = "*";
+                }
+                else if ( is( "isOther" ) )
+                {
+                    suffix = "";
+                }
+                else
+                {
+                    suffix = "";
+                }
+                return path.toString() + suffix + link;
+            }
+
+            String longDisplay()
+            {
+                String username;
+                if ( attributes.containsKey( "owner" ) )
+                {
+                    username = Objects.toString( attributes.get( "owner" ), null );
+                }
+                else
+                {
+                    username = "owner";
+                }
+                if ( username.length() > 8 )
+                {
+                    username = username.substring( 0, 8 );
+                }
+                else
+                {
+                    for ( int i = username.length(); i < 8; i++ )
+                    {
+                        username = username + " ";
+                    }
+                }
+                String group;
+                if ( attributes.containsKey( "group" ) )
+                {
+                    group = Objects.toString( attributes.get( "group" ), null );
+                }
+                else
+                {
+                    group = "group";
+                }
+                if ( group.length() > 8 )
+                {
+                    group = group.substring( 0, 8 );
+                }
+                else
+                {
+                    for ( int i = group.length(); i < 8; i++ )
+                    {
+                        group = group + " ";
+                    }
+                }
+                Number length = ( Number ) attributes.get( "size" );
+                if ( length == null )
+                {
+                    length = 0L;
+                }
+                String lengthString;
+                if ( true /*opt.isSet("h")*/ )
+                {
+                    double l = length.longValue();
+                    String unit = "B";
+                    if ( l >= 1000 )
+                    {
+                        l /= 1024;
+                        unit = "K";
+                        if ( l >= 1000 )
+                        {
+                            l /= 1024;
+                            unit = "M";
+                            if ( l >= 1000 )
+                            {
+                                l /= 1024;
+                                unit = "T";
+                            }
+                        }
+                    }
+                    if ( l < 10 && length.longValue() > 1000 )
+                    {
+                        lengthString = String.format( "%.1f", l ) + unit;
+                    }
+                    else
+                    {
+                        lengthString = String.format( "%3.0f", l ) + unit;
+                    }
+                }
+                else
+                {
+                    lengthString = String.format( "%1$8s", length );
+                }
+                @SuppressWarnings( "unchecked" )
+                Set<PosixFilePermission> perms = ( Set<PosixFilePermission> ) attributes.get( "permissions" );
+                if ( perms == null )
+                {
+                    perms = EnumSet.noneOf( PosixFilePermission.class );
+                }
+                // TODO: all fields should be padded to align
+                return ( is( "isDirectory" ) ? "d"
+                        : ( is( "isSymbolicLink" ) ? "l" : ( is( "isOther" ) ? "o" : "-" ) ) )
+                        + PosixFilePermissions.toString( perms ) + " "
+                        + String.format( "%3s",
+                                ( attributes.containsKey( "nlink" ) ? attributes.get( "nlink" ).toString() : "1" ) )
+                        + " " + username + " " + group + " " + lengthString + " "
+                        + toString( ( FileTime ) attributes.get( "lastModifiedTime" ) )
+                        + " " + display();
+            }
+
+            protected String toString( FileTime time )
+            {
+                long millis = ( time != null ) ? time.toMillis() : -1L;
+                if ( millis < 0L )
+                {
+                    return "------------";
+                }
+                ZonedDateTime dt = Instant.ofEpochMilli( millis ).atZone( ZoneId.systemDefault() );
+                // Less than six months
+                if ( System.currentTimeMillis() - millis < 183L * 24L * 60L * 60L * 1000L )
+                {
+                    return DateTimeFormatter.ofPattern( "MMM ppd HH:mm" ).format( dt );
+                }
+                // Older than six months
+                else
+                {
+                    return DateTimeFormatter.ofPattern( "MMM ppd  yyyy" ).format( dt );
+                }
+            }
+
+            protected Map<String, Object> readAttributes( Path path )
+            {
+                Map<String, Object> attrs = new TreeMap<>( String.CASE_INSENSITIVE_ORDER );
+                for ( String view : path.getFileSystem().supportedFileAttributeViews() )
+                {
+                    try
+                    {
+                        Map<String, Object> ta = Files.readAttributes( path, view + ":*", LinkOption.NOFOLLOW_LINKS );
+                        ta.forEach( attrs::putIfAbsent );
+                    }
+                    catch ( IOException e )
+                    {
+                        // Ignore
+                    }
+                }
+                attrs.computeIfAbsent( "isExecutable", s -> Files.isExecutable( path ) );
+                attrs.computeIfAbsent( "permissions", s -> getPermissionsFromFile( path.toFile() ) );
+                return attrs;
+            }
+        }
+
+        Files.walk( currentDir )
+                .map( p -> new PathEntry( p, currentDir ) )
+                .sorted()
+                .map( PathEntry::longDisplay )
+                .forEach( out );
+    }
+
+    private static Set<PosixFilePermission> getPermissionsFromFile( File f )
+    {
+        Set<PosixFilePermission> perms = EnumSet.noneOf( PosixFilePermission.class );
+        if ( f.canRead() )
+        {
+            perms.add( PosixFilePermission.OWNER_READ );
+            perms.add( PosixFilePermission.GROUP_READ );
+            perms.add( PosixFilePermission.OTHERS_READ );
+        }
+
+        if ( f.canWrite() )
+        {
+            perms.add( PosixFilePermission.OWNER_WRITE );
+            perms.add( PosixFilePermission.GROUP_WRITE );
+            perms.add( PosixFilePermission.OTHERS_WRITE );
+        }
+
+        if ( f.canExecute() /*|| (OSUtils.IS_WINDOWS && isWindowsExecutable(f.getName()))*/ )
+        {
+            perms.add( PosixFilePermission.OWNER_EXECUTE );
+            perms.add( PosixFilePermission.GROUP_EXECUTE );
+            perms.add( PosixFilePermission.OTHERS_EXECUTE );
+        }
+
+        return perms;
     }
 }
