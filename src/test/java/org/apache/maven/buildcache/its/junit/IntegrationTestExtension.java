@@ -67,7 +67,7 @@ public class IntegrationTestExtension implements BeforeAllCallback, BeforeEachCa
         {
             basedir = Paths.get( basedirstr );
         }
-        mavenHome = Files.list( basedir )
+        mavenHome = Files.list( basedir.toAbsolutePath() )
                 .filter( p -> Files.exists( p.resolve( "bin/mvn" ) ) )
                 .findAny()
                 .orElseThrow( () -> new IllegalStateException( "Could not find maven home" ) );
@@ -206,7 +206,7 @@ public class IntegrationTestExtension implements BeforeAllCallback, BeforeEachCa
                 } );
             }
 
-            Verifier verifier = new Verifier( testExecutionDir.toString() );
+            Verifier verifier = new Verifier( testExecutionDir.toString(), true );
             verifier.setLogFileName( "../log.txt" );
             return verifier;
         }

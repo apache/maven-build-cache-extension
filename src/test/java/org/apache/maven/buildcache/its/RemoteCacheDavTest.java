@@ -110,13 +110,13 @@ public class RemoteCacheDavTest
 
     protected void doTestRemoteCache( String transport ) throws VerificationException, IOException
     {
-        String url = ( "wagon".equals( transport ) ? "dav:" : "" ) + "http://localhost:" + dav.getFirstMappedPort();
+        String url = ( "wagon".equals( transport ) ? "dav:" : "" ) + "http://localhost:" + dav.getFirstMappedPort() + "/mbce";
         substitute( basedir.resolve( ".mvn/maven-build-cache-config.xml" ),
                 "url", url, "id", REPO_ID, "location", localCache.toString() );
 
         verifier.setAutoclean( false );
 
-        cleanDirs( localCache, remoteCache );
+        cleanDirs( localCache, remoteCache.resolve( "mbce" ) );
         assertFalse( hasBuildInfoXml( localCache ), () -> error( localCache, "local", false ) );
         assertFalse( hasBuildInfoXml( remoteCache ), () -> error( remoteCache, "remote", false ) );
 
@@ -132,7 +132,7 @@ public class RemoteCacheDavTest
         assertTrue( hasBuildInfoXml( localCache ), () -> error( localCache, "local", true ) );
         assertFalse( hasBuildInfoXml( remoteCache ), () -> error( remoteCache, "remote", false ) );
 
-        cleanDirs( localCache, remoteCache );
+        cleanDirs( localCache, remoteCache.resolve( "mbce" ) );
 
         verifier.getCliOptions().clear();
         verifier.addCliOption( "--settings=" + settings );
