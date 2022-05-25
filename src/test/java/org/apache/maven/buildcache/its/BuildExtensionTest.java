@@ -19,9 +19,9 @@
 package org.apache.maven.buildcache.its;
 
 import org.apache.maven.buildcache.its.junit.IntegrationTest;
-import org.apache.maven.buildcache.its.junit.Test;
 import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
+import org.junit.jupiter.api.Test;
 
 @IntegrationTest( "src/test/projects/build-extension" )
 public class BuildExtensionTest
