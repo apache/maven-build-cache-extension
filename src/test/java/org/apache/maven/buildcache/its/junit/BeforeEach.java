@@ -16,25 +16,15 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.maven.buildcache.its;
+package org.apache.maven.buildcache.its.junit;
 
-import org.apache.maven.buildcache.its.junit.IntegrationTest;
-import org.apache.maven.it.VerificationException;
-import org.apache.maven.it.Verifier;
-import org.junit.jupiter.api.Test;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-@IntegrationTest( "src/test/projects/mbuildcache-21" )
-public class Issue21Test
+@Target( ElementType.METHOD )
+@Retention( RetentionPolicy.RUNTIME )
+public @interface BeforeEach
 {
-
-    @Test
-    void simple( Verifier verifier ) throws VerificationException
-    {
-        verifier.setAutoclean( false );
-
-        verifier.setLogFileName( "../log.txt" );
-        verifier.executeGoal( "verify" );
-        verifier.verifyErrorFreeLog();
-    }
-
 }

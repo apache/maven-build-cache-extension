@@ -19,92 +19,201 @@
 package org.apache.maven.buildcache.its.junit;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.Comparator;
-import java.util.List;
 import java.util.stream.Stream;
 import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
-import org.junit.jupiter.api.extension.Extension;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ParameterContext;
 import org.junit.jupiter.api.extension.ParameterResolutionException;
 import org.junit.jupiter.api.extension.ParameterResolver;
-import org.junit.jupiter.api.extension.TestInstancePostProcessor;
-import org.junit.jupiter.api.extension.TestTemplateInvocationContext;
-import org.junit.jupiter.api.extension.TestTemplateInvocationContextProvider;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
 
 @ResourceLock( Resources.SYSTEM_PROPERTIES )
-public class IntegrationTestExtension implements BeforeAllCallback, TestTemplateInvocationContextProvider
+public class IntegrationTestExtension implements BeforeAllCallback, BeforeEachCallback, ParameterResolver
 {
 
-    private static boolean initialized;
-    private static Path maven3;
-    private static Path maven4;
+    private static Path mavenHome;
 
     @Override
-    public void beforeAll( ExtensionContext context ) throws Exception
+    public void beforeAll( ExtensionContext context ) throws IOException
     {
-        buildMaven();
+        Path basedir;
+        String basedirstr = System.getProperty( "maven.basedir" );
+        if ( basedirstr == null )
+        {
+            if ( Files.exists( Paths.get( "target/maven3" ) ) )
+            {
+                basedir = Paths.get( "target/maven3" );
+            }
+            else if ( Files.exists( Paths.get( "target/maven4" ) ) )
+            {
+                basedir = Paths.get( "target/maven4" );
+            }
+            else
+            {
+                throw new IllegalStateException( "Could not find maven home !" );
+            }
+        }
+        else
+        {
+            basedir = Paths.get( basedirstr );
+        }
+        mavenHome = Files.list( basedir.toAbsolutePath() )
+                .filter( p -> Files.exists( p.resolve( "bin/mvn" ) ) )
+                .findAny()
+                .orElseThrow( () -> new IllegalStateException( "Could not find maven home" ) );
+        System.setProperty( "maven.home", mavenHome.toString() );
+        mavenHome.resolve( "bin/mvn" ).toFile().setExecutable( true );
     }
 
     @Override
-    public boolean supportsTestTemplate( ExtensionContext context )
+    public void beforeEach( ExtensionContext context ) throws Exception
     {
-        return context.getTestMethod()
-                .filter( m -> m.isAnnotationPresent( Test.class ) )
-                .isPresent();
+        final Class<?> testClass = context.getRequiredTestClass();
+        final IntegrationTest test = testClass.getAnnotation( IntegrationTest.class );
+        final String rawProjectDir = test.value();
+        final String className = context.getRequiredTestClass().getSimpleName();
+        String methodName = context.getRequiredTestMethod().getName();
+        if ( rawProjectDir == null )
+        {
+            throw new IllegalStateException( "@IntegrationTest must be set" );
+        }
+        final Path testDir = Paths.get( "target/mvnd-tests/" + className + "/" + methodName ).toAbsolutePath();
+        deleteDir( testDir );
+        Files.createDirectories( testDir );
+        final Path testExecutionDir;
+
+        final Path testSrcDir = Paths.get( rawProjectDir ).toAbsolutePath().normalize();
+        if ( !Files.exists( testSrcDir ) )
+        {
+            throw new IllegalStateException( "@IntegrationTest(\"" + testSrcDir
+                    + "\") points at a path that does not exist: " + testSrcDir );
+        }
+        testExecutionDir = testDir.resolve( "project" );
+        try ( Stream<Path> files = Files.walk( testSrcDir ) )
+        {
+            files.forEach( source ->
+            {
+                final Path dest = testExecutionDir.resolve( testSrcDir.relativize( source ) );
+                try
+                {
+                    if ( Files.isDirectory( source ) )
+                    {
+                        Files.createDirectories( dest );
+                    }
+                    else
+                    {
+                        Files.createDirectories( dest.getParent() );
+                        Files.copy( source, dest );
+                    }
+                }
+                catch ( IOException e )
+                {
+                    throw new RuntimeException( e );
+                }
+            } );
+        }
+
+        for ( Field field : testClass.getDeclaredFields() )
+        {
+            if ( field.isAnnotationPresent( Inject.class ) )
+            {
+                if ( field.getType() == Verifier.class )
+                {
+                    field.setAccessible( true );
+                    field.set( context.getRequiredTestInstance(), resolveParameter( null, context ) );
+                }
+            }
+        }
+
+        for ( Method method : testClass.getDeclaredMethods() )
+        {
+            if ( method.isAnnotationPresent( BeforeEach.class ) )
+            {
+                method.setAccessible( true );
+                method.invoke( context.getRequiredTestInstance() );
+            }
+        }
     }
 
     @Override
-    public Stream<TestTemplateInvocationContext> provideTestTemplateInvocationContexts(
+    public boolean supportsParameter( ParameterContext parameterContext,
             ExtensionContext extensionContext )
+            throws ParameterResolutionException
     {
-        Method m = extensionContext.getRequiredTestMethod();
-        return Stream.concat( maven3 != null ? Stream.of( maven3 ) : Stream.empty(),
-                maven4 != null ? Stream.of( maven4 ) : Stream.empty() )
-                .map( p -> new MavenTemplate( m, p ) );
+        return parameterContext.getParameter().getType() == Verifier.class;
     }
 
-    private static void buildMaven() throws Exception
+    @Override
+    public Object resolveParameter( ParameterContext parameterContext,
+            ExtensionContext context )
+            throws ParameterResolutionException
     {
-        if ( initialized )
+        try
         {
-            return;
-        }
-        //        String root = Objects.requireNonNull( System.getProperty( "maven.multiModuleProjectDirectory" ),
-        //                "The 'maven.multiModuleProjectDirectory' system property need to be set" );
+            final IntegrationTest test = context.getRequiredTestClass().getAnnotation( IntegrationTest.class );
+            final String rawProjectDir = test.value();
+            if ( rawProjectDir == null )
+            {
+                throw new IllegalStateException( "value of @IntegrationTest must be set" );
+            }
 
-        // maven3
-        if ( Boolean.getBoolean( "with-maven3" ) )
+            final String className = context.getRequiredTestClass().getSimpleName();
+            String methodName = context.getRequiredTestMethod().getName();
+            final Path testDir = Paths.get( "target/mvnd-tests/" + className + "/" + methodName ).toAbsolutePath();
+
+            deleteDir( testDir );
+            Files.createDirectories( testDir );
+
+            final Path testSrcDir = Paths.get( rawProjectDir ).toAbsolutePath().normalize();
+            if ( !Files.exists( testSrcDir ) )
+            {
+                throw new IllegalStateException( "@IntegrationTest(\"" + testSrcDir
+                        + "\") points at a path that does not exist: " + testSrcDir );
+            }
+
+            final Path testExecutionDir = testDir.resolve( "project" );
+            try ( Stream<Path> files = Files.walk( testSrcDir ) )
+            {
+                files.forEach( source ->
+                {
+                    final Path dest = testExecutionDir.resolve( testSrcDir.relativize( source ) );
+                    try
+                    {
+                        if ( Files.isDirectory( source ) )
+                        {
+                            Files.createDirectories( dest );
+                        }
+                        else
+                        {
+                            Files.createDirectories( dest.getParent() );
+                            Files.copy( source, dest );
+                        }
+                    }
+                    catch ( IOException e )
+                    {
+                        throw new RuntimeException( e );
+                    }
+                } );
+            }
+
+            Verifier verifier = new Verifier( testExecutionDir.toString(), true );
+            verifier.setLogFileName( "../log.txt" );
+            return verifier;
+        }
+        catch ( VerificationException | IOException e )
         {
-            maven3 = Files.list( Paths.get( "target/maven3" ) )
-                    .filter( f -> f.getFileName().toString().startsWith( "apache-maven" ) && Files.isDirectory( f ) )
-                    .findFirst()
-                    .map( Path::toAbsolutePath )
-                    .orElseThrow( () -> new IllegalStateException( "Unable to find maven3 directory" ) );
-            maven3.resolve( "bin/mvn" ).toFile().setExecutable( true );
+            throw new ParameterResolutionException( "Unable to create Verifier", e );
         }
-
-        // maven4
-        if ( Boolean.getBoolean( "with-maven4" ) )
-        {
-            maven4 = Files.list( Paths.get( "target/maven4" ) )
-                    .filter( f -> f.getFileName().toString().startsWith( "apache-maven" ) && Files.isDirectory( f ) )
-                    .findFirst()
-                    .map( Path::toAbsolutePath )
-                    .orElse( null );
-            maven4.resolve( "bin/mvn" ).toFile().setExecutable( true );
-        }
-
-        initialized = true;
     }
 
     public static Path deleteDir( Path dir )
@@ -143,174 +252,6 @@ public class IntegrationTestExtension implements BeforeAllCallback, TestTemplate
             else
             {
                 System.err.println( "Error deleting " + f + ": " + e );
-            }
-        }
-    }
-
-    public static class MavenTemplate implements TestTemplateInvocationContext
-    {
-
-        private final Method method;
-        private final Path mavenPath;
-
-        public MavenTemplate( Method method, Path mavenPath )
-        {
-            this.method = method;
-            this.mavenPath = mavenPath;
-        }
-
-        @Override
-        public String getDisplayName( int invocationIndex )
-        {
-            return mavenPath == maven3 ? "[maven3]" : "[maven4]";
-        }
-
-        @Override
-        public List<Extension> getAdditionalExtensions()
-        {
-            return Arrays.asList( ( TestInstancePostProcessor ) this::postProcessTestInstance,
-                    new VerifierParameterResolver() );
-        }
-
-        protected void postProcessTestInstance( Object testInstance, ExtensionContext context ) throws Exception
-        {
-            if ( !context.getTestMethod().isPresent() )
-            {
-                return;
-            }
-            final Class<?> testClass = context.getRequiredTestClass();
-            final IntegrationTest test = testClass.getAnnotation( IntegrationTest.class );
-            final String rawProjectDir = test.value();
-            final String className = context.getRequiredTestClass().getSimpleName();
-            String methodName = context.getRequiredTestMethod().getName();
-            if ( rawProjectDir == null )
-            {
-                throw new IllegalStateException( "@IntegrationTest must be set" );
-            }
-            final Path testDir = Paths.get( "target/maven-tests/" + className + "/" + methodName + "/"
-                    + ( mavenPath == maven3 ? "maven3" : "maven4" ) ).toAbsolutePath();
-            deleteDir( testDir );
-            Files.createDirectories( testDir );
-            final Path testExecutionDir;
-
-            final Path testSrcDir = Paths.get( rawProjectDir ).toAbsolutePath().normalize();
-            if ( !Files.exists( testSrcDir ) )
-            {
-                throw new IllegalStateException( "@IntegrationTest(\"" + testSrcDir
-                        + "\") points at a path that does not exist: " + testSrcDir );
-            }
-            testExecutionDir = testDir.resolve( "project" );
-            try ( Stream<Path> files = Files.walk( testSrcDir ) )
-            {
-                files.forEach( source ->
-                {
-                    final Path dest = testExecutionDir.resolve( testSrcDir.relativize( source ) );
-                    try
-                    {
-                        if ( Files.isDirectory( source ) )
-                        {
-                            Files.createDirectories( dest );
-                        }
-                        else
-                        {
-                            Files.createDirectories( dest.getParent() );
-                            Files.copy( source, dest );
-                        }
-                    }
-                    catch ( IOException e )
-                    {
-                        throw new RuntimeException( e );
-                    }
-                } );
-            }
-        }
-
-        private class VerifierParameterResolver implements ParameterResolver
-        {
-
-            @Override
-            public boolean supportsParameter( ParameterContext parameterContext,
-                    ExtensionContext extensionContext )
-                    throws ParameterResolutionException
-            {
-                return parameterContext.getParameter().getType() == Verifier.class;
-            }
-
-            @Override
-            public Object resolveParameter( ParameterContext parameterContext,
-                    ExtensionContext context )
-                    throws ParameterResolutionException
-            {
-                String prevMavenHome = System.getProperty( "maven.home" );
-                try
-                {
-                    final IntegrationTest test = context.getRequiredTestClass().getAnnotation( IntegrationTest.class );
-                    final String rawProjectDir = test.value();
-                    if ( rawProjectDir == null )
-                    {
-                        throw new IllegalStateException( "value of @IntegrationTest must be set" );
-                    }
-
-                    final String className = context.getRequiredTestClass().getSimpleName();
-                    String methodName = context.getRequiredTestMethod().getName();
-                    final Path testDir = Paths.get( "target/mvnd-tests/" + className + "/" + methodName + "/"
-                            + ( mavenPath == maven3 ? "maven3" : "maven4" ) ).toAbsolutePath();
-
-                    deleteDir( testDir );
-                    Files.createDirectories( testDir );
-
-                    final Path testSrcDir = Paths.get( rawProjectDir ).toAbsolutePath().normalize();
-                    if ( !Files.exists( testSrcDir ) )
-                    {
-                        throw new IllegalStateException( "@IntegrationTest(\"" + testSrcDir
-                                + "\") points at a path that does not exist: " + testSrcDir );
-                    }
-
-                    final Path testExecutionDir = testDir.resolve( "project" );
-                    try ( Stream<Path> files = Files.walk( testSrcDir ) )
-                    {
-                        files.forEach( source ->
-                        {
-                            final Path dest = testExecutionDir.resolve( testSrcDir.relativize( source ) );
-                            try
-                            {
-                                if ( Files.isDirectory( source ) )
-                                {
-                                    Files.createDirectories( dest );
-                                }
-                                else
-                                {
-                                    Files.createDirectories( dest.getParent() );
-                                    Files.copy( source, dest );
-                                }
-                            }
-                            catch ( IOException e )
-                            {
-                                throw new RuntimeException( e );
-                            }
-                        } );
-                    }
-
-                    System.setProperty( "maven.home", mavenPath.toString() );
-                    Verifier verifier = new Verifier( testExecutionDir.toString() );
-                    verifier.setLogFileName( "../log.txt" );
-                    return verifier;
-                }
-                catch ( VerificationException | IOException e )
-                {
-                    throw new ParameterResolutionException( "Unable to create Verifier", e );
-                }
-                finally
-                {
-                    if ( prevMavenHome != null )
-                    {
-                        System.setProperty( "maven.home", prevMavenHome );
-                    }
-                    else
-                    {
-                        System.clearProperty( "maven.home" );
-                    }
-                }
             }
         }
     }
