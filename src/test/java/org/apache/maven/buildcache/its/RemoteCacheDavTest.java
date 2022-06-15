@@ -64,7 +64,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 @IntegrationTest( "src/test/projects/remote-cache-dav" )
-@Testcontainers
+@Testcontainers( disabledWithoutDocker = true )
 @EnabledOnOs( OS.LINUX ) // github actions do not support docker on windows and osx
 public class RemoteCacheDavTest
 {
@@ -92,8 +92,6 @@ public class RemoteCacheDavTest
     @BeforeEach
     void setup() throws IOException
     {
-        assumeTrue( DockerClientFactory.instance().isDockerAvailable(), "docker is not available" );
-
         basedir = Paths.get( verifier.getBasedir() );
         remoteCache = basedir.resolveSibling( "cache-remote" ).toAbsolutePath().normalize();
         localCache = basedir.resolveSibling( "cache-local" ).toAbsolutePath().normalize();
