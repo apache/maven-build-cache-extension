@@ -210,6 +210,9 @@ public class CacheUtils
             while ( entry != null )
             {
                 Path file = out.resolve( entry.getName() );
+                if (!file.normalize().startsWith(out.normalize())) {
+                    throw new RuntimeException("Bad zip entry");
+                }
                 if ( entry.isDirectory() )
                 {
                     Files.createDirectory( file );
