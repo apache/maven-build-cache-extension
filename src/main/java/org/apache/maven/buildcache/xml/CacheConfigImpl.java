@@ -87,6 +87,16 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     public static final String RESTORE_GENERATED_SOURCES_PROPERTY_NAME = "maven.build.cache.restoreGeneratedSources";
     public static final String ALWAYS_RUN_PLUGINS = "maven.build.cache.alwaysRunPlugins";
 
+    /**
+     * Flag to control if we should skip lookup for cached artifacts globally r for a particular project even if
+     * qualifying artifacts exist in build cache.
+     * E.g. to trigger a forced build (full or of a particular module)
+     * May be also activated via properties for projects via a profile e.g. on CI when some files produced by the build
+     * are required (e.g. smth. from target folder as additional CI build artifacts):
+     * <maven.build.cache.skipLookup>true<maven.build.cache.skipLookup/>
+     */
+    public static final String CACHE_SKIP_LOOKUP = "maven.build.cache.skipLookup";
+
     private static final Logger LOGGER = LoggerFactory.getLogger( CacheConfigImpl.class );
 
     private final XmlService xmlService;
@@ -516,6 +526,12 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     public boolean isSaveFinal()
     {
         return Boolean.getBoolean( SAVE_NON_OVERRIDEABLE_NAME );
+    }
+
+    @Override
+    public boolean isSkipLookup()
+    {
+        return Boolean.getBoolean( CACHE_SKIP_LOOKUP );
     }
 
     @Override

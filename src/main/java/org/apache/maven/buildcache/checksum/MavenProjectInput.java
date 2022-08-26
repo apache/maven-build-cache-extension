@@ -88,6 +88,8 @@ import static org.apache.commons.lang3.StringUtils.startsWithAny;
 import static org.apache.commons.lang3.StringUtils.stripToEmpty;
 import static org.apache.maven.buildcache.CacheUtils.isPom;
 import static org.apache.maven.buildcache.CacheUtils.isSnapshot;
+import static org.apache.maven.buildcache.xml.CacheConfigImpl.CACHE_SKIP_LOOKUP;
+import static org.apache.maven.buildcache.xml.CacheConfigImpl.RESTORE_GENERATED_SOURCES_PROPERTY_NAME;
 
 /**
  * MavenProjectInput
@@ -180,9 +182,21 @@ public class MavenProjectInput
         {
             if ( propertyName.startsWith( CACHE_EXCLUDE_NAME ) )
             {
+                String propertyValue = properties.getProperty( propertyName );
+                Path path = Paths.get( propertyValue );
+                filteredOutPaths.add( path );
+                if ( LOGGER.isDebugEnabled() )
+                {
+                    LOGGER.debug( "Adding an excludePath from property '{}', values is '{}', path is '{}' ",
+                            propertyName, propertyValue, path );
+                }
+
                 filteredOutPaths.add( Paths.get( properties.getProperty( propertyName ) ) );
             }
         }
+        CacheUtils.debugPrintCollection( LOGGER, filteredOutPaths,
+                "List of excluded paths (checked either by fileName or by startsWith prefix)",
+                "Pah entry" );
 
         this.fileComparator = new PathIgnoringCaseComparator();
     }
@@ -817,6 +831,24 @@ public class MavenProjectInput
             }
             return s1.compareToIgnoreCase( s2 );
         }
+    }
+
+    public static boolean shouldSkipCacheLookup( MavenProject project )
+    {
+        return Boolean.parseBoolean( project.getProperties().getProperty( CACHE_SKIP_LOOKUP, "false" ) );
+    }
+
+    /**
+     * Allow skipping generated properties restoration on a per-project level via a property (which defaults to true)
+     * e.g. <maven.build.cache.restoreGeneratedSources>false<maven.build.cache.restoreGeneratedSources/>
+     * 
+     * @param  project
+     * @return
+     */
+    public static boolean shouldRestoreGeneratedSources( MavenProject project )
+    {
+        return Boolean
+                .parseBoolean( project.getProperties().getProperty( RESTORE_GENERATED_SOURCES_PROPERTY_NAME, "true" ) );
     }
 
 }

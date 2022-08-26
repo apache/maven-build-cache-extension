@@ -27,6 +27,8 @@ import org.junit.jupiter.api.Test;
 public class BuildExtensionTest
 {
 
+    private static final String PROJECT_NAME = "org.apache.maven.caching.test.simple:simple";
+
     @Test
     void simple( Verifier verifier ) throws VerificationException
     {
@@ -39,7 +41,7 @@ public class BuildExtensionTest
         verifier.setLogFileName( "../log-2.txt" );
         verifier.executeGoal( "verify" );
         verifier.verifyErrorFreeLog();
-        verifier.verifyTextInLog( "Found cached build, restoring from cache" );
+        verifier.verifyTextInLog( "Found cached build, restoring " + PROJECT_NAME + " from cache" );
     }
 
 }
