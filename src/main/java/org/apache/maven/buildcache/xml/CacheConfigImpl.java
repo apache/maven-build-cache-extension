@@ -88,9 +88,9 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     public static final String ALWAYS_RUN_PLUGINS = "maven.build.cache.alwaysRunPlugins";
 
     /**
-     * Flag to control if we should skip lookup for cached artifacts globally r for a particular project even if
+     * Flag to control if we should skip lookup for cached artifacts globally or for a particular project even if
      * qualifying artifacts exist in build cache.
-     * E.g. to trigger a forced build (full or of a particular module)
+     * E.g. to trigger a forced build (full or for a particular module)
      * May be also activated via properties for projects via a profile e.g. on CI when some files produced by the build
      * are required (e.g. smth. from target folder as additional CI build artifacts):
      * <maven.build.cache.skipLookup>true<maven.build.cache.skipLookup/>

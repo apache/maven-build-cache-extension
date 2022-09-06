@@ -839,7 +839,7 @@ public class MavenProjectInput
     }
 
     /**
-     * Allow skipping generated properties restoration on a per-project level via a property (which defaults to true)
+     * Allow skipping generated sources restoration on a per-project level via a property (which defaults to true)
      * e.g. <maven.build.cache.restoreGeneratedSources>false<maven.build.cache.restoreGeneratedSources/>
      * 
      * @param  project
