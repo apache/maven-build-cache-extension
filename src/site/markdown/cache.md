@@ -126,7 +126,3 @@ Such scheme allows to validate cache correctness by reconciling outcomes of cach
 * [Cache Parameters](parameters.html) - description of supported parameters
 * [Sample config file](maven-cache-config.xml)
 
-
-* Maximilian Novikov - Project lead. Idea, design, coordination and verification.
-* Alexander Ashitkin - Co-design and implementation of the majority of functionality
-* Alexander Novoselov - Hashing module implementation
