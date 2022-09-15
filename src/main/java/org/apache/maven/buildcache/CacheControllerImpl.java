@@ -154,7 +154,7 @@ public class CacheControllerImpl implements CacheController
     @Override
     @Nonnull
     public CacheResult findCachedBuild( MavenSession session, MavenProject project,
-            List<MojoExecution> mojoExecutions, boolean skipLookup )
+            List<MojoExecution> mojoExecutions, boolean skipCache )
     {
         final String highestRequestPhase = CacheUtils.getLast( mojoExecutions ).getLifecyclePhase();
         if ( !lifecyclePhasesHelper.isLaterPhaseThanClean( highestRequestPhase ) )
@@ -169,7 +169,7 @@ public class CacheControllerImpl implements CacheController
         final CacheContext context = new CacheContext( project, inputInfo, session );
 
         CacheResult result = empty( context );
-        if ( !skipLookup )
+        if ( !skipCache )
         {
 
             LOGGER.info( "Attempting to restore project {} from build cache", projectName );

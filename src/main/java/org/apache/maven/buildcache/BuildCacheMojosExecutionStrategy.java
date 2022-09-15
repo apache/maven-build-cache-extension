@@ -97,7 +97,7 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy
         // execute clean bound goals before restoring to not interfere/slowdown clean
         CacheState cacheState = DISABLED;
         CacheResult result = CacheResult.empty();
-        boolean skipCacheLookup = cacheConfig.isSkipLookup() || MavenProjectInput.shouldSkipCacheLookup( project );
+        boolean skipCache = cacheConfig.isSkip() || MavenProjectInput.shouldSkipCache( project );
         if ( source == Source.LIFECYCLE )
         {
             List<MojoExecution> cleanPhase = lifecyclePhasesHelper.getCleanSegment( mojoExecutions );
@@ -106,9 +106,9 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy
                 mojoExecutionRunner.run( mojoExecution );
             }
             cacheState = cacheConfig.initialize();
-            if ( cacheState == INITIALIZED || skipCacheLookup )
+            if ( cacheState == INITIALIZED || skipCache )
             {
-                result = cacheController.findCachedBuild( session, project, mojoExecutions, skipCacheLookup );
+                result = cacheController.findCachedBuild( session, project, mojoExecutions, skipCache );
             }
         }
 
@@ -137,7 +137,7 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy
             cacheController.save( result, mojoExecutions, executionEvents );
         }
 
-        if ( cacheConfig.isFailFast() && !result.isSuccess() && !skipCacheLookup )
+        if ( cacheConfig.isFailFast() && !result.isSuccess() && !skipCache )
         {
             throw new LifecycleExecutionException(
                     "Failed to restore project[" + getVersionlessProjectKey( project ) + "] from cache, failing build.",

@@ -94,7 +94,7 @@ public interface CacheConfig
 
     boolean isSaveFinal();
 
-    boolean isSkipLookup();
+    boolean isSkip();
 
     boolean isFailFast();
 

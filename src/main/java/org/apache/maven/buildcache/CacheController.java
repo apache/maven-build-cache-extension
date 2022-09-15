@@ -34,7 +34,7 @@ public interface CacheController
     CacheResult findCachedBuild( MavenSession session,
             MavenProject project,
             List<MojoExecution> mojoExecutions,
-            boolean skipLookup );
+            boolean skipCache );
 
     boolean restoreProjectArtifacts( CacheResult cacheResult );
 

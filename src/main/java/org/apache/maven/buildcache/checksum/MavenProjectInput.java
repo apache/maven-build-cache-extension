@@ -88,7 +88,7 @@ import static org.apache.commons.lang3.StringUtils.startsWithAny;
 import static org.apache.commons.lang3.StringUtils.stripToEmpty;
 import static org.apache.maven.buildcache.CacheUtils.isPom;
 import static org.apache.maven.buildcache.CacheUtils.isSnapshot;
-import static org.apache.maven.buildcache.xml.CacheConfigImpl.CACHE_SKIP_LOOKUP;
+import static org.apache.maven.buildcache.xml.CacheConfigImpl.CACHE_SKIP;
 import static org.apache.maven.buildcache.xml.CacheConfigImpl.RESTORE_GENERATED_SOURCES_PROPERTY_NAME;
 
 /**
@@ -833,9 +833,9 @@ public class MavenProjectInput
         }
     }
 
-    public static boolean shouldSkipCacheLookup( MavenProject project )
+    public static boolean shouldSkipCache( MavenProject project )
     {
-        return Boolean.parseBoolean( project.getProperties().getProperty( CACHE_SKIP_LOOKUP, "false" ) );
+        return Boolean.parseBoolean( project.getProperties().getProperty( CACHE_SKIP, "false" ) );
     }
 
     /**

@@ -93,9 +93,9 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
      * E.g. to trigger a forced build (full or for a particular module)
      * May be also activated via properties for projects via a profile e.g. on CI when some files produced by the build
      * are required (e.g. smth. from target folder as additional CI build artifacts):
-     * <maven.build.cache.skipLookup>true<maven.build.cache.skipLookup/>
+     * <maven.build.cache.skip>true<maven.build.cache.skip/>
      */
-    public static final String CACHE_SKIP_LOOKUP = "maven.build.cache.skipLookup";
+    public static final String CACHE_SKIP = "maven.build.cache.skip";
 
     private static final Logger LOGGER = LoggerFactory.getLogger( CacheConfigImpl.class );
 
@@ -529,9 +529,9 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     }
 
     @Override
-    public boolean isSkipLookup()
+    public boolean isSkip()
     {
-        return Boolean.getBoolean( CACHE_SKIP_LOOKUP );
+        return Boolean.getBoolean( CACHE_SKIP );
     }
 
     @Override
