@@ -351,7 +351,7 @@ public class CacheControllerImpl implements CacheController
                         // performance reasons
                         // it may also be disabled on a per-project level (defaults to true - enable)
                         if ( cacheConfig.isRestoreGeneratedSources()
-                                && MavenProjectInput.shouldRestoreGeneratedSources( project ) )
+                                && MavenProjectInput.isRestoreGeneratedSources( project ) )
                         {
                             // generated sources artifact
                             final Path attachedArtifactFile = localCache.getArtifactFile( context,

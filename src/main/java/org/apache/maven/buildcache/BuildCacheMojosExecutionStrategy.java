@@ -97,7 +97,7 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy
         // execute clean bound goals before restoring to not interfere/slowdown clean
         CacheState cacheState = DISABLED;
         CacheResult result = CacheResult.empty();
-        boolean skipCache = cacheConfig.isSkip() || MavenProjectInput.shouldSkipCache( project );
+        boolean skipCache = cacheConfig.isSkipCache() || MavenProjectInput.isSkipCache( project );
         if ( source == Source.LIFECYCLE )
         {
             List<MojoExecution> cleanPhase = lifecyclePhasesHelper.getCleanSegment( mojoExecutions );

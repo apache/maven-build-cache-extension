@@ -194,7 +194,7 @@ public class MavenProjectInput
         }
         CacheUtils.debugPrintCollection( LOGGER, filteredOutPaths,
                 "List of excluded paths (checked either by fileName or by startsWith prefix)",
-                "Pah entry" );
+                "Path entry" );
 
         this.fileComparator = new PathIgnoringCaseComparator();
     }
@@ -831,7 +831,7 @@ public class MavenProjectInput
         }
     }
 
-    public static boolean shouldSkipCache( MavenProject project )
+    public static boolean isSkipCache( MavenProject project )
     {
         return Boolean.parseBoolean( project.getProperties().getProperty( CACHE_SKIP, "false" ) );
     }
@@ -843,7 +843,7 @@ public class MavenProjectInput
      * @param  project
      * @return
      */
-    public static boolean shouldRestoreGeneratedSources( MavenProject project )
+    public static boolean isRestoreGeneratedSources( MavenProject project )
     {
         return Boolean
                 .parseBoolean( project.getProperties().getProperty( RESTORE_GENERATED_SOURCES_PROPERTY_NAME, "true" ) );
