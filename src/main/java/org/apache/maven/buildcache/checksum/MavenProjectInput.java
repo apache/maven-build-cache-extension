@@ -190,8 +190,6 @@ public class MavenProjectInput
                     LOGGER.debug( "Adding an excludePath from property '{}', values is '{}', path is '{}' ",
                             propertyName, propertyValue, path );
                 }
-
-                filteredOutPaths.add( Paths.get( properties.getProperty( propertyName ) ) );
             }
         }
         CacheUtils.debugPrintCollection( LOGGER, filteredOutPaths,
