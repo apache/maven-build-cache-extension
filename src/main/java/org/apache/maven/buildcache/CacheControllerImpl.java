@@ -188,7 +188,7 @@ public class CacheControllerImpl implements CacheController
                 }
                 else
                 {
-                    LOGGER.info( "Local build was not found by checksum {} for {}" + inputInfo.getChecksum(),
+                    LOGGER.info( "Local build was not found by checksum {} for {}", inputInfo.getChecksum(),
                             projectName );
                 }
             }
