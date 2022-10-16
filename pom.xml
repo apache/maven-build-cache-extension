@@ -462,9 +462,6 @@ under the License.
     <profiles>
         <profile>
             <id>maven3</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
             <properties>
                 <mavenVersion>3.9.0-SNAPSHOT</mavenVersion>
                 <maven.dir>maven3</maven.dir>
@@ -473,8 +470,11 @@ under the License.
         </profile>
         <profile>
             <id>maven4</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
             <properties>
-                <mavenVersion>4.0.0-alpha-1-SNAPSHOT</mavenVersion>
+                <mavenVersion>4.0.0-alpha-2</mavenVersion>
                 <maven.dir>maven4</maven.dir>
                 <maven.basedir>${project.build.directory}/${maven.dir}</maven.basedir>
             </properties>
