@@ -35,6 +35,8 @@ import org.apache.maven.model.Model;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.model.PluginExecution;
 import org.apache.maven.project.MavenProject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @SessionScoped
 @Named
@@ -42,6 +44,8 @@ public class DefaultNormalizedModelProvider implements NormalizedModelProvider
 {
 
     private static final String NORMALIZED_VERSION = "cache-extension-version";
+
+    private static final Logger LOGGER = LoggerFactory.getLogger( DefaultNormalizedModelProvider.class );
 
     private final CacheConfig cacheConfig;
     private final MultiModuleSupport multiModuleSupport;
@@ -123,10 +127,16 @@ public class DefaultNormalizedModelProvider implements NormalizedModelProvider
                 {
                     Plugin copy = plugin.clone();
                     List<String> excludeProperties = cacheConfig.getEffectivePomExcludeProperties( copy );
-                    removeBlacklistedAttributes( copy.getConfiguration(), excludeProperties );
-                    for ( PluginExecution execution : copy.getExecutions() )
+                    if ( !excludeProperties.isEmpty() )
                     {
-                        removeBlacklistedAttributes( execution.getConfiguration(), excludeProperties );
+                        CacheUtils.debugPrintCollection( LOGGER, excludeProperties,
+                                String.format( "List of excluded properties for %s", copy.getArtifactId() ),
+                                "Excluded property" );
+                        removeBlacklistedAttributes( copy.getConfiguration(), excludeProperties );
+                        for ( PluginExecution execution : copy.getExecutions() )
+                        {
+                            removeBlacklistedAttributes( execution.getConfiguration(), excludeProperties );
+                        }
                     }
 
                     copy.setDependencies(

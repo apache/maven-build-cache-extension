@@ -94,6 +94,8 @@ public interface CacheConfig
 
     boolean isSaveFinal();
 
+    boolean isSkipCache();
+
     boolean isFailFast();
 
     int getMaxLocalBuildsCached();
