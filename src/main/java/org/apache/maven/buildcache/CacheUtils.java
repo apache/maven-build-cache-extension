@@ -28,6 +28,7 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.function.Supplier;
@@ -43,6 +44,7 @@ import org.apache.maven.model.Dependency;
 import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.project.MavenProject;
 import org.eclipse.aether.SessionData;
+import org.slf4j.Logger;
 
 import static org.apache.commons.lang3.StringUtils.removeStart;
 import static org.apache.commons.lang3.StringUtils.trim;
@@ -222,6 +224,22 @@ public class CacheUtils
                 }
                 Files.setLastModifiedTime( file, FileTime.fromMillis( entry.getTime() ) );
                 entry = zis.getNextEntry();
+            }
+        }
+    }
+
+    public static <T> void debugPrintCollection( Logger logger, Collection<T> values, String heading,
+            String elementCaption )
+    {
+        if ( logger.isDebugEnabled() && values != null && !values.isEmpty() )
+        {
+            final int size = values.size();
+            int i = 0;
+            logger.debug( "{} (total {})", heading, size );
+            for ( T value : values )
+            {
+                i++;
+                logger.debug( "{} {} of {} : {}", elementCaption, i, size, value );
             }
         }
     }

@@ -53,6 +53,7 @@ import org.apache.maven.SessionScoped;
 import org.apache.maven.artifact.handler.ArtifactHandler;
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.buildcache.artifact.RestoredArtifact;
+import org.apache.maven.buildcache.checksum.MavenProjectInput;
 import org.apache.maven.buildcache.hash.HashAlgorithm;
 import org.apache.maven.buildcache.hash.HashFactory;
 import org.apache.maven.buildcache.xml.Build;
@@ -153,7 +154,7 @@ public class CacheControllerImpl implements CacheController
     @Override
     @Nonnull
     public CacheResult findCachedBuild( MavenSession session, MavenProject project,
-            List<MojoExecution> mojoExecutions )
+            List<MojoExecution> mojoExecutions, boolean skipCache )
     {
         final String highestRequestPhase = CacheUtils.getLast( mojoExecutions ).getLifecyclePhase();
         if ( !lifecyclePhasesHelper.isLaterPhaseThanClean( highestRequestPhase ) )
@@ -161,28 +162,41 @@ public class CacheControllerImpl implements CacheController
             return empty();
         }
 
-        LOGGER.info( "Attempting to restore project from build cache" );
+        String projectName = getVersionlessProjectKey( project );
 
         ProjectsInputInfo inputInfo = projectInputCalculator.calculateInput( project );
 
         final CacheContext context = new CacheContext( project, inputInfo, session );
-        // remote build first
-        CacheResult result = findCachedBuild( mojoExecutions, context );
 
-        if ( !result.isSuccess() && result.getContext() != null )
+        CacheResult result = empty( context );
+        if ( !skipCache )
         {
-            LOGGER.debug( "Remote cache is incomplete or missing, trying local build" );
 
-            CacheResult localBuild = findLocalBuild( mojoExecutions, context );
+            LOGGER.info( "Attempting to restore project {} from build cache", projectName );
 
-            if ( localBuild.isSuccess() || ( localBuild.isPartialSuccess() && !result.isPartialSuccess() ) )
+            // remote build first
+            result = findCachedBuild( mojoExecutions, context );
+
+            if ( !result.isSuccess() && result.getContext() != null )
             {
-                result = localBuild;
+                LOGGER.info( "Remote cache is incomplete or missing, trying local build for {}", projectName );
+
+                CacheResult localBuild = findLocalBuild( mojoExecutions, context );
+                if ( localBuild.isSuccess() || ( localBuild.isPartialSuccess() && !result.isPartialSuccess() ) )
+                {
+                    result = localBuild;
+                }
+                else
+                {
+                    LOGGER.info( "Local build was not found by checksum {} for {}", inputInfo.getChecksum(),
+                            projectName );
+                }
             }
-            else
-            {
-                LOGGER.info( "Local build was not found by checksum " + inputInfo.getChecksum() );
-            }
+        }
+        else
+        {
+            LOGGER.info( "Project {} is marked as requiring force rebuild, will skip lookup in build cache",
+                    projectName );
         }
         cacheResults.put( getVersionlessProjectKey( project ), result );
 
@@ -232,8 +246,10 @@ public class CacheControllerImpl implements CacheController
         try
         {
             final ProjectsInputInfo inputInfo = context.getInputInfo();
+            String projectName = getVersionlessProjectKey( context.getProject() );
 
-            LOGGER.info( "Found cached build, restoring from cache {}", inputInfo.getChecksum() );
+            LOGGER.info( "Found cached build, restoring {} from cache by checksum {}", projectName,
+                    inputInfo.getChecksum() );
             LOGGER.debug( "Cached build details: {}", build );
 
             final String cacheImplementationVersion = build.getCacheImplementationVersion();
@@ -264,8 +280,8 @@ public class CacheControllerImpl implements CacheController
             if ( lifecyclePhasesHelper.isLaterPhaseThanBuild( highestRequestPhase, build )
                     && !canIgnoreMissingSegment( build, mojoExecutions ) )
             {
-                LOGGER.info( "Project restored partially. Highest cached goal: {}, requested: {}",
-                        build.getHighestCompletedGoal(), highestRequestPhase );
+                LOGGER.info( "Project {} restored partially. Highest cached goal: {}, requested: {}",
+                        projectName, build.getHighestCompletedGoal(), highestRequestPhase );
                 return partialSuccess( build, context );
             }
 
@@ -333,7 +349,9 @@ public class CacheControllerImpl implements CacheController
                     {
                         // restoring generated sources might be unnecessary in CI, could be disabled for
                         // performance reasons
-                        if ( cacheConfig.isRestoreGeneratedSources() )
+                        // it may also be disabled on a per-project level (defaults to true - enable)
+                        if ( cacheConfig.isRestoreGeneratedSources()
+                                && MavenProjectInput.isRestoreGeneratedSources( project ) )
                         {
                             // generated sources artifact
                             final Path attachedArtifactFile = localCache.getArtifactFile( context,
