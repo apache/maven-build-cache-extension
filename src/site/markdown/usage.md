@@ -26,8 +26,8 @@ to identify which dependencies are part of cacheable project the cache engine ne
 
 * Full project root location which must be passed with `-Dmaven.multiModuleProjectDirectory`
 * Profiles which activate full graph in project build. Underlying implementation logic is to introspect reactor
-  graph in `full` mode to discover which dependencies are part of the cacheable project. This information will be used
-  then any subtree is being build to identify dependencies as a part of the project:
+  graph in `full` mode to discover which dependencies are part of the full project and cacheable. This information will
+  be used when subtree is being build to identify dependencies as a part of a wider project and process them from cache:
 
 ```xml
 <configuration>
