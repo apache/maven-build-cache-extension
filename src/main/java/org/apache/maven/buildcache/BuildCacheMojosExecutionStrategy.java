@@ -18,11 +18,14 @@
  */
 package org.apache.maven.buildcache;
 
+import java.io.File;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import javax.annotation.Priority;
 import javax.inject.Inject;
 import javax.inject.Named;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.SessionScoped;
 import org.apache.maven.buildcache.checksum.MavenProjectInput;
@@ -100,7 +103,7 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy
         boolean skipCache = cacheConfig.isSkipCache() || MavenProjectInput.isSkipCache( project );
         if ( source == Source.LIFECYCLE )
         {
-            List<MojoExecution> cleanPhase = lifecyclePhasesHelper.getCleanSegment( mojoExecutions );
+            List<MojoExecution> cleanPhase = lifecyclePhasesHelper.getCleanSegment( project, mojoExecutions );
             for ( MojoExecution mojoExecution : cleanPhase )
             {
                 mojoExecutionRunner.run( mojoExecution );
@@ -169,7 +172,8 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy
         final Build build = cacheResult.getBuildInfo();
         final MavenProject project = cacheResult.getContext().getProject();
         final MavenSession session = cacheResult.getContext().getSession();
-        final List<MojoExecution> cachedSegment = lifecyclePhasesHelper.getCachedSegment( mojoExecutions, build );
+        final List<MojoExecution> cachedSegment = lifecyclePhasesHelper.getCachedSegment( project, mojoExecutions,
+                build );
 
         boolean restored = cacheController.restoreProjectArtifacts( cacheResult );
         if ( !restored )
@@ -210,7 +214,9 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy
             }
         }
 
-        for ( MojoExecution mojoExecution : lifecyclePhasesHelper.getPostCachedSegment( mojoExecutions, build ) )
+        List<MojoExecution> postCachedSegment = lifecyclePhasesHelper.getPostCachedSegment( project, mojoExecutions,
+                build );
+        for ( MojoExecution mojoExecution : postCachedSegment )
         {
             mojoExecutionRunner.run( mojoExecution );
         }
@@ -237,7 +243,7 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy
                 final String fullGoalName = cacheCandidate.getMojoDescriptor().getFullGoalName();
 
                 if ( completedExecution != null
-                        && !isParamsMatched( cacheCandidate, mojo, completedExecution ) )
+                        && !isParamsMatched( project, cacheCandidate, mojo, completedExecution ) )
                 {
                     LOGGER.info( "Mojo cached parameters mismatch with actual, forcing full project build. Mojo: {}",
                             fullGoalName );
@@ -277,7 +283,8 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy
         return consistent;
     }
 
-    private boolean isParamsMatched( MojoExecution mojoExecution,
+    boolean isParamsMatched( MavenProject project,
+            MojoExecution mojoExecution,
             Mojo mojo,
             CompletedExecution completedExecution )
     {
@@ -288,15 +295,35 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy
             final String propertyName = trackedProperty.getPropertyName();
 
             String expectedValue = DtoUtils.findPropertyValue( propertyName, completedExecution );
-            if ( expectedValue == null && trackedProperty.getDefaultValue() != null )
+            if ( expectedValue == null )
             {
-                expectedValue = trackedProperty.getDefaultValue();
+                expectedValue = trackedProperty.getDefaultValue() != null ? trackedProperty.getDefaultValue() : "null";
             }
 
             final String currentValue;
             try
             {
-                currentValue = String.valueOf( ReflectionUtils.getValueIncludingSuperclasses( propertyName, mojo ) );
+                Object value = ReflectionUtils.getValueIncludingSuperclasses( propertyName, mojo );
+
+                if ( value instanceof File )
+                {
+                    Path baseDirPath = project.getBasedir().toPath();
+                    Path path = ( ( File ) value ).toPath();
+                    currentValue = normalizedPath( path, baseDirPath );
+                }
+                else if ( value instanceof Path )
+                {
+                    Path baseDirPath = project.getBasedir().toPath();
+                    currentValue = normalizedPath( ( ( Path ) value ), baseDirPath );
+                }
+                else if ( value != null && value.getClass().isArray() )
+                {
+                    currentValue = ArrayUtils.toString( value );
+                }
+                else
+                {
+                    currentValue = String.valueOf( value );
+                }
             }
             catch ( IllegalAccessException e )
             {
@@ -321,6 +348,20 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy
             }
         }
         return true;
+    }
+
+    /**
+     * Best effort to normalize paths from Mojo fields.
+     * - all absolute paths under project root to be relativized for portability
+     * - redundant '..' and '.' to be removed to have consistent views on all paths
+     * - all relative paths are considered portable and should not be touched
+     * - absolute paths outside of project directory could not be deterministically relativized and not touched
+     */
+    private static String normalizedPath( Path path, Path baseDirPath )
+    {
+        boolean isProjectSubdir = path.isAbsolute() && path.startsWith( baseDirPath );
+        Path preparedPath = isProjectSubdir ? baseDirPath.relativize( path ) : path;
+        return preparedPath.normalize().toString();
     }
 
 }

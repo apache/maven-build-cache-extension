@@ -21,33 +21,93 @@ package org.apache.maven.buildcache;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
+import javax.annotation.Nonnull;
+import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 import javax.inject.Named;
-import javax.inject.Singleton;
+import org.apache.maven.SessionScoped;
 import org.apache.maven.buildcache.xml.Build;
+import org.apache.maven.execution.AbstractExecutionListener;
+import org.apache.maven.execution.ExecutionEvent;
+import org.apache.maven.execution.MavenExecutionRequest;
+import org.apache.maven.execution.MavenSession;
 import org.apache.maven.lifecycle.DefaultLifecycles;
 import org.apache.maven.lifecycle.Lifecycle;
 import org.apache.maven.plugin.MojoExecution;
+import org.apache.maven.project.MavenProject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Singleton
+@SessionScoped
 @Named
-public class LifecyclePhasesHelper
+public class LifecyclePhasesHelper extends AbstractExecutionListener
 {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger( LifecyclePhasesHelper.class );
+
+    private final MavenSession session;
     private final DefaultLifecycles defaultLifecycles;
     private final List<String> phases;
     private final String lastCleanPhase;
 
+    private final ConcurrentMap<MavenProject, MojoExecution> forkedProjectToOrigin = new ConcurrentHashMap<>();
+
     @Inject
-    public LifecyclePhasesHelper( DefaultLifecycles defaultLifecycles,
+    public LifecyclePhasesHelper( MavenSession session,
+            DefaultLifecycles defaultLifecycles,
             @Named( "clean" ) Lifecycle cleanLifecycle )
     {
+        this.session = session;
         this.defaultLifecycles = Objects.requireNonNull( defaultLifecycles );
         this.phases = defaultLifecycles.getLifeCycles().stream()
                 .flatMap( lf -> lf.getPhases().stream() )
                 .collect( Collectors.toList() );
         this.lastCleanPhase = CacheUtils.getLast( cleanLifecycle.getPhases() );
+    }
+
+    @PostConstruct
+    public void init()
+    {
+        MavenExecutionRequest request = session.getRequest();
+        ChainedListener lifecycleListener = new ChainedListener( request.getExecutionListener() );
+        lifecycleListener.chainListener( this );
+        request.setExecutionListener( lifecycleListener );
+    }
+
+    @Override
+    public void forkedProjectStarted( ExecutionEvent event )
+    {
+        LOGGER.debug( "Started forked project. Project: {}, instance: {}, originating mojo: {}", event.getProject(),
+                System.identityHashCode( event.getProject() ), event.getMojoExecution() );
+        forkedProjectToOrigin.put( event.getProject(), event.getMojoExecution() );
+    }
+
+    @Override
+    public void forkedProjectSucceeded( ExecutionEvent event )
+    {
+        LOGGER.debug( "Finished forked project. Project: {}, instance: {}", event.getProject(),
+                System.identityHashCode( event.getProject() ) );
+        forkedProjectToOrigin.remove( event.getProject(), event.getMojoExecution() );
+    }
+
+    @Override
+    public void forkedProjectFailed( ExecutionEvent event )
+    {
+        LOGGER.debug( "Finished forked project. Project: {}, instance: {}", event.getProject(),
+                System.identityHashCode( event.getProject() ) );
+        forkedProjectToOrigin.remove( event.getProject(), event.getMojoExecution() );
+    }
+
+    @Nonnull
+    public String resolveHighestLifecyclePhase( MavenProject project, List<MojoExecution> mojoExecutions )
+    {
+        // if forked, take originating mojo as the highest phase, else last mojo phase
+        return forkedProjectToOrigin.getOrDefault( project, CacheUtils.getLast( mojoExecutions ) )
+                .getLifecyclePhase();
+
     }
 
     /**
@@ -84,13 +144,16 @@ public class LifecyclePhasesHelper
     /**
      * Computes the list of mojos executions in the clean phase
      */
-    public List<MojoExecution> getCleanSegment( List<MojoExecution> mojoExecutions )
+    public List<MojoExecution> getCleanSegment( MavenProject project, List<MojoExecution> mojoExecutions )
     {
-        List<MojoExecution> list = new ArrayList<>();
+        List<MojoExecution> list = new ArrayList<>( mojoExecutions.size() );
         for ( MojoExecution mojoExecution : mojoExecutions )
         {
-            if ( mojoExecution.getLifecyclePhase() == null
-                    || isLaterPhaseThanClean( mojoExecution.getLifecyclePhase() ) )
+            // if forked, take originating mojo as a lifecycle phase source
+            String lifecyclePhase = forkedProjectToOrigin.getOrDefault( project, mojoExecution )
+                    .getLifecyclePhase();
+
+            if ( isLaterPhaseThanClean( lifecyclePhase ) )
             {
                 break;
             }
@@ -102,16 +165,20 @@ public class LifecyclePhasesHelper
     /**
      * Computes the list of mojos executions that are cached.
      */
-    public List<MojoExecution> getCachedSegment( List<MojoExecution> mojoExecutions, Build build )
+    public List<MojoExecution> getCachedSegment( MavenProject project, List<MojoExecution> mojoExecutions, Build build )
     {
-        List<MojoExecution> list = new ArrayList<>();
+        List<MojoExecution> list = new ArrayList<>( mojoExecutions.size() );
         for ( MojoExecution mojoExecution : mojoExecutions )
         {
-            if ( !isLaterPhaseThanClean( mojoExecution.getLifecyclePhase() ) )
+            // if forked, take originating mojo as a lifecycle phase source
+            String lifecyclePhase = forkedProjectToOrigin.getOrDefault( project, mojoExecution )
+                    .getLifecyclePhase();
+
+            if ( !isLaterPhaseThanClean( lifecyclePhase ) )
             {
                 continue;
             }
-            if ( isLaterPhaseThanBuild( mojoExecution.getLifecyclePhase(), build ) )
+            if ( isLaterPhaseThanBuild( lifecyclePhase, build ) )
             {
                 break;
             }
@@ -123,12 +190,18 @@ public class LifecyclePhasesHelper
     /**
      * Computes the list of mojos executions that will have to be executed after cache restoration.
      */
-    public List<MojoExecution> getPostCachedSegment( List<MojoExecution> mojoExecutions, Build build )
+    public List<MojoExecution> getPostCachedSegment( MavenProject project, List<MojoExecution> mojoExecutions,
+            Build build )
     {
-        List<MojoExecution> list = new ArrayList<>();
+        List<MojoExecution> list = new ArrayList<>( mojoExecutions.size() );
         for ( MojoExecution mojoExecution : mojoExecutions )
         {
-            if ( isLaterPhaseThanBuild( mojoExecution.getLifecyclePhase(), build ) )
+
+            // if forked, take originating mojo as a lifecycle phase source
+            String lifecyclePhase = forkedProjectToOrigin.getOrDefault( project, mojoExecution )
+                    .getLifecyclePhase();
+
+            if ( isLaterPhaseThanBuild( lifecyclePhase, build ) )
             {
                 list.add( mojoExecution );
             }
