@@ -20,7 +20,7 @@
 To on-board incremental Maven you need to complete several steps:
 
 * Declare caching extension in your project (either in `pom.xml` or `.mvn/extensions.xml`)
-* Add `maven-cache-config.xml` cache config in `.mvn/` (optional) to customize default behavior
+* Add `maven-build-cache-config.xml` cache config in `.mvn/` (optional) to customize default behavior
 * Validate build results and iteratively, adjust config to properly reflect project specifics
 * Setup remote cache (optional)
 
@@ -38,27 +38,30 @@ either in `pom.xml`'s `<project>/<build>/<extensions>` or in `.mvn/extensions.xm
 
 ### Adding build cache config
 
-Copy [default config `maven-build-cache-config.xml`](../resources/maven-build-cache-config.xml)
+Copy template config [`maven-build-cache-config.xml`](../resources/maven-build-cache-config.xml)
 to [`.mvn/`](https://maven.apache.org/configure.html) directory of your project.  
 To get overall understanding of build cache machinery, it is recommended to review the config and read comments. In typical
-scenario you need to adjust:
+scenario you need to:
 
-* Exclusions for unstable, temporary files or environment specific files
-* Plugins reconciliation rules – add critical plugins parameters to reconciliation
-* Source code files selectors. Though source code locations discovered automatically from project and plugins config,
+* Exclude unstable, temporary files or environment specific files
+* Add plugins reconciliation rules – add critical plugins parameters to reconciliation
+* Configure precise source code files selectors. Though source code locations discovered automatically from project and plugins config,
   there might be edge cases.
-* remote cache location (if remote cache is used)
+* Add remote cache location (if remote cache is used)
 
 ### Adjusting build cache config
 
 Having extension run usual command, like `mvn package`. Verify the caching engine is activated:
 
-* Check log output - there should be cache related output or initialization error message.
+* Check log output - there should be cache related output or initialization error message:
+  ```
+  [INFO] Loading cache configuration from <project dir>/.mvn/maven-build-cache-config.xml
+  ```
 * Navigate to your local repo directory - there should be a sibling directory `cache` next to the usual
   local `repository`.
 * Find `buildinfo.xml` in the cache repository for typical module and review it. Ensure that
   * expected source code files are present in the build info
-  * all critical plugins and their critical parameters are covered by config
+  * Review all plugings used in the build and add their critical parameters to reconciliation
 
 It is recommended to find the best working trade-off between fairness and cache efficiency. Adding unnecessary rules and
 checks could reduce both performance and cache efficiency (hit rate).

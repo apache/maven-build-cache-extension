@@ -24,11 +24,23 @@ Once extension is activated, cache will kick-in automatically on every lifecycle
 Build could be invoked on any module in project and will try to discover cache by introspecting dependencies. In order
 to identify which dependencies are part of cacheable project the cache engine needs to know:
 
-* full project root location which must be passed with `-Dmaven.multiModuleProjectDirectory`
-* Specify profiles which activate full graph in config:
+* Full project root location which must be passed with `-Dmaven.multiModuleProjectDirectory`
+* Profiles which activate full graph in project build. Underlying implementation logic is to introspect reactor
+  graph in `full` mode to discover which dependencies are part of the full project and cacheable. This information will
+  be used when subtree is being build to identify dependencies as a part of a wider project and process them from cache:
 
-```
-TBD
+```xml
+<configuration>
+  ...
+  <multiModule>
+    <discovery>
+      <scanProfiles>
+        <scanProfile>my-full-project-profile</scanProfile>
+      </scanProfiles>
+    </discovery>
+  </multiModule>
+  ...
+</configuration>
 ```
 
 ## Disable cache

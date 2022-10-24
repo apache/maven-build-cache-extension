@@ -26,8 +26,8 @@ Absolutely minimal config
 
 ```xml
 <?xml version="1.0" encoding="UTF-8" ?>
-<cache xmlns="http://maven.apache.org/CACHE-CONFIG/1.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-       xsi:schemaLocation="http://maven.apache.org/CACHE-CONFIG/1.0.0 http://maven.apache.org/xsd/cache-config-1.0.0.xsd">
+<cache xmlns="http://maven.apache.org/BUILD-CACHE-CONFIG/1.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://maven.apache.org/BUILD-CACHE-CONFIG/1.0.0 http://maven.apache.org/xsd/cache-config-1.0.0.xsd">
 
     <configuration>
         <enabled>true</enabled>
