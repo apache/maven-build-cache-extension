@@ -29,6 +29,8 @@ import org.apache.maven.buildcache.xml.build.DigestItem;
 import org.apache.maven.buildcache.xml.build.PropertyValue;
 import org.apache.maven.buildcache.xml.config.TrackedProperty;
 import org.apache.maven.model.Dependency;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.apache.maven.buildcache.checksum.KeyUtils.getArtifactKey;
 
@@ -37,6 +39,8 @@ import static org.apache.maven.buildcache.checksum.KeyUtils.getArtifactKey;
  */
 public class DtoUtils
 {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger( DtoUtils.class );
 
     public static String findPropertyValue( String propertyName, CompletedExecution completedExecution )
     {
@@ -130,6 +134,13 @@ public class DtoUtils
         execution.addProperty( valueType );
     }
 
+    /**
+     * Checks that all tracked (for reconciliation purposes) properties present in cached build record
+     *
+     * @param  cachedExecution   mojo execution record (from cache)
+     * @param  trackedProperties list of tracked properties (from config)
+     * @return                   true if all tracked properties are listed in the cache record
+     */
     public static boolean containsAllProperties(
             @Nonnull CompletedExecution cachedExecution, List<TrackedProperty> trackedProperties )
     {
@@ -148,6 +159,8 @@ public class DtoUtils
         {
             if ( !contains( executionProperties, trackedProperty.getPropertyName() ) )
             {
+                LOGGER.warn( "Tracked property `{}` not found in cached build. Execution: {}",
+                        trackedProperty.getPropertyName(), cachedExecution.getExecutionKey() );
                 return false;
             }
         }

@@ -156,8 +156,9 @@ public class CacheControllerImpl implements CacheController
     public CacheResult findCachedBuild( MavenSession session, MavenProject project,
             List<MojoExecution> mojoExecutions, boolean skipCache )
     {
-        final String highestRequestPhase = CacheUtils.getLast( mojoExecutions ).getLifecyclePhase();
-        if ( !lifecyclePhasesHelper.isLaterPhaseThanClean( highestRequestPhase ) )
+        final String highestPhase = lifecyclePhasesHelper.resolveHighestLifecyclePhase( project, mojoExecutions );
+
+        if ( !lifecyclePhasesHelper.isLaterPhaseThanClean( highestPhase ) )
         {
             return empty();
         }
@@ -261,7 +262,8 @@ public class CacheControllerImpl implements CacheController
                         build.getCacheImplementationVersion() );
             }
 
-            List<MojoExecution> cachedSegment = lifecyclePhasesHelper.getCachedSegment( mojoExecutions, build );
+            List<MojoExecution> cachedSegment = lifecyclePhasesHelper.getCachedSegment( context.getProject(),
+                    mojoExecutions, build );
             List<MojoExecution> missingMojos = build.getMissingExecutions( cachedSegment );
             if ( !missingMojos.isEmpty() )
             {
@@ -276,9 +278,11 @@ public class CacheControllerImpl implements CacheController
                 return failure( build, context );
             }
 
-            final String highestRequestPhase = CacheUtils.getLast( mojoExecutions ).getLifecyclePhase();
+            final String highestRequestPhase = lifecyclePhasesHelper.resolveHighestLifecyclePhase( context.getProject(),
+                    mojoExecutions );
+
             if ( lifecyclePhasesHelper.isLaterPhaseThanBuild( highestRequestPhase, build )
-                    && !canIgnoreMissingSegment( build, mojoExecutions ) )
+                    && !canIgnoreMissingSegment( context.getProject(), build, mojoExecutions ) )
             {
                 LOGGER.info( "Project {} restored partially. Highest cached goal: {}, requested: {}",
                         projectName, build.getHighestCompletedGoal(), highestRequestPhase );
@@ -296,10 +300,11 @@ public class CacheControllerImpl implements CacheController
         }
     }
 
-    private boolean canIgnoreMissingSegment( Build info, List<MojoExecution> mojoExecutions )
+    private boolean canIgnoreMissingSegment( MavenProject project, Build info, List<MojoExecution> mojoExecutions )
     {
-        final List<MojoExecution> postCachedSegment = lifecyclePhasesHelper.getPostCachedSegment( mojoExecutions,
-                info );
+        final List<MojoExecution> postCachedSegment = lifecyclePhasesHelper.getPostCachedSegment( project,
+                mojoExecutions, info );
+
         for ( MojoExecution mojoExecution : postCachedSegment )
         {
             if ( !cacheConfig.canIgnore( mojoExecution ) )
@@ -732,14 +737,15 @@ public class CacheControllerImpl implements CacheController
 
             if ( cachedExecution == null )
             {
-                LOGGER.info( "Execution is not cached. Plugin: {}, goal {}",
-                        mojoExecution.getExecutionId(), mojoExecution.getGoal() );
+                LOGGER.info( "Execution is not cached. Plugin: {}, goal {}, executionId: {}", mojoExecution.getPlugin(),
+                        mojoExecution.getGoal(), mojoExecution.getExecutionId() );
                 return false;
             }
 
             if ( !DtoUtils.containsAllProperties( cachedExecution, trackedProperties ) )
             {
-                LOGGER.info( "Build info doesn't match rules. Plugin: {}",
+                LOGGER.warn( "Cached build record doesn't contain all tracked properties. Plugin: {}, goal: {},"
+                        + " executionId: {}", mojoExecution.getPlugin(), mojoExecution.getGoal(),
                         mojoExecution.getExecutionId() );
                 return false;
             }
