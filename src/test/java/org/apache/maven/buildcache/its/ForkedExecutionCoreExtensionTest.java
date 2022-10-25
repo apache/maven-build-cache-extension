@@ -66,6 +66,10 @@ public class ForkedExecutionCoreExtensionTest
                 "-D" + CACHE_LOCATION_PROPERTY_NAME + "=" + tempDirectory.toAbsolutePath() ) );
         verifier.executeGoal( "verify" );
         verifier.verifyTextInLog( "Started forked project" );
+        verifier.verifyTextInLog(
+                "Mojo execution pmd:pmd:emptyLifecyclePhase:maven-pmd-plugin:org.apache.maven.plugins is forked,"
+                        + " returning phase verify from originating mojo "
+                        + "default:check:verify:maven-pmd-plugin:org.apache.maven.plugins" );
         verifier.verifyTextInLog( "[INFO] BUILD SUCCESS" );
 
         verifier.setLogFileName( "../log-2.txt" );

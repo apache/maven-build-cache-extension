@@ -605,7 +605,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     public String getLocalRepositoryLocation()
     {
         checkInitializedState();
-        return System.getProperty( CACHE_LOCATION_PROPERTY_NAME, getLocal().getLocation() );
+        return getProperty( CACHE_LOCATION_PROPERTY_NAME, getLocal().getLocation() );
     }
 
     @Override
