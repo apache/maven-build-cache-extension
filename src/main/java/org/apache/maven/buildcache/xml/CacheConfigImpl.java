@@ -94,7 +94,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
      * E.g. to trigger a forced build (full or for a particular module)
      * May be also activated via properties for projects via a profile e.g. on CI when some files produced by the build
      * are required (e.g. smth. from target folder as additional CI build artifacts):
-     * <maven.build.cache.skipCache>true<maven.build.cache.skipCache/>
+     * {@code <maven.build.cache.skipCache>true<maven.build.cache.skipCache/>}
      */
     public static final String CACHE_SKIP = "maven.build.cache.skipCache";
 

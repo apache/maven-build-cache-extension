@@ -26,7 +26,7 @@ under the License.
     <parent><!-- TODO switch to maven-extensions:35 -->
         <groupId>org.apache.maven</groupId>
         <artifactId>maven-parent</artifactId>
-        <version>34</version>
+        <version>37</version>
         <relativePath/>
     </parent>
 
@@ -41,12 +41,13 @@ under the License.
     <url>https://maven.apache.org/extensions/maven-build-cache-extension/</url>
 
     <properties>
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
+        <javaVersion>8</javaVersion>
+        <minimalMavenBuildVersion>3.5.0</minimalMavenBuildVersion>
+        <minimalJavaBuildVersion>11</minimalJavaBuildVersion>
         <classWorldsVersion>2.6.0</classWorldsVersion>
 
-        <formatter-maven-plugin.version>2.17.0</formatter-maven-plugin.version>
-        <impsort-maven-plugin.version>1.6.2</impsort-maven-plugin.version>
+        <formatter-maven-plugin.version>2.20.0</formatter-maven-plugin.version>
+        <impsort-maven-plugin.version>1.7.0</impsort-maven-plugin.version>
 
         <commonsCliVersion>1.4</commonsCliVersion>
         <commonsLangVersion>3.12.0</commonsLangVersion>
@@ -233,13 +234,14 @@ under the License.
                 <artifactId>apache-rat-plugin</artifactId>
                 <configuration>
                     <excludes>
+                        <exclude>.mvn/maven.config</exclude>
                         <exclude>.asf.yaml</exclude>
                         <exclude>src/test/resources*/**</exclude>
                         <exclude>src/test/projects/**</exclude>
                         <exclude>src/test/remote-repo/**</exclude>
                         <exclude>src/build/maven-header.txt</exclude>
                         <exclude>.gitmodules</exclude>
-                        <exclude>maven/**</exclude>
+                        <exclude>.gitattributes</exclude>
                     </excludes>
                 </configuration>
             </plugin>
@@ -294,7 +296,7 @@ under the License.
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>animal-sniffer-maven-plugin</artifactId>
-                <version>1.20</version>
+                <version>1.21</version>
                 <configuration>
                     <signature>
                         <groupId>org.codehaus.mojo.signature</groupId>
@@ -379,7 +381,7 @@ under the License.
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>
-                <version>3.2.0</version>
+                <version>3.3.0</version>
                 <executions>
                     <execution>
                         <id>add-resources</id>
@@ -399,8 +401,16 @@ under the License.
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.10.1</version>
+                <configuration>
+                    <release>${javaVersion}</release>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
-                <version>2.8</version>
+                <version>3.3.0</version>
                 <executions>
                     <execution>
                         <id>copy-maven-distribution</id>
@@ -427,7 +437,7 @@ under the License.
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.0.0-M5</version>
+                <version>3.0.0-M7</version>
                 <configuration>
                     <argLine>-Xmx256m --add-exports java.base/sun.nio.ch=ALL-UNNAMED</argLine>
                     <environmentVariables>
@@ -466,13 +476,18 @@ under the License.
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-install-plugin</artifactId>
-                <version>3.0.0-M1</version>
+                <version>3.0.1</version>
                 <executions>
                     <execution>
                         <id>default-install</id>
                         <phase>pre-integration-test</phase>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.4.0</version>
             </plugin>
         </plugins>
     </build>
