@@ -23,9 +23,9 @@ under the License.
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <parent><!-- TODO switch to maven-extensions:35 -->
-        <groupId>org.apache.maven</groupId>
-        <artifactId>maven-parent</artifactId>
+    <parent>
+        <groupId>org.apache.maven.extensions</groupId>
+        <artifactId>maven-extensions</artifactId>
         <version>37</version>
         <relativePath/>
     </parent>
@@ -290,27 +290,6 @@ under the License.
                             <goal>sort</goal>
                         </goals>
                         <phase>process-sources</phase>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>animal-sniffer-maven-plugin</artifactId>
-                <version>1.21</version>
-                <configuration>
-                    <signature>
-                        <groupId>org.codehaus.mojo.signature</groupId>
-                        <artifactId>java18</artifactId>
-                        <version>1.0</version>
-                    </signature>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>check-java-compat</id>
-                        <phase>process-classes</phase>
-                        <goals>
-                            <goal>check</goal>
-                        </goals>
                     </execution>
                 </executions>
             </plugin>
