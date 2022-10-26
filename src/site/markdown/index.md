@@ -124,5 +124,5 @@ Such scheme allows to validate cache correctness by reconciling outcomes of cach
 * [How-To](how-to.html) - cookbook for typical scenarios
 * [Performance](performance.html) - performance tuning
 * [Cache Parameters](parameters.html) - description of supported parameters
-* [Sample config file](maven-cache-config.xml)
+* [Sample config file](maven-build-cache-config.xml)
 

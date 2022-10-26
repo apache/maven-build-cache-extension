@@ -57,7 +57,6 @@ under the License.
       <item name="cache-report.xml" href="build-cache-report.html"/>
     </menu>
 
-    <menu ref="parent"/>
     <menu ref="reports"/>
   </body>
 </project>
