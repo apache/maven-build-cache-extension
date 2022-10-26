@@ -62,6 +62,7 @@ import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.model.PluginExecution;
 import org.apache.maven.plugin.MojoExecution;
+import org.apache.maven.rtinfo.RuntimeInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -102,6 +103,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
 
     private final XmlService xmlService;
     private final MavenSession session;
+    private final RuntimeInformation rtInfo;
 
     private volatile CacheState state;
     private CacheConfig cacheConfig;
@@ -109,10 +111,11 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     private List<Pattern> excludePatterns;
 
     @Inject
-    public CacheConfigImpl( XmlService xmlService, MavenSession session )
+    public CacheConfigImpl( XmlService xmlService, MavenSession session, RuntimeInformation rtInfo )
     {
         this.xmlService = xmlService;
         this.session = session;
+        this.rtInfo = rtInfo;
     }
 
     @Nonnull
@@ -126,7 +129,14 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
                 if ( state == null )
                 {
                     final String enabled = getProperty( CACHE_ENABLED_PROPERTY_NAME, "true" );
-                    if ( !Boolean.parseBoolean( enabled ) )
+
+                    if ( !rtInfo.isMavenVersion( "[3.9.0-SNAPSHOT,)" ) )
+                    {
+                        LOGGER.warn( "Cache requires Maven >= 3.9, but version is " + rtInfo.getMavenVersion()
+                                + ". Disabling cache." );
+                        state = CacheState.DISABLED;
+                    }
+                    else if ( !Boolean.parseBoolean( enabled ) )
                     {
                         LOGGER.info(
                                 "Cache disabled by command line flag, project will be built fully and not cached" );
