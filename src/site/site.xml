@@ -38,7 +38,6 @@ under the License.
     </menu>
 
     <menu name="Documentation">
-      <item name="Overview" href="cache.html"/>
       <item name="Getting Started" href="getting-started.html"/>
       <item name="Usage" href="usage.html"/>
       <item name="Remote Cache Setup" href="remote-cache.html"/>

@@ -24,7 +24,7 @@
 [![Jenkins tests](https://img.shields.io/jenkins/t/https/ci-maven.apache.org/job/Maven/job/maven-box/job/maven-build-cache-extension/job/master.svg?)][test-results]
 
 This project provides a Build Cache Extension feature which calculates out-of-date modules in the build dependencies graph and improves build times by avoiding re-building unnecessary modules.
-Read [cache guide](https://maven.apache.org/extensions/maven-build-cache-extension/cache.html) for more details.
+Read [cache guide](https://maven.apache.org/extensions/maven-build-cache-extension/index.html) for more details.
 
 Status
 --------
