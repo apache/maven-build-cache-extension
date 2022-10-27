@@ -31,7 +31,7 @@ under the License.
 
     <groupId>org.apache.maven.extensions</groupId>
     <artifactId>maven-build-cache-extension</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>Apache Maven Build Cache Extension</name>
@@ -64,14 +64,14 @@ under the License.
         <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
 
         <maven.site.path>extensions-archives/${project.artifactId}-LATEST</maven.site.path><!-- TODO remove when switching parent to maven-extensions:35 -->
-        <project.build.outputTimestamp>2022-10-27T09:44:44Z</project.build.outputTimestamp>
+        <project.build.outputTimestamp>2022-10-27T09:45:25Z</project.build.outputTimestamp>
     </properties>
 
     <scm>
         <connection>scm:git:https://gitbox.apache.org/repos/asf/maven-build-cache-extension.git</connection>
         <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/maven-build-cache-extension.git</developerConnection>
         <url>https://github.com/apache/maven-build-cache-extension/tree/${project.scm.tag}</url>
-        <tag>maven-build-cache-extension-1.0.0</tag>
+        <tag>master</tag>
     </scm>
     <issueManagement>
         <system>jira</system>
