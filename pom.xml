@@ -19,20 +19,19 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
         <groupId>org.apache.maven.extensions</groupId>
         <artifactId>maven-extensions</artifactId>
         <version>37</version>
-        <relativePath/>
+        <relativePath />
     </parent>
 
     <groupId>org.apache.maven.extensions</groupId>
     <artifactId>maven-build-cache-extension</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0.0</version>
     <packaging>jar</packaging>
 
     <name>Apache Maven Build Cache Extension</name>
@@ -65,14 +64,14 @@ under the License.
         <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
 
         <maven.site.path>extensions-archives/${project.artifactId}-LATEST</maven.site.path><!-- TODO remove when switching parent to maven-extensions:35 -->
-        <project.build.outputTimestamp>2021-04-05T08:12:18Z</project.build.outputTimestamp>
+        <project.build.outputTimestamp>2022-10-27T09:44:44Z</project.build.outputTimestamp>
     </properties>
 
     <scm>
         <connection>scm:git:https://gitbox.apache.org/repos/asf/maven-build-cache-extension.git</connection>
         <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/maven-build-cache-extension.git</developerConnection>
         <url>https://github.com/apache/maven-build-cache-extension/tree/${project.scm.tag}</url>
-        <tag>master</tag>
+        <tag>maven-build-cache-extension-1.0.0</tag>
     </scm>
     <issueManagement>
         <system>jira</system>
