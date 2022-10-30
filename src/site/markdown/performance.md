@@ -17,21 +17,15 @@
 
 ## Performance Tuning
 
-Various setup options which affect cache performance.
-
 ### General notes
 
-Tuning of cache performance could reduce both resources consumption and build execution time but that is not guaranteed.
-In many scenarios build time of invalidated (changed) projects could be dominating in overall build time. Performance
-wins achieved by a faster cache engine might not correlate with final build times in straightforward way. As usual with
-performance, effect of performance optimizations should be carefully measured in relevant scenarios.
+Cache tuning could significantly reduce resource consumption and build execution time, but that is not guaranteed. Performance-tuning hints might not considerably affect the build time depending on a usage pattern. As usual with performance tuning, measure results in relevant scenarios to validate results and weigh the pros and cons.
 
 ### Hash algorithm selection
 
-By default, cache uses SHA-256 algorithm which is sufficiently fast and provides negligible probability of hash
-collisions. In projects with large codebase, performance of hash algorithms becomes more important and in such
-scenarios [XX](https://cyan4973.github.io/xxHash/) or XXMM (memory mapped files) hashing algorithms provide better
-performance.
+By default, the cache uses the SHA-256 algorithm, which is sufficiently fast and provides a negligible probability of hash
+collisions. In projects with a large codebase, the performance of hash algorithms becomes more critical, and other algorithms like
+[XX](https://cyan4973.github.io/xxHash/) or XXMM (memory-mapped files) could provide better performance.
 
 ```xml
 <hashAlgorithm>XX</hashAlgorithm>
@@ -43,11 +37,10 @@ or
 <hashAlgorithm>XXMM</hashAlgorithm>
 ```
 
-### Filter out unnecessary/huge artifacts
+### Filter out unnecessary artifacts
 
-Price of uploading and downloading from cache of huge artifacts could be significant. In many scenarios assembling WAR,
-EAR or ZIP archive could be done more efficiently locally from cached JARs than storing bundles. In order to filter out
-artifacts add configuration section:
+The price of uploading and downloading huge artifacts could be significant. In many scenarios assembling WAR,
+EAR or ZIP archive locally is more efficient than writing to soring in cache bundles. To filter out artifacts, add the configuration section:
 
 ```xml
 <cache>
@@ -59,24 +52,21 @@ artifacts add configuration section:
 </cache>
 ```
 
-### Use lazy restore
+### Use a lazy restore
 
-By default, cache tries to restore all artifacts for a project preemptively. Lazy restore could give a significant time
-and resources wins for remote cache by avoiding requesting and downloading unnecessary artifacts from cache. Use command
-line flag:
+By default, the cache tries to restore all artifacts for a project preemptively. Lazy restore could give significant time by avoiding requesting and downloading unnecessary artifacts from the cache.
+It is beneficial when small changes are a dominating build pattern. Use command line flag:
 
 ```
 -Dmaven.build.cache.lazyRestore=true";
 ```
 
-Note: In case of cache corruption lazy cache cannot fallback to normal execution, it will fail instead. To heal the
-corrupted cache need to force rewrite of the cache or remove corrupted cache entries manually
+In cache corruption situations, the lazy cache cannot support fallback to normal execution. It will fail instead. To heal the corrupted cache, manually remove corrupted cache entries or force cache rewrite.
 
 ### Disable project files restoration
 
-By default, cache support partial restore of source code state from cached generated sources (and potentially more,
-depending on configuration). This could be helpful in local environment, but likely unnecessary and adds overhead in
-continuous integration. To disable add command line flag
+By default, cache supports the partial restoration of source code state from cached generated sources (and potentially more,
+depending on configuration). It is helpful in a local environment but likely unnecessary and adds overhead in continuous integration. To disable, add a command line flag.
 
 ```
 -Dmaven.build.cache.restoreGeneratedSources=false";
@@ -84,10 +74,7 @@ continuous integration. To disable add command line flag
 
 ### Disable post-processing of archives(JARs, WARs, etc) META-INF
 
-Post-processing is disabled by default, but for some projects cache could be configured to auto-correct metadata (most
-notably [MANIFEST.MF `Implementation-Version`](https://docs.oracle.com/javase/8/docs/technotes/guides/jar/jar.html#Main_Attributes))
-. This could be rather expensive as it requires copying and repacking archive entries. If metadata state is not relevant
-for the build (continuous integration, `verify` scenarios and similar) consider disabling it:
+The cache could be configured to auto-correct metadata (most notably [MANIFEST.MF `Implementation-Version`](https://docs.oracle.com/javase/8/docs/technotes/guides/jar/jar.html#Main_Attributes)). The correction requires copying and repacking archive entries and adds overhead. If the metadata state is not relevant for the build, consider disabling it (off by default):
 
 ```xml
 <cache>

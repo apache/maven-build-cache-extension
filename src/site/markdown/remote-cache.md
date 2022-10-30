@@ -17,88 +17,100 @@
 
 ## Overview
 
-This document describes generic approach to remote cache setup. The process implies good knowledge of both Maven and the
-project. Due to Maven model limitation the process is semi-manual, but allows you to achieve sufficient control and
-transparency over caching logic.
+This document describes a generic approach to remote cache setup. Due to Maven model limitations, the process is
+semi-manual but allows you to achieve sufficient control and transparency over caching logic. The process implies good
+knowledge of both Maven and the project.
 
 ### Before you start
 
-Before you start, please keep in mind basic principles:
+Before you start, please keep in mind the basic principles:
 
-* Cache is key based, the key is produced by HashTree-like technique. The key is produced by hashing every configured
-  source code file, every dependency and effective pom (including plugin parameters). Every element's hash contributes
-  to the key. In order to produce the same key there engine must consume exactly the same hashes.
-* There is no built-in normalization of line endings in this implementation, file hash calculation is raw bytes
-  based. The most obvious implication could be illustrated by a simple Git checkout. By default, git will check out
-  source code with CRLF line endings on win and LF on Linux. Because of that builds over same commit on a Linux agent
-  and local build on Windows workstation will yield different hashes.
-* Parameters of plugins are reconciled in runtime. For example to avoid of accidentally reusing builds which never run
-  tests ensure that critical surefire parameters are tracked (`skipTests` and similar) in config. The same applies for
-  all over plugins.
+* The cache is key based. Using the HashTree-like technique it produces the key by hashing every configured source code
+  file, every dependency, and effective pom (including plugin parameters). Every element's hash contributes to the key.
+  The engine must consume identical hashes to produce the same key.
+* There is no built-in normalization of line endings in this implementation. File hash calculation is raw bytes based. A
+  common pitfall is a Git checkout with CRLF on Win and LF on Linux. The same commit with different line endings will
+  produce different hashes.
+* Parameters of plugins are reconciled in runtime. For example, to avoid accidentally reusing builds that never run
+  tests, track all critical surefire parameters (`skipTests` and similar) in config. The same applies to all other
+  plugins.
 
 ## Step-By-Step
 
-### Minimize number of moving parts
+### Minimize the number of moving parts
 
-* Run build with single threaded builder to make sure logs from different modules do not interfere
-* Use the same branch which no-one else commits to
-* Designate single agent/node for CI builds
+* Run build with a single-threaded builder to make sure logs from different modules do not interfere
+* Use the same branch which no one else commits to
+* Designate a single agent/node for CI builds
 * Preferably use the same OS between CI and local machine
 
 ### Fork branch for cache setup purposes
 
-Fork stable code branch for cache setup purposes as you will need source code which doesn't change over time of setup.
-Also, you likely will need to do code changes as long as you go.
+Fork stable code branch for cache setup purposes, as you will need source code that doesn't change over setup time.
+Also, you likely need to make code changes as long as you go.
 
-### Setup http server to store artifacts
+### Setup HTTP server to store artifacts
 
-In order to share build results cache needs a shared storage. The simplest option is to set up a http server which
-supports http PUT/GET/HEAD operations will suffice (Nginx, Apache or similar). Add the url to config and
+To share results, the cache needs shared storage. The simplest option is to set up an HTTP server that supports HTTP
+PUT/GET/HEAD operations (Nginx, Apache, or similar). Add the URL to the config and
 change `remote@enabled` to true:
 
 ```xml
-<remote enabled="true">
+<!--Default @id is 'cache'-->
+<remote enabled="true" id="my-cache">
     <url>http://your-buildcache-url</url>
 </remote>
 ```
 
-If proxy or authentication is required to access remote cache, add server record to settings.xml as described
-in [Servers](https://maven.apache.org/settings.html#Servers). The server should be referenced from cache config:
+If proxy or authentication is required to access the remote cache, add server record to settings.xml as described
+in [Servers](https://maven.apache.org/settings.html#Servers). Reference the server in the cache config:
 
-```
-TBD
+```xml
+
+<servers>
+    <server>
+        <!-- Should match id attribute from the 'remote' tag in cache config or should be 'cache' by default -->
+        <id>my-cache</id>
+        <username>[cache user]</username>
+        <password>[cache password]</password>
+    </server>
+</servers>
 ```
 
-Beside the http server, remote cache could be configured using any storage which is supported by [Maven Resolver](https://maven.apache.org/resolver/). That includes a wide set of options, including SSH, FTP and many others through the use of [Maven Wagon](https://maven.apache.org/wagon/). See Wagon documentation for a full list of options and other details.
+Besides the HTTP server, the remote cache could be configured using any storage supported
+by [Maven Resolver](https://maven.apache.org/resolver/). That includes a broad set of options, including SSH, FTP, and
+many others, using [Maven Wagon](https://maven.apache.org/wagon/). See Wagon documentation for a complete list of
+options and other details.
 
 ### Build selection
 
-Build stored in cache ideally should be a build assembled in the most correct, comprehensive and complete way. Pull
-requests builds are good candidates to populate cache usually because this is there quality safeguards are applied
-normally.
+Build stored in cache ideally should be assembled in the most correct, comprehensive, and complete way. Pull request
+builds are typically good candidates to populate the cache because this is where quality safeguards are commonly
+applied.
 
 ### CI Build setup to seed shared cache
 
-Allow writes in remote cache add jvm property to designated CI builds.
+To allow writes in the remote cache, add JVM property to designated CI builds.
 
 ```
 -Dmaven.build.cache.remote.save.enabled=true
 ```
 
-Run the build, review log and ensure that artifacts are uploaded to remote cache. Now, rerun build and ensure that it
+Run the build, review the log, and verify the successful upload of cache artifacts to the remote cache. Now, rerun the
+build and ensure that it
 completes almost instantly because it is fully cached.
 
-### Remote cache relocation to local builds
+### Make remote cache portable
 
-As practice shows, developers often don't realize that builds they run in local and CI environments are different. So
-straightforward attempt to reuse remote cache in local build usually results in cache misses because of difference in
-plugins, parameters, profiles, environment, etc. In order to reuse results you might need to change poms, cache config,
-CI jobs and the project itself. This part is usually most challenging and time-consuming. Follow steps below to
-iteratively achieve working configuration.
+As practice shows, builds that run on local workstations and CI environments differ. A straightforward attempt to
+reuse cache produced in different environments usually results in cache misses. Out-of-the-box caches are rarely
+portable because of differences in CI jobs, environment specifics, and project configurations. Making the cache portable
+is typically the most challenging and time-consuming part of the setup. Follow the steps below to achieve a portable
+configuration iteratively.
 
-* Enable fail fast mode to fail build on the first discrepancy between
-* Provide reference to the CI build as a baseline for comparison between your local and remote builds. Go to the
-  reference CI build log and one of the final lines of the build should be a line about saving `build-cache-report.xml`
+* Enable fail-fast mode to fail the build on the first discrepancy between the remote and local data
+* Provide reference to the CI build as a baseline for comparing your local and remote builds. Go to the reference CI
+  build log, and in the end, find the line about saving `build-cache-report.xml`:
 
 ```
 [INFO] [CACHE] Saved to remote cache https://your-cache-url/<...>/915296a3-4596-4eb5-bf37-f6e13ebe087e/build-cache-report.xml
@@ -106,13 +118,13 @@ iteratively achieve working configuration.
 
 Copy the link to a `build-cache-report.xml` and provide it to your local build as a baseline for comparison.
 
-* Run local build. Command line should look similar to this:
+* Run local build. The command line should look similar to this:
 
 ```bash
 mvn verify -Dmaven.build.cache.failFast=true -Dmaven.build.cache.baselineUrl=https://your-cache-url/<...>/915296a3-4596-4eb5-bf37-f6e13ebe087e/build-cache-report.xml
 ```
 
-Once discrepancy between remote and local builds detected cache will fail with diagnostic info in
+Once a discrepancy between remote and local builds is detected, the cache will fail and write report in the
 project's `target/incremental-maven` directory:
 
 ```
@@ -122,81 +134,86 @@ project's `target/incremental-maven` directory:
 ```
 
 Review `buildsdiff.xml` file and eliminate detected discrepancies. You can also diff build-info files directly to get
-low level insights. See techniques to configure cache in [How-To](how-to.md) and troubleshooting of typical issues
-in the section below.
+low-level insights. See techniques to configure cache in [How-To](how-to.md) and troubleshooting of typical issues
+in the section below. Also, it is possible to diff remote and local `buildInfo.xml` files directly using any tool of
+your preference.
 
 ## Common issues
 
-### Issue 1: Local checkout is with different line endings
+### Issue 1: Local checkout with different line endings
 
-Solution: normalise line endings. Current implementation doesn't have built-in line endings normalization, it has to be
-done externally. In git it is recommended to use `.gitattributes` file to establish consistent line endings across all
-envs for file types specific to this project
+Solution: normalize line endings. The current implementation doesn't have built-in line endings normalization, need to
+apply it manually. In git, using the `.gitattributes` file is the recommended way to establish consistent line endings
+across all environments.
 
 ### Issue 2: Effective poms mismatch because of plugins injection by profiles
 
-Different profiles between remote and local builds likely result in different text of effective poms. As effective pom
-contributes hash value to the key that could lead to cache misses. Solution: instead of adding/removing specific plugins
-by profiles, set default value of the plugin's `skip` or `disabled` flag in a profile properties instead. Instead of:
+Different profiles between remote and local builds are likely to result in different content of effective poms.
+Effective pom contributes hash value to the key that could lead to cache misses. Solution: instead of adding/removing
+specific plugins by profiles, set the default value of the plugin's `skip` or `disabled` flag in profile properties
+instead. Instead of:
 
 ```xml
+
 <profiles>
-  <profile>
-    <id>run-plugin-in-ci-only</id>
-    <build>
-      <plugins>
-        <plugin>
-          <artifactId>surefire-report-maven-plugin</artifactId>
-          <configuration>
-            <!-- my configuration -->
-          </configuration>
-        </plugin>
-      </plugins>
-    </build>
-  </profile>
+    <profile>
+        <id>run-plugin-in-ci-only</id>
+        <build>
+            <plugins>
+                <plugin>
+                    <artifactId>surefire-report-maven-plugin</artifactId>
+                    <configuration>
+                        <!-- my configuration -->
+                    </configuration>
+                </plugin>
+            </plugins>
+        </build>
+    </profile>
 </profiles>
 ```
 
 Use:
 
 ```xml
+
 <properties>
     <!-- default value -->
     <skip.plugin.property>true</skip.plugin.property>
 </properties>
 <build>
-  <plugins>
-      <plugin>
-          <artifactId>maven-surefire-plugin</artifactId>
-          <configuration>
-              <!-- plugin behavior is controlled by property -->
-              <skip>${skip.plugin.property}</skip>
-          </configuration>
-      </plugin>
-  </plugins>
+<plugins>
+    <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+            <!--  flag to control the plugin behavior - skip or run -->
+            <skip>${skip.plugin.property}</skip>
+        </configuration>
+    </plugin>
+</plugins>
 </build>
 <profiles>
-  <profile>
-      <id>run-plugin-in-ci-only</id>
-      <properties>
-          <!-- override to run plugin in reference ci build -->
-          <skip.plugin.property>false</skip.plugin.property>
-      </properties>
-  </profile>
+<profile>
+    <id>run-plugin-in-ci-only</id>
+    <properties>
+        <!-- override to run the plugin in reference ci build -->
+        <skip.plugin.property>false</skip.plugin.property>
+    </properties>
+</profile>
 </profiles>
 ```
 
-Hint: effective poms could be found in `buildinfo` files under `/build/projectsInputInfo/item[@type='pom']`
-xpath (`item type="pom"`).
+Check effective pom in `buildinfo` files under `/build/projectsInputInfo/item[@type='pom']` xpath to see the content.
 
-### Issue 3: Effective pom mismatch because of environment specific properties
+### Issue 3: Effective pom mismatch because of environment-specific properties
 
-Potential reason: Sometimes it is not possible to avoid discrepancies in different environments - for example if plugin
-takes command line as parameter, it will be likely different on Win and linux. Such commands will appear in effective
-pom as a different literal values and will result in a different effective pom hash and cache key mismatch. Solution:
-filter out such properties from effective pom:
+Sometimes it is impossible to avoid discrepancies in different environments - for example, if a plugin
+takes the command line as a parameter, it likely spells differently on Win and Linux. Such commands will appear in the
+effective
+pom as different literal values, resulting in a different effective pom hash and cache key mismatch. Solution:
+Filter out environment-specific properties from the effective pom model:
 
 ```xml
+
 <input>
     <global>
         ...
@@ -215,20 +232,22 @@ Potential reasons: plugins or tests emit temporary files (logs and similar) in n
 global exclusions list to filter out the unexpected files:
 
 ```xml
+
 <global>
     <exclude>tempfile.out</exclude>
 </global>
 ```
 
-see sample config for exact syntax
+See the sample config for the exact syntax.
 
 ### Issue 5: Difference in tracked plugin properties
 
-Tracked property in config means it is critical for determining is build up to date or not. Discrepancies could happen
-for any plugin for a number of reasons. Example: local build is using java target 1.6, remote: 1.8. `buildsdiff.xml`
-will produce something like
+Tracked properties ensure consistent values with the cache record. Discrepancies could happen
+for any plugin for many reasons. Example: local build is using java target 1.6, remote: 1.8. `buildsdiff.xml` will
+produce something like
 
 ```xml
+
 <mismatch item="target"
           current="1.8"
           baseline="1.6"
@@ -236,5 +255,5 @@ will produce something like
           resolution="Align properties between remote and local build or remove property from tracked list if mismatch could be tolerated. In some cases it is possible to add skip value to ignore lax mismatch"/>
 ```
 
-Solution is at your discretion. If the property is tracked, out-of-date status is fair and expected. If you want to
+The solution is at your discretion. For a tracked property, out-of-date status is fair and expected. If you want to
 relax consistency rules in favor of compatibility, remove property from the reconciliations list

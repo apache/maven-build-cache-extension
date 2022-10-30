@@ -17,12 +17,12 @@
 
 ## Overview
 
-Cache configuration provides you additional control over incremental Maven behavior. Follow it step by step to
-understand how it works and figure out your optimal config
+Cache configuration provides you additional control over the build-cache extension behavior. Follow it step-by-step to
+understand how it works, and figure out an optimal config
 
 ### Minimal config
 
-Absolutely minimal config
+Minimal config
 
 ```xml
 <?xml version="1.0" encoding="UTF-8" ?>
@@ -58,7 +58,7 @@ Just add `<remote>` section under `<configuration>`
 
 ### Adding more file types to input
 
-Add all the project specific source code files in `<glob>`. Scala in this case:
+Add all the project-specific source code files in `<glob>`. Scala, in this case:
 
 ```xml
     <input>
@@ -70,8 +70,7 @@ Add all the project specific source code files in `<glob>`. Scala in this case:
 
 ### Adding source directory for bespoke project layouts
 
-In most of the cases incremental Maven will recognize directories automatically by build introspection. If not, you can
-add additional directories with `<include>`. Also you can filter out undesirable dirs and files by using exclude tag
+In most cases, the build-cache extension automatically recognizes directories by introspecting the build. When it is not enough, adding additional directories with `<include>` is possible. Also, you can filter out undesirable dirs and files by using exclude tag.
 
 ```xml
     <input>
@@ -87,7 +86,7 @@ add additional directories with `<include>`. Also you can filter out undesirable
     </input>
 ```
 
-### Plugin property is env specific and yields different cache key in different environments
+### Plugin property is environment-specific and yields different cache keys in different environments
 
 Consider to exclude env specific properties:
 
@@ -108,11 +107,11 @@ Consider to exclude env specific properties:
     </input>
 ```
 
-Implications - builds with different `argLine` will have identical key. Validate that is semantically valid.
+Implications - builds with different `argLine` will have an identical key. Validate that it is acceptable in terms of artifact equivalency.
 
-### Plugin property points to directory where only subset of files is relevant
+### Plugin property points to a directory where only a subset of files is relevant
 
-If plugin configuration property points to `somedir` it will be scanned with default glob. You can tweak it with custom
+If the plugin configuration property points to `somedir`, it will be scanned with the default glob. You can tweak it with custom
 processing rule
 
 ```xml
@@ -133,9 +132,9 @@ processing rule
     </input>
 ```
 
-### Local repository is not updated because `install` is cached
+### Local repository is not updated because the `install` phase is cached
 
-Add `executionControl/runAlways` section
+Add `executionControl/runAlways` section:
 
 ```xml
     <executionControl>
@@ -161,10 +160,10 @@ Add `executionControl/runAlways` section
     </executionControl>
 ```
 
-### I occasionally cached build with `-DskipTests=true` and tests do not run now
+### I occasionally cached build with `-DskipTests=true`, and tests do not run now
 
-If you add command line flags to your build, they do not participate in effective pom - Maven defers final value
-resolution to plugin runtime. To invalidate build if filed value is different in runtime, add reconciliation section
+If you add command line flags to your build, they do not participate in effective pom - Maven defers the final value
+resolution to plugin runtime. To invalidate the build if the filed value is different in runtime, add a reconciliation section
 to `executionControl`:
 
 ```xml
@@ -194,27 +193,24 @@ to `executionControl`:
 </cache>
 ```
 
-Please notice `skipValue` attribute. It denotes value which forces skipped execution.
-Read `propertyName="skipTests" skipValue="true"` as if property skipTests has value true, plugin will skip execution If
-you declare such value incremental Maven will reuse appropriate full-build though technically they are different, but
-because full-build is better it is safe to reuse
+Please notice the `skipValue` attribute. It captures the value that makes the plugin skip execution. Think of `skipProperty` as follows: if the build started with `-DskipTests=true`, restoring results from a build with completed tests is safe because the local run does not require completed tests. The same logic applies to any other plugin, not just Surefire.
 
 ### How to renormalize line endings in working copy after committing .gitattributes (git 2.16+)
 
-Ensure you've committed (and ideally pushed everything) - no changes in working copy. After that:
+Ensure you've committed (and ideally pushed everything) - no changes in the working copy. After that:
 
 ```shell
-# Rewrite objects and update index
+# Rewrite objects and update the index
 git add --renormalize .
 # Commit changes
-git commit -m "Normalizing line endings"
-# Remove working copy paths from git cache
+git commit -m "Normalizing line endings."
+# Remove working copy paths from the git cache
 git rm --cached -r .
 # Refresh with new line endings
 git reset --hard
 ```
 
-### I want to cache interim build and override it later with final version
+### I want to cache the interim build and override it later with the final version
 
-Solution: set `-Dmaven.build.cache.remote.save.final=true` to nodes which produce final builds. Such builds will not be overridden
+Solution: set `-Dmaven.build.cache.remote.save.final=true` to nodes that produce final builds. Such builds will not be overridden
 and eventually will replace all interim builds
