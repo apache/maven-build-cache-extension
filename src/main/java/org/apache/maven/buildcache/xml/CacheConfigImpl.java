@@ -82,6 +82,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     public static final String CONFIG_PATH_PROPERTY_NAME = "maven.build.cache.configPath";
     public static final String CACHE_ENABLED_PROPERTY_NAME = "maven.build.cache.enabled";
     public static final String CACHE_LOCATION_PROPERTY_NAME = "maven.build.cache.location";
+
     public static final String REMOTE_ENABLED_PROPERTY_NAME = "maven.build.cache.remote.enabled";
     public static final String REMOTE_URL_PROPERTY_NAME = "maven.build.cache.remote.url";
     public static final String REMOTE_SERVER_ID_PROPERTY_NAME = "maven.build.cache.remote.server.id";
