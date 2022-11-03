@@ -594,7 +594,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     public String getUrl()
     {
         checkInitializedState();
-        return getRemote().getUrl();
+        return getProperty( "maven.build.cache.remoteUrl", getRemote().getUrl() );
     }
 
     @Override

@@ -25,6 +25,7 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.Nonnull;
@@ -49,6 +50,7 @@ import org.eclipse.aether.spi.connector.transport.GetTask;
 import org.eclipse.aether.spi.connector.transport.PutTask;
 import org.eclipse.aether.spi.connector.transport.Transporter;
 import org.eclipse.aether.spi.connector.transport.TransporterProvider;
+import org.eclipse.aether.util.repository.AuthenticationBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,6 +63,13 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
 {
 
     private static final Logger LOGGER = LoggerFactory.getLogger( RemoteCacheRepositoryImpl.class );
+
+    public static final String MAVEN_BUILD_CACHE_DIRECT_CONNECT = "MAVEN_BUILD_CACHE_DIRECT_CONNECT";
+    public static final String MAVEN_BUILD_CACHE_USER = "MAVEN_BUILD_CACHE_USER";
+    public static final String MAVEN_BUILD_CACHE_PASSWORD = "MAVEN_BUILD_CACHE_PASSWORD";
+    public static final String MAVEN_BUILD_CACHE_PROXY_URL = "MAVEN_BUILD_CACHE_PROXY_URL";
+    public static final String MAVEN_BUILD_CACHE_PROXY_USER = "MAVEN_BUILD_CACHE_PROXY_USER";
+    public static final String MAVEN_BUILD_CACHE_PROXY_PASSWORD = "MAVEN_BUILD_CACHE_PROXY_PASSWORD";
 
     private final XmlService xmlService;
     private final CacheConfig cacheConfig;
@@ -81,11 +90,58 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
             RepositorySystemSession session = mavenSession.getRepositorySession();
             RemoteRepository repo = new RemoteRepository.Builder(
                     cacheConfig.getId(), "cache", cacheConfig.getUrl() ).build();
-            RemoteRepository mirror = session.getMirrorSelector().getMirror( repo );
-            RemoteRepository repoOrMirror = mirror != null ? mirror : repo;
-            Proxy proxy = session.getProxySelector().getProxy( repoOrMirror );
-            Authentication auth = session.getAuthenticationSelector().getAuthentication( repoOrMirror );
-            RemoteRepository repository = new RemoteRepository.Builder( repoOrMirror )
+            Map<String, String> env = System.getenv();
+
+            // if direct connectivity isn't forced, resolving through maven settings
+            if ( !env.containsKey( MAVEN_BUILD_CACHE_DIRECT_CONNECT ) )
+            {
+                RemoteRepository mirror = session.getMirrorSelector().getMirror( repo );
+                if ( mirror != null )
+                {
+                    repo = mirror;
+                }
+            }
+
+            // if proxy is set by environment, use it
+            Proxy proxy;
+            if ( env.containsKey( MAVEN_BUILD_CACHE_PROXY_URL ) )
+            {
+                String proxyUrl = env.get( MAVEN_BUILD_CACHE_PROXY_URL );
+                LOGGER.debug( "Remote build cache proxy url overridden by environment to {}", proxyUrl );
+                URI uri = URI.create( proxyUrl );
+                if ( env.containsKey( MAVEN_BUILD_CACHE_PROXY_USER ) )
+                {
+                    LOGGER.debug( "Remote build cache proxy credentials overridden by environment" );
+                    Authentication proxyAuthentication = new AuthenticationBuilder()
+                            .addUsername( env.get( MAVEN_BUILD_CACHE_PROXY_USER ) )
+                            .addPassword( env.get( MAVEN_BUILD_CACHE_PROXY_PASSWORD ) )
+                            .build();
+                    proxy = new Proxy( uri.getScheme(), uri.getHost(), uri.getPort(), proxyAuthentication );
+                }
+                else
+                {
+                    proxy = new Proxy( uri.getScheme(), uri.getHost(), uri.getPort() );
+                }
+            }
+            else
+            {
+                proxy = session.getProxySelector().getProxy( repo );
+            }
+
+            Authentication auth;
+            if ( env.containsKey( MAVEN_BUILD_CACHE_USER ) )
+            {
+                LOGGER.debug( "Remote build cache credentials overridden by environment" );
+                auth = new AuthenticationBuilder()
+                        .addUsername( env.get( MAVEN_BUILD_CACHE_USER ) )
+                        .addPassword( env.get( MAVEN_BUILD_CACHE_PASSWORD ) )
+                        .build();
+            }
+            else
+            {
+                auth = session.getAuthenticationSelector().getAuthentication( repo );
+            }
+            RemoteRepository repository = new RemoteRepository.Builder( repo )
                     .setProxy( proxy )
                     .setAuthentication( auth )
                     .build();
