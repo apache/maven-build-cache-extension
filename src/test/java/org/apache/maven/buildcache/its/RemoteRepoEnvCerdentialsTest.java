@@ -23,12 +23,10 @@ import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
 import com.github.tomakehurst.wiremock.verification.LoggedRequest;
 import com.google.common.collect.Lists;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.http.HttpHeaders;
 import org.apache.maven.buildcache.RemoteCacheRepositoryImpl;
@@ -44,9 +42,11 @@ import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.exactly;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.moreThanOrExactly;
 import static com.github.tomakehurst.wiremock.client.WireMock.notFound;
 import static com.github.tomakehurst.wiremock.client.WireMock.ok;
 import static com.github.tomakehurst.wiremock.client.WireMock.put;
+import static com.github.tomakehurst.wiremock.client.WireMock.putRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -94,12 +94,12 @@ public class RemoteRepoEnvCerdentialsTest
                 .withHeader( HttpHeaders.AUTHORIZATION, equalTo( authHEader ) )
                 .willReturn( ok() ) );
 
-        wm.stubFor( put( urlPathMatching( ".*/remote-repo-env-credentials.jar" ) )
-                .withHeader( HttpHeaders.AUTHORIZATION, equalTo( authHEader ) )
+        UrlPathPattern jar = urlPathMatching( ".*/remote-repo-env-credentials.jar" );
+        wm.stubFor( put( jar ).withHeader( HttpHeaders.AUTHORIZATION, equalTo( authHEader ) )
                 .willReturn( ok() ) );
 
-        wm.stubFor( put( urlPathMatching( ".*/build-cache-report.xml" ) )
-                .withHeader( HttpHeaders.AUTHORIZATION, equalTo( authHEader ) )
+        UrlPathPattern report = urlPathMatching( ".*/build-cache-report.xml" );
+        wm.stubFor( put( report ).withHeader( HttpHeaders.AUTHORIZATION, equalTo( authHEader ) )
                 .willReturn( ok() ) );
 
         verifier.setAutoclean( false );
@@ -117,6 +117,8 @@ public class RemoteRepoEnvCerdentialsTest
         verifier.verifyTextInLog( "BUILD SUCCESS" );
 
         wm.verify( exactly( 1 ), getRequestedFor( buildInfoPath ) );
+        wm.verify( moreThanOrExactly( 1 ), putRequestedFor( jar ) );
+        wm.verify( moreThanOrExactly( 1 ), putRequestedFor( report ) );
         List<LoggedRequest> allUnmatchedRequests = wm.findAllUnmatchedRequests();
         assertThat( allUnmatchedRequests ).isEmpty();
     }
@@ -132,16 +134,15 @@ public class RemoteRepoEnvCerdentialsTest
 
         UrlPathPattern buildInfoPath = urlPathMatching( ".*/buildinfo.xml" );
         wm.stubFor( get( buildInfoPath ).willReturn( notFound() ) );
-        wm.stubFor( put( buildInfoPath )
-                .withHeader( HttpHeaders.AUTHORIZATION, equalTo( authHeader ) )
+        wm.stubFor( put( buildInfoPath ).withHeader( HttpHeaders.AUTHORIZATION, equalTo( authHeader ) )
                 .willReturn( ok() ) );
 
-        wm.stubFor( put( urlPathMatching( ".*/remote-repo-env-credentials.jar" ) )
-                .withHeader( HttpHeaders.AUTHORIZATION, equalTo( authHeader ) )
+        UrlPathPattern jar = urlPathMatching( ".*/remote-repo-env-credentials.jar" );
+        wm.stubFor( put( jar ).withHeader( HttpHeaders.AUTHORIZATION, equalTo( authHeader ) )
                 .willReturn( ok() ) );
 
-        wm.stubFor( put( urlPathMatching( ".*/build-cache-report.xml" ) )
-                .withHeader( HttpHeaders.AUTHORIZATION, equalTo( authHeader ) )
+        UrlPathPattern report = urlPathMatching( ".*/build-cache-report.xml" );
+        wm.stubFor( put( report ).withHeader( HttpHeaders.AUTHORIZATION, equalTo( authHeader ) )
                 .willReturn( ok() ) );
 
         verifier.setAutoclean( false );
@@ -155,6 +156,9 @@ public class RemoteRepoEnvCerdentialsTest
                         "-Dmaven.build.cache.remote.save.enabled=true" ) );
         verifier.executeGoal( "verify" );
         verifier.verifyTextInLog( "BUILD SUCCESS" );
+
+        wm.verify( moreThanOrExactly( 1 ), putRequestedFor( jar ) );
+        wm.verify( moreThanOrExactly( 1 ), putRequestedFor( report ) );
 
         List<LoggedRequest> unmatchedRequests = wm.findAllUnmatchedRequests();
         assertThat( unmatchedRequests ).isEmpty();
