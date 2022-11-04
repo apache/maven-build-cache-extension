@@ -34,7 +34,7 @@
             <extension>
                 <groupId>org.apache.maven.extensions</groupId>
                 <artifactId>maven-build-cache-extension</artifactId>
-                <version>1.0.0-SNAPSHOT</version>
+                <version>${projectVersion}</version>
             </extension>
         </extensions>
     </build>

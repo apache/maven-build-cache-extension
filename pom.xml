@@ -45,6 +45,11 @@ under the License.
         <minimalJavaBuildVersion>11</minimalJavaBuildVersion>
         <classWorldsVersion>2.6.0</classWorldsVersion>
 
+        <!-- default maven version, can be override by maven3 profile -->
+        <mavenVersion>4.0.0-alpha-2</mavenVersion>
+        <maven.dir>maven4</maven.dir>
+        <maven.basedir>${project.build.directory}/${maven.dir}</maven.basedir>
+
         <formatter-maven-plugin.version>2.20.0</formatter-maven-plugin.version>
         <impsort-maven-plugin.version>1.7.0</impsort-maven-plugin.version>
 
@@ -434,32 +439,6 @@ under the License.
                             <excludes>**/its/**</excludes>
                         </configuration>
                     </execution>
-                    <execution>
-                        <id>integration-test</id>
-                        <phase>integration-test</phase>
-                        <goals>
-                            <goal>test</goal>
-                        </goals>
-                        <configuration>
-                            <includes>**/its/**</includes>
-                            <systemPropertyVariables>
-                                <project.version>${project.version}</project.version>
-                                <maven.multiModuleProjectDirectory>${maven.multiModuleProjectDirectory}</maven.multiModuleProjectDirectory>
-                                <maven.basedir>${maven.basedir}</maven.basedir>
-                            </systemPropertyVariables>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-install-plugin</artifactId>
-                <version>3.0.1</version>
-                <executions>
-                    <execution>
-                        <id>default-install</id>
-                        <phase>pre-integration-test</phase>
-                    </execution>
                 </executions>
             </plugin>
             <plugin>
@@ -472,21 +451,43 @@ under the License.
 
     <profiles>
         <profile>
+            <id>run-its</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <version>3.0.0-M7</version>
+                        <configuration>
+                            <systemPropertyVariables>
+                                <!-- local repo provided by m-invoker-p:install -->
+                                <localRepo>${project.build.directory}/local-repo</localRepo>
+                                <projectVersion>${project.version}</projectVersion>
+                                <maven.multiModuleProjectDirectory>${maven.multiModuleProjectDirectory}</maven.multiModuleProjectDirectory>
+                                <maven.basedir>${maven.basedir}</maven.basedir>
+                            </systemPropertyVariables>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>integration-test</id>
+                                <phase>integration-test</phase>
+                                <goals>
+                                    <goal>test</goal>
+                                </goals>
+                                <configuration>
+                                    <includes>**/its/**</includes>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
             <id>maven3</id>
             <properties>
                 <mavenVersion>3.9.0-SNAPSHOT</mavenVersion>
                 <maven.dir>maven3</maven.dir>
-                <maven.basedir>${project.build.directory}/${maven.dir}</maven.basedir>
-            </properties>
-        </profile>
-        <profile>
-            <id>maven4</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
-            <properties>
-                <mavenVersion>4.0.0-alpha-2</mavenVersion>
-                <maven.dir>maven4</maven.dir>
                 <maven.basedir>${project.build.directory}/${maven.dir}</maven.basedir>
             </properties>
         </profile>
