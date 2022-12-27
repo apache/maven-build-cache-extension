@@ -68,7 +68,6 @@ under the License.
     <mavenVersion>4.0.0-alpha-5</mavenVersion>
     <maven.dir>maven4</maven.dir>
     <maven.basedir>${project.build.directory}/${maven.dir}</maven.basedir>
-
     <commonsCliVersion>1.4</commonsCliVersion>
     <commonsLangVersion>3.12.0</commonsLangVersion>
     <junit.version>5.9.3</junit.version>
