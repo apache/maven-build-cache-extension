@@ -66,6 +66,7 @@ under the License.
         <resolverVersion>1.8.0</resolverVersion>
         <slf4jVersion>1.7.32</slf4jVersion>
         <xmlunitVersion>2.6.4</xmlunitVersion>
+        <wiremockVersion>2.35.0</wiremockVersion>
         <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
 
         <maven.site.path>extensions-archives/${project.artifactId}-LATEST</maven.site.path><!-- TODO remove when switching parent to maven-extensions:35 -->
@@ -232,7 +233,7 @@ under the License.
         <dependency>
             <groupId>com.github.tomakehurst</groupId>
             <artifactId>wiremock-jre8</artifactId>
-            <version>2.33.1</version>
+            <version>${wiremockVersion}</version>
             <scope>test</scope>
             <exclusions>
                 <exclusion>
