@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import com.google.common.collect.Lists;
+import org.apache.commons.lang3.SystemUtils;
 import org.apache.maven.buildcache.xml.CacheConfig;
 import org.apache.maven.buildcache.xml.build.CompletedExecution;
 import org.apache.maven.buildcache.xml.build.PropertyValue;
@@ -71,11 +72,13 @@ class BuildCacheMojosExecutionStrategyTest {
         @Test
         void testBasicParamsMatching() {
 
+            boolean windows = SystemUtils.IS_OS_WINDOWS;
+
             List<Pair<TrackedProperty, PropertyValue>> cacheProperties = Lists.newArrayList(
                     setupProperty("bool", "true"),
                     setupProperty("primitive", "1"),
                     setupProperty("file", "c"),
-                    setupProperty("path", "../d/e"),
+                    setupProperty("path", windows ? "..\\d\\e" : "../d/e"),
                     setupProperty("list", "[a, b, c]"),
                     setupProperty("array", "{c,d,e}"),
                     setupProperty("nullObject", null));
@@ -89,12 +92,17 @@ class BuildCacheMojosExecutionStrategyTest {
             when(cacheConfigMock.getTrackedProperties(executionMock)).thenReturn(trackedProperties);
             when(cacheRecordMock.getProperties()).thenReturn(cacheRecordProperties);
 
-            when(projectMock.getBasedir()).thenReturn(new File("/a/b"));
+            when(projectMock.getBasedir()).thenReturn(windows ? new File("c:\\a\\b") : new File("/a/b"));
 
             TestMojo testMojo = TestMojo.create(
-                    true, 1, new File("/a/b/c"), Paths.get("../d/e"), Lists.newArrayList("a", "b", "c"), new String[] {
-                        "c", "d", "e"
-                    });
+                    true,
+                    1,
+                    windows
+                            ? Paths.get("c:\\a\\b\\c").toFile()
+                            : Paths.get("/a/b/c").toFile(),
+                    Paths.get(windows ? "..\\d\\e" : "../d/e"),
+                    Lists.newArrayList("a", "b", "c"),
+                    new String[] {"c", "d", "e"});
 
             assertTrue(strategy.isParamsMatched(projectMock, executionMock, testMojo, cacheRecordMock));
         }

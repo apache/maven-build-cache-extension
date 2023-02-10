@@ -148,6 +148,16 @@ public class XmlService {
             }
         } catch (IOException | XmlPullParserException e) {
             throw new RuntimeException("Unable to parse cache xml element", e);
+        } finally {
+            closeQuietly(inputStream);
+        }
+    }
+
+    private void closeQuietly(InputStream inputStream) {
+        try {
+            inputStream.close();
+        } catch (IOException e) {
+            // ignore
         }
     }
 }
