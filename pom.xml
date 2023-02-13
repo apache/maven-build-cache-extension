@@ -486,7 +486,7 @@ under the License.
         <profile>
             <id>maven3</id>
             <properties>
-                <mavenVersion>3.9.0-SNAPSHOT</mavenVersion>
+                <mavenVersion>3.9.0</mavenVersion>
                 <maven.dir>maven3</maven.dir>
                 <maven.basedir>${project.build.directory}/${maven.dir}</maven.basedir>
             </properties>
