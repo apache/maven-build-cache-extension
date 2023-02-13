@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -19,22 +19,22 @@
 package org.apache.maven.buildcache;
 
 import javax.annotation.Nonnull;
+
 import org.apache.maven.buildcache.xml.config.DirScanConfig;
 
 /**
  * PluginScanConfig
  */
-public interface PluginScanConfig
-{
+public interface PluginScanConfig {
 
     boolean isSkip();
 
-    boolean accept( String propertyName );
+    boolean accept(String propertyName);
 
-    PluginScanConfig mergeWith( PluginScanConfig overrideSource );
+    PluginScanConfig mergeWith(PluginScanConfig overrideSource);
 
     @Nonnull
-    ScanConfigProperties getTagScanProperties( String tagName );
+    ScanConfigProperties getTagScanProperties(String tagName);
 
     DirScanConfig dto();
 }

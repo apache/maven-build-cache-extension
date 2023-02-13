@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -18,10 +18,12 @@
  */
 package org.apache.maven.buildcache.xml;
 
-import java.util.List;
-import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
+import java.util.List;
+import java.util.regex.Pattern;
+
 import org.apache.maven.buildcache.PluginScanConfig;
 import org.apache.maven.buildcache.hash.HashFactory;
 import org.apache.maven.buildcache.xml.config.Exclude;
@@ -36,25 +38,24 @@ import org.apache.maven.plugin.MojoExecution;
 /**
  * CacheConfig
  */
-public interface CacheConfig
-{
+public interface CacheConfig {
 
     @Nonnull
     CacheState initialize();
 
     @Nonnull
-    List<TrackedProperty> getTrackedProperties( MojoExecution mojoExecution );
+    List<TrackedProperty> getTrackedProperties(MojoExecution mojoExecution);
 
-    boolean isLogAllProperties( MojoExecution mojoExecution );
-
-    @Nonnull
-    List<PropertyName> getLoggedProperties( MojoExecution mojoExecution );
+    boolean isLogAllProperties(MojoExecution mojoExecution);
 
     @Nonnull
-    List<PropertyName> getNologProperties( MojoExecution mojoExecution );
+    List<PropertyName> getLoggedProperties(MojoExecution mojoExecution);
 
     @Nonnull
-    List<String> getEffectivePomExcludeProperties( Plugin plugin );
+    List<PropertyName> getNologProperties(MojoExecution mojoExecution);
+
+    @Nonnull
+    List<String> getEffectivePomExcludeProperties(Plugin plugin);
 
     @Nullable
     MultiModule getMultiModule();
@@ -70,15 +71,15 @@ public interface CacheConfig
     List<Exclude> getGlobalExcludePaths();
 
     @Nonnull
-    PluginScanConfig getPluginDirScanConfig( Plugin plugin );
+    PluginScanConfig getPluginDirScanConfig(Plugin plugin);
 
     @Nonnull
-    PluginScanConfig getExecutionDirScanConfig( Plugin plugin, PluginExecution exec );
+    PluginScanConfig getExecutionDirScanConfig(Plugin plugin, PluginExecution exec);
 
     @Nonnull
     HashFactory getHashFactory();
 
-    boolean isForcedExecution( MojoExecution execution );
+    boolean isForcedExecution(MojoExecution execution);
 
     String getId();
 
@@ -106,7 +107,7 @@ public interface CacheConfig
 
     boolean adjustMetaInfVersion();
 
-    boolean canIgnore( MojoExecution mojoExecution );
+    boolean canIgnore(MojoExecution mojoExecution);
 
     @Nonnull
     List<Pattern> getExcludePatterns();

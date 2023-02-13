@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -20,6 +20,7 @@ package org.apache.maven.buildcache;
 
 import javax.inject.Inject;
 import javax.inject.Named;
+
 import org.apache.maven.AbstractMavenLifecycleParticipant;
 import org.apache.maven.MavenExecutionException;
 import org.apache.maven.SessionScoped;
@@ -28,26 +29,22 @@ import org.apache.maven.execution.MavenSession;
 
 @SessionScoped
 @Named
-@SuppressWarnings( "unused" )
-public class CacheLifecycleParticipant extends AbstractMavenLifecycleParticipant
-{
+@SuppressWarnings("unused")
+public class CacheLifecycleParticipant extends AbstractMavenLifecycleParticipant {
 
     private final CacheConfig cacheConfig;
     private final CacheController cacheController;
 
     @Inject
-    public CacheLifecycleParticipant( CacheConfig cacheConfig, CacheController cacheController )
-    {
+    public CacheLifecycleParticipant(CacheConfig cacheConfig, CacheController cacheController) {
         this.cacheConfig = cacheConfig;
         this.cacheController = cacheController;
     }
 
     @Override
-    public void afterSessionEnd( MavenSession session ) throws MavenExecutionException
-    {
-        if ( cacheConfig.isEnabled() )
-        {
-            cacheController.saveCacheReport( session );
+    public void afterSessionEnd(MavenSession session) throws MavenExecutionException {
+        if (cacheConfig.isEnabled()) {
+            cacheController.saveCacheReport(session);
         }
     }
 }

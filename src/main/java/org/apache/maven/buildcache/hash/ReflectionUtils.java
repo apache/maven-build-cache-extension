@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -24,38 +24,27 @@ import java.lang.reflect.Method;
 /**
  * ReflectionUtils
  */
-class ReflectionUtils
-{
+class ReflectionUtils {
 
-    static Method getMethod( String className, String methodName, Class<?>... parameterTypes )
-    {
-        try
-        {
-            final Method method = Class.forName( className ).getMethod( methodName, parameterTypes );
-            method.setAccessible( true );
+    static Method getMethod(String className, String methodName, Class<?>... parameterTypes) {
+        try {
+            final Method method = Class.forName(className).getMethod(methodName, parameterTypes);
+            method.setAccessible(true);
             return method;
-        }
-        catch ( Exception ignore )
-        {
+        } catch (Exception ignore) {
             return null;
         }
     }
 
-    static Object getField( String className, String fieldName )
-    {
-        try
-        {
-            final Field field = Class.forName( className ).getDeclaredField( fieldName );
-            field.setAccessible( true );
-            return field.get( null );
-        }
-        catch ( Exception ignore )
-        {
+    static Object getField(String className, String fieldName) {
+        try {
+            final Field field = Class.forName(className).getDeclaredField(fieldName);
+            field.setAccessible(true);
+            return field.get(null);
+        } catch (Exception ignore) {
             return null;
         }
     }
 
-    private ReflectionUtils()
-    {
-    }
+    private ReflectionUtils() {}
 }

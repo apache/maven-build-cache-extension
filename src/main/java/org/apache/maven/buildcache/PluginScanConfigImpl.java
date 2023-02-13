@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -18,8 +18,10 @@
  */
 package org.apache.maven.buildcache;
 
-import java.util.List;
 import javax.annotation.Nonnull;
+
+import java.util.List;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.buildcache.xml.config.DirScanConfig;
 import org.apache.maven.buildcache.xml.config.TagExclude;
@@ -28,43 +30,35 @@ import org.apache.maven.buildcache.xml.config.TagScanConfig;
 /**
  * PluginScanConfigImpl
  */
-public class PluginScanConfigImpl implements PluginScanConfig
-{
+public class PluginScanConfigImpl implements PluginScanConfig {
 
     private final DirScanConfig dto;
 
-    public PluginScanConfigImpl( DirScanConfig scanConfig )
-    {
+    public PluginScanConfigImpl(DirScanConfig scanConfig) {
         this.dto = scanConfig;
     }
 
     @Override
-    public boolean isSkip()
-    {
-        return StringUtils.equals( dto.getMode(), "skip" );
+    public boolean isSkip() {
+        return StringUtils.equals(dto.getMode(), "skip");
     }
 
     @Override
-    public boolean accept( String tagName )
-    {
+    public boolean accept(String tagName) {
         // include or exclude is a choice element, could be only obe property set
 
         //noinspection ConstantConditions
         final List<TagScanConfig> includes = dto.getIncludes();
-        if ( !includes.isEmpty() )
-        {
-            return findTagScanProperties( tagName ) != null;
+        if (!includes.isEmpty()) {
+            return findTagScanProperties(tagName) != null;
         }
 
-        return !contains( dto.getExcludes(), tagName );
+        return !contains(dto.getExcludes(), tagName);
     }
 
-    private boolean contains( List<TagExclude> excludes, String tagName )
-    {
-        for ( TagExclude exclude : excludes )
-        {
-            if ( StringUtils.equals( exclude.getTagName(), tagName ) )
-            {
+    private boolean contains(List<TagExclude> excludes, String tagName) {
+        for (TagExclude exclude : excludes) {
+            if (StringUtils.equals(exclude.getTagName(), tagName)) {
                 return true;
             }
         }
@@ -73,85 +67,69 @@ public class PluginScanConfigImpl implements PluginScanConfig
 
     @Nonnull
     @Override
-    public PluginScanConfig mergeWith( final PluginScanConfig overrideConfig )
-    {
-        if ( dto == null )
-        {
+    public PluginScanConfig mergeWith(final PluginScanConfig overrideConfig) {
+        if (dto == null) {
             return overrideConfig;
         }
 
         final DirScanConfig override = overrideConfig.dto();
-        if ( override == null )
-        {
+        if (override == null) {
             return this;
         }
 
-        if ( override.isIgnoreParent() )
-        {
+        if (override.isIgnoreParent()) {
             return overrideConfig;
         }
 
         DirScanConfig merged = new DirScanConfig();
-        if ( override.getMode() != null )
-        {
-            merged.setMode( override.getMode() );
-        }
-        else
-        {
-            merged.setMode( dto.getMode() );
+        if (override.getMode() != null) {
+            merged.setMode(override.getMode());
+        } else {
+            merged.setMode(dto.getMode());
         }
 
-        merged.getExcludes().addAll( dto.getExcludes() );
-        merged.getExcludes().addAll( override.getExcludes() );
+        merged.getExcludes().addAll(dto.getExcludes());
+        merged.getExcludes().addAll(override.getExcludes());
 
-        merged.getIncludes().addAll( dto.getIncludes() );
-        merged.getIncludes().addAll( override.getIncludes() );
+        merged.getIncludes().addAll(dto.getIncludes());
+        merged.getIncludes().addAll(override.getIncludes());
 
-        return new PluginScanConfigImpl( merged );
+        return new PluginScanConfigImpl(merged);
     }
 
     @Nonnull
-    public ScanConfigProperties getTagScanProperties( String tagName )
-    {
-        ScanConfigProperties scanProperties = findTagScanProperties( tagName );
+    public ScanConfigProperties getTagScanProperties(String tagName) {
+        ScanConfigProperties scanProperties = findTagScanProperties(tagName);
         return scanProperties != null ? scanProperties : defaultScanConfig();
     }
 
     @Override
-    public DirScanConfig dto()
-    {
+    public DirScanConfig dto() {
         return dto;
     }
 
-    private ScanConfigProperties findTagScanProperties( String tagName )
-    {
-        ScanConfigProperties scanConfigProperties = findConfigByName( tagName, dto.getIncludes() );
-        if ( scanConfigProperties == null )
-        {
-            scanConfigProperties = findConfigByName( tagName, dto.getTagScanConfigs() );
+    private ScanConfigProperties findTagScanProperties(String tagName) {
+        ScanConfigProperties scanConfigProperties = findConfigByName(tagName, dto.getIncludes());
+        if (scanConfigProperties == null) {
+            scanConfigProperties = findConfigByName(tagName, dto.getTagScanConfigs());
         }
         return scanConfigProperties;
     }
 
-    private ScanConfigProperties findConfigByName( String tagName, List<TagScanConfig> configs )
-    {
-        if ( configs == null )
-        {
+    private ScanConfigProperties findConfigByName(String tagName, List<TagScanConfig> configs) {
+        if (configs == null) {
             return null;
         }
 
-        for ( TagScanConfig config : configs )
-        {
-            if ( StringUtils.equals( tagName, config.getTagName() ) )
-            {
-                return new ScanConfigProperties( config.isRecursive(), config.getGlob() );
+        for (TagScanConfig config : configs) {
+            if (StringUtils.equals(tagName, config.getTagName())) {
+                return new ScanConfigProperties(config.isRecursive(), config.getGlob());
             }
         }
         return null;
     }
 
-    private static ScanConfigProperties defaultScanConfig()
-    {
-        return new ScanConfigProperties( true, null );
+    private static ScanConfigProperties defaultScanConfig() {
+        return new ScanConfigProperties(true, null);
     }
 }

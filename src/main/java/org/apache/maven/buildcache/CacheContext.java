@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -27,32 +27,27 @@ import static java.util.Objects.requireNonNull;
 /**
  * CacheContext
  */
-public class CacheContext
-{
+public class CacheContext {
 
     private final MavenProject project;
     private final ProjectsInputInfo inputInfo;
     private final MavenSession session;
 
-    public CacheContext( MavenProject project, ProjectsInputInfo inputInfo, MavenSession session )
-    {
-        this.project = requireNonNull( project );
-        this.inputInfo = requireNonNull( inputInfo );
-        this.session = requireNonNull( session );
+    public CacheContext(MavenProject project, ProjectsInputInfo inputInfo, MavenSession session) {
+        this.project = requireNonNull(project);
+        this.inputInfo = requireNonNull(inputInfo);
+        this.session = requireNonNull(session);
     }
 
-    public MavenProject getProject()
-    {
+    public MavenProject getProject() {
         return project;
     }
 
-    public ProjectsInputInfo getInputInfo()
-    {
+    public ProjectsInputInfo getInputInfo() {
         return inputInfo;
     }
 
-    public MavenSession getSession()
-    {
+    public MavenSession getSession() {
         return session;
     }
 }

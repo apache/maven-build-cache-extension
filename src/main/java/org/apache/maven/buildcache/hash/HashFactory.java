@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -25,55 +25,45 @@ import java.util.Map;
 /**
  * HashFactory
  */
-public enum HashFactory
-{
-
-    SHA1( new SHA( "SHA-1" ) ),
-    SHA256( new SHA( "SHA-256" ) ),
-    SHA384( new SHA( "SHA-384" ) ),
-    SHA512( new SHA( "SHA-512" ) ),
-    XX( new XX() ),
-    XXMM( new XXMM() );
+public enum HashFactory {
+    SHA1(new SHA("SHA-1")),
+    SHA256(new SHA("SHA-256")),
+    SHA384(new SHA("SHA-384")),
+    SHA512(new SHA("SHA-512")),
+    XX(new XX()),
+    XXMM(new XXMM());
 
     private static final Map<String, HashFactory> LOOKUP = new HashMap<>();
 
-    static
-    {
-        for ( HashFactory factory : HashFactory.values() )
-        {
-            LOOKUP.put( factory.getAlgorithm(), factory );
+    static {
+        for (HashFactory factory : HashFactory.values()) {
+            LOOKUP.put(factory.getAlgorithm(), factory);
         }
     }
 
-    public static HashFactory of( String algorithm ) throws NoSuchAlgorithmException
-    {
-        final HashFactory factory = LOOKUP.get( algorithm );
-        if ( factory == null )
-        {
-            throw new NoSuchAlgorithmException( algorithm );
+    public static HashFactory of(String algorithm) throws NoSuchAlgorithmException {
+        final HashFactory factory = LOOKUP.get(algorithm);
+        if (factory == null) {
+            throw new NoSuchAlgorithmException(algorithm);
         }
         return factory;
     }
 
     private final Hash.Factory factory;
 
-    HashFactory( Hash.Factory factory )
-    {
+    HashFactory(Hash.Factory factory) {
         this.factory = factory;
     }
 
-    public String getAlgorithm()
-    {
+    public String getAlgorithm() {
         return factory.getAlgorithm();
     }
 
-    public HashAlgorithm createAlgorithm()
-    {
-        return new HashAlgorithm( factory.algorithm() );
+    public HashAlgorithm createAlgorithm() {
+        return new HashAlgorithm(factory.algorithm());
     }
 
-    public HashChecksum createChecksum( int count )
-    {
-        return new HashChecksum( factory.algorithm(), factory.checksum( count ) );
+    public HashChecksum createChecksum(int count) {
+        return new HashChecksum(factory.algorithm(), factory.checksum(count));
     }
 }

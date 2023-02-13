@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -18,10 +18,12 @@
  */
 package org.apache.maven.buildcache;
 
+import javax.annotation.Nonnull;
+
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Optional;
-import javax.annotation.Nonnull;
+
 import org.apache.maven.buildcache.xml.Build;
 import org.apache.maven.buildcache.xml.build.Artifact;
 import org.apache.maven.project.MavenProject;
@@ -29,8 +31,7 @@ import org.apache.maven.project.MavenProject;
 /**
  * Remote cache repository.
  */
-public interface RemoteCacheRepository extends CacheRepository
-{
+public interface RemoteCacheRepository extends CacheRepository {
 
     String BUILDINFO_XML = "buildinfo.xml";
     String CACHE_REPORT_XML = "build-cache-report.xml";
@@ -40,11 +41,11 @@ public interface RemoteCacheRepository extends CacheRepository
      * Returns <code>true</code> if success, <code>false</code> if the artifact does not exists
      * and throws an <code>IOException</code> if a problem occurs.
      */
-    boolean getArtifactContent( CacheContext context, Artifact artifact, Path target ) throws IOException;
+    boolean getArtifactContent(CacheContext context, Artifact artifact, Path target) throws IOException;
 
     @Nonnull
-    String getResourceUrl( CacheContext context, String filename );
+    String getResourceUrl(CacheContext context, String filename);
 
     @Nonnull
-    Optional<Build> findBaselineBuild( MavenProject project );
+    Optional<Build> findBaselineBuild(MavenProject project);
 }

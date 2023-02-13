@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -23,72 +23,60 @@ import java.nio.file.Path;
 /**
  * WalkKey
  */
-public class WalkKey
-{
+public class WalkKey {
 
     private final Path normalized;
     private final String glob;
     private final boolean recursive;
 
-    public WalkKey( Path normalized, String glob, boolean recursive )
-    {
+    public WalkKey(Path normalized, String glob, boolean recursive) {
         this.normalized = normalized;
         this.glob = glob;
         this.recursive = recursive;
     }
 
     @Override
-    public boolean equals( Object o )
-    {
-        if ( this == o )
-        {
+    public boolean equals(Object o) {
+        if (this == o) {
             return true;
         }
-        if ( o == null || getClass() != o.getClass() )
-        {
+        if (o == null || getClass() != o.getClass()) {
             return false;
         }
 
-        WalkKey key = ( WalkKey ) o;
+        WalkKey key = (WalkKey) o;
 
-        if ( recursive != key.recursive )
-        {
+        if (recursive != key.recursive) {
             return false;
         }
-        if ( !normalized.equals( key.normalized ) )
-        {
+        if (!normalized.equals(key.normalized)) {
             return false;
         }
-        return glob.equals( key.glob );
+        return glob.equals(key.glob);
     }
 
     @Override
-    public int hashCode()
-    {
+    public int hashCode() {
         int result = normalized.hashCode();
         result = 31 * result + glob.hashCode();
-        result = 31 * result + ( recursive ? 1 : 0 );
+        result = 31 * result + (recursive ? 1 : 0);
         return result;
     }
 
-    public Path getPath()
-    {
+    public Path getPath() {
         return normalized;
     }
 
-    public String getGlob()
-    {
+    public String getGlob() {
         return glob;
     }
 
-    public boolean isRecursive()
-    {
+    public boolean isRecursive() {
         return recursive;
     }
 
     @Override
-    public String toString()
-    {
+    public String toString() {
         return "WalkKey{" + "normalized=" + normalized + ", glob='" + glob + '\'' + ", recursive=" + recursive + '}';
     }
 }

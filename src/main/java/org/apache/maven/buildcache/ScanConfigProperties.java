@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -21,25 +21,21 @@ package org.apache.maven.buildcache;
 /**
  * ScanConfigProperties
  */
-public class ScanConfigProperties
-{
+public class ScanConfigProperties {
 
     private final boolean recursive;
     private final String glob;
 
-    public ScanConfigProperties( boolean recursive, String glob )
-    {
+    public ScanConfigProperties(boolean recursive, String glob) {
         this.recursive = recursive;
         this.glob = glob;
     }
 
-    public boolean isRecursive()
-    {
+    public boolean isRecursive() {
         return recursive;
     }
 
-    public String getGlob()
-    {
+    public String getGlob() {
         return glob;
     }
 }

@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -23,25 +23,22 @@ import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
 import org.junit.jupiter.api.Test;
 
-@IntegrationTest( "src/test/projects/build-extension" )
-public class BuildExtensionTest
-{
+@IntegrationTest("src/test/projects/build-extension")
+public class BuildExtensionTest {
 
     private static final String PROJECT_NAME = "org.apache.maven.caching.test.simple:simple";
 
     @Test
-    void simple( Verifier verifier ) throws VerificationException
-    {
-        verifier.setAutoclean( false );
+    void simple(Verifier verifier) throws VerificationException {
+        verifier.setAutoclean(false);
 
-        verifier.setLogFileName( "../log-1.txt" );
-        verifier.executeGoal( "verify" );
+        verifier.setLogFileName("../log-1.txt");
+        verifier.executeGoal("verify");
         verifier.verifyErrorFreeLog();
 
-        verifier.setLogFileName( "../log-2.txt" );
-        verifier.executeGoal( "verify" );
+        verifier.setLogFileName("../log-2.txt");
+        verifier.executeGoal("verify");
         verifier.verifyErrorFreeLog();
-        verifier.verifyTextInLog( "Found cached build, restoring " + PROJECT_NAME + " from cache" );
+        verifier.verifyTextInLog("Found cached build, restoring " + PROJECT_NAME + " from cache");
     }
-
 }
