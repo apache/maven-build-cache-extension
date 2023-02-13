@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -20,6 +20,7 @@ package org.apache.maven.buildcache;
 
 import java.util.List;
 import java.util.Map;
+
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.execution.MojoExecutionEvent;
 import org.apache.maven.plugin.MojoExecution;
@@ -28,22 +29,19 @@ import org.apache.maven.project.MavenProject;
 /**
  * CacheController
  */
-public interface CacheController
-{
+public interface CacheController {
 
-    CacheResult findCachedBuild( MavenSession session,
-            MavenProject project,
+    CacheResult findCachedBuild(
+            MavenSession session, MavenProject project, List<MojoExecution> mojoExecutions, boolean skipCache);
+
+    boolean restoreProjectArtifacts(CacheResult cacheResult);
+
+    void save(
+            CacheResult cacheResult,
             List<MojoExecution> mojoExecutions,
-            boolean skipCache );
+            Map<String, MojoExecutionEvent> executionEvents);
 
-    boolean restoreProjectArtifacts( CacheResult cacheResult );
+    boolean isForcedExecution(MavenProject project, MojoExecution execution);
 
-    void save( CacheResult cacheResult,
-            List<MojoExecution> mojoExecutions,
-            Map<String, MojoExecutionEvent> executionEvents );
-
-    boolean isForcedExecution( MavenProject project, MojoExecution execution );
-
-    void saveCacheReport( MavenSession session );
-
+    void saveCacheReport(MavenSession session);
 }

@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -23,6 +23,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Provider;
 import javax.inject.Singleton;
+
 import org.apache.maven.buildcache.xml.CacheConfig;
 import org.apache.maven.buildcache.xml.CacheState;
 import org.codehaus.plexus.PlexusContainer;
@@ -32,29 +33,24 @@ import org.codehaus.plexus.component.repository.exception.ComponentLookupExcepti
  * Remote cache repository.
  */
 @Singleton
-@Named( "#factory#" )
-@Priority( 10 )
-public class RemoteCacheRepositoryProvider implements Provider<RemoteCacheRepository>
-{
+@Named("#factory#")
+@Priority(10)
+public class RemoteCacheRepositoryProvider implements Provider<RemoteCacheRepository> {
 
     private final RemoteCacheRepository repository;
 
     @Inject
-    public RemoteCacheRepositoryProvider( CacheConfig config, PlexusContainer container )
-            throws ComponentLookupException
-    {
+    public RemoteCacheRepositoryProvider(CacheConfig config, PlexusContainer container)
+            throws ComponentLookupException {
         String hint = "noop";
-        if ( config.initialize() == CacheState.INITIALIZED )
-        {
+        if (config.initialize() == CacheState.INITIALIZED) {
             hint = config.getTransport();
         }
 
-        repository = container.lookup( RemoteCacheRepository.class, hint );
+        repository = container.lookup(RemoteCacheRepository.class, hint);
     }
 
-    public RemoteCacheRepository get()
-    {
+    public RemoteCacheRepository get() {
         return repository;
     }
-
 }

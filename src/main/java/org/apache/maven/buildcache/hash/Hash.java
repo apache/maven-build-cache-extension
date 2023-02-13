@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -24,27 +24,24 @@ import java.nio.file.Path;
 /**
  * Hash
  */
-public class Hash
-{
+public class Hash {
 
     /**
      * Algorithm
      */
-    public interface Algorithm
-    {
+    public interface Algorithm {
 
-        byte[] hash( byte[] array );
+        byte[] hash(byte[] array);
 
-        byte[] hash( Path path ) throws IOException;
+        byte[] hash(Path path) throws IOException;
     }
 
     /**
      * accumulates states and should be completed by {@link #digest()}
      */
-    public interface Checksum
-    {
+    public interface Checksum {
 
-        void update( byte[] hash );
+        void update(byte[] hash);
 
         byte[] digest();
     }
@@ -52,13 +49,12 @@ public class Hash
     /**
      * Factory
      */
-    public interface Factory
-    {
+    public interface Factory {
 
         String getAlgorithm();
 
         Algorithm algorithm();
 
-        Checksum checksum( int count );
+        Checksum checksum(int count);
     }
 }

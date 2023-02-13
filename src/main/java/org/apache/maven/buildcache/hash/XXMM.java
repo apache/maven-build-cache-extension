@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -28,39 +28,32 @@ import static java.nio.file.StandardOpenOption.READ;
 /**
  * XXMM
  */
-public class XXMM implements Hash.Factory
-{
+public class XXMM implements Hash.Factory {
 
     private static final ThreadLocal<CloseableBuffer> BUFFER = new ThreadLocal<>();
 
     @Override
-    public String getAlgorithm()
-    {
+    public String getAlgorithm() {
         return "XXMM";
     }
 
     @Override
-    public Hash.Algorithm algorithm()
-    {
+    public Hash.Algorithm algorithm() {
         return new Algorithm();
     }
 
     @Override
-    public Hash.Checksum checksum( int count )
-    {
-        return new XX.Checksum( ThreadLocalBuffer.get( BUFFER, XX.capacity( count ) ) );
+    public Hash.Checksum checksum(int count) {
+        return new XX.Checksum(ThreadLocalBuffer.get(BUFFER, XX.capacity(count)));
     }
 
-    private static class Algorithm extends XX.Algorithm
-    {
+    private static class Algorithm extends XX.Algorithm {
 
         @Override
-        public byte[] hash( Path path ) throws IOException
-        {
-            try ( FileChannel channel = FileChannel.open( path, READ );
-                    CloseableBuffer buffer = CloseableBuffer.mappedBuffer( channel, READ_ONLY ) )
-            {
-                return HexUtils.toByteArray( XX.INSTANCE.hashBytes( buffer.getBuffer() ) );
+        public byte[] hash(Path path) throws IOException {
+            try (FileChannel channel = FileChannel.open(path, READ);
+                    CloseableBuffer buffer = CloseableBuffer.mappedBuffer(channel, READ_ONLY)) {
+                return HexUtils.toByteArray(XX.INSTANCE.hashBytes(buffer.getBuffer()));
             }
         }
     }

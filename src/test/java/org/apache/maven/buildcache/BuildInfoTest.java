@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -28,6 +28,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+
 import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.artifact.handler.DefaultArtifactHandler;
 import org.apache.maven.buildcache.hash.HashFactory;
@@ -40,73 +41,68 @@ import org.apache.maven.buildcache.xml.build.ProjectsInputInfo;
 import org.apache.maven.buildcache.xml.build.PropertyValue;
 import org.junit.jupiter.api.Test;
 
-public class BuildInfoTest
-{
+public class BuildInfoTest {
 
     @Test
-    public void name() throws Exception
-    {
+    public void name() throws Exception {
 
         XmlService xmlService = new XmlService();
 
         ProjectsInputInfo main = new ProjectsInputInfo();
-        main.setChecksum( "dependencyChecksum" );
-        main.addItem( createItem( "pom", "<project><modelVersion>4.0.0</modelVersion></project>", "hash1" ) );
-        main.addItem( createItem( "file", Paths.get( "." ).toString(), "hash2" ) );
+        main.setChecksum("dependencyChecksum");
+        main.addItem(createItem("pom", "<project><modelVersion>4.0.0</modelVersion></project>", "hash1"));
+        main.addItem(createItem("file", Paths.get(".").toString(), "hash2"));
 
         Artifact artifact = new Artifact();
-        artifact.setGroupId( "g" );
-        artifact.setArtifactId( "a" );
-        artifact.setType( "t" );
-        artifact.setClassifier( "c" );
-        artifact.setScope( "s" );
-        artifact.setFileName( "f" );
-        artifact.setFileSize( 123456 );
-        artifact.setFileHash( "456L" );
+        artifact.setGroupId("g");
+        artifact.setArtifactId("a");
+        artifact.setType("t");
+        artifact.setClassifier("c");
+        artifact.setScope("s");
+        artifact.setFileName("f");
+        artifact.setFileSize(123456);
+        artifact.setFileHash("456L");
 
         org.apache.maven.buildcache.xml.build.Build buildInfo = new org.apache.maven.buildcache.xml.build.Build();
-        buildInfo.setCacheImplementationVersion( "cacheImplementationVersion" );
-        buildInfo.setBuildServer( "server" );
-        buildInfo.setBuildTime( new Date() );
-        buildInfo.setArtifact( artifact );
-        buildInfo.setHashFunction( "SHA-256" );
-        buildInfo.setGoals( Collections.singletonList( "install" ) );
-        final org.apache.maven.artifact.Artifact attachedArtifact = new DefaultArtifact( "ag", "aa", "av", "as", "at",
-                "ac",
-                new DefaultArtifactHandler() );
-        buildInfo.setAttachedArtifacts( Build.createAttachedArtifacts( Collections.singletonList( attachedArtifact ),
-                HashFactory.XX.createAlgorithm() ) );
-        buildInfo.setProjectsInputInfo( main );
-        buildInfo.setExecutions( createExecutions() );
+        buildInfo.setCacheImplementationVersion("cacheImplementationVersion");
+        buildInfo.setBuildServer("server");
+        buildInfo.setBuildTime(new Date());
+        buildInfo.setArtifact(artifact);
+        buildInfo.setHashFunction("SHA-256");
+        buildInfo.setGoals(Collections.singletonList("install"));
+        final org.apache.maven.artifact.Artifact attachedArtifact =
+                new DefaultArtifact("ag", "aa", "av", "as", "at", "ac", new DefaultArtifactHandler());
+        buildInfo.setAttachedArtifacts(Build.createAttachedArtifacts(
+                Collections.singletonList(attachedArtifact), HashFactory.XX.createAlgorithm()));
+        buildInfo.setProjectsInputInfo(main);
+        buildInfo.setExecutions(createExecutions());
 
-        byte[] bytes = xmlService.toBytes( buildInfo );
-        System.out.println( new String( bytes, StandardCharsets.UTF_8 ) );
-        Path tempFilePath = Files.createTempFile( "test", "test" );
+        byte[] bytes = xmlService.toBytes(buildInfo);
+        System.out.println(new String(bytes, StandardCharsets.UTF_8));
+        Path tempFilePath = Files.createTempFile("test", "test");
         File file = tempFilePath.toFile();
         file.deleteOnExit();
-        Files.write( tempFilePath, bytes );
+        Files.write(tempFilePath, bytes);
 
-        org.apache.maven.buildcache.xml.build.Build buildInfo1 = xmlService.loadBuild( file );
-        System.out.println( buildInfo1 );
+        org.apache.maven.buildcache.xml.build.Build buildInfo1 = xmlService.loadBuild(file);
+        System.out.println(buildInfo1);
     }
 
-    private List<CompletedExecution> createExecutions()
-    {
+    private List<CompletedExecution> createExecutions() {
         CompletedExecution execution = new CompletedExecution();
-        execution.setExecutionKey( "execkey" );
+        execution.setExecutionKey("execkey");
         PropertyValue property = new PropertyValue();
-        property.setValue( "value" );
-        property.setName( "key" );
-        execution.addProperty( property );
-        return new ArrayList<>( Arrays.asList( execution ) );
+        property.setValue("value");
+        property.setName("key");
+        execution.addProperty(property);
+        return new ArrayList<>(Arrays.asList(execution));
     }
 
-    private DigestItem createItem( String pom, String s, String hash1 )
-    {
+    private DigestItem createItem(String pom, String s, String hash1) {
         final DigestItem d1 = new DigestItem();
-        d1.setType( pom );
-        d1.setHash( s );
-        d1.setValue( hash1 );
+        d1.setType(pom);
+        d1.setHash(s);
+        d1.setValue(hash1);
         return d1;
     }
 }
