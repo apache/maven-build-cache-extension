@@ -178,6 +178,14 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
                         }
                         fillWithDefaults( cacheConfig );
 
+                        // `maven.build.cache.enabled` overrides the `enabled` of the XML file
+                        // to allow a disabled configuration to be enabled on the command line
+                        final String cacheEnabledProperty = getProperty( CACHE_ENABLED_PROPERTY_NAME, null );
+                        if ( cacheEnabledProperty != null )
+                        {
+                            cacheConfig.getConfiguration().setEnabled( Boolean.parseBoolean( cacheEnabledProperty ) );
+                        }
+
                         if ( !cacheConfig.getConfiguration().isEnabled() )
                         {
                             state = CacheState.DISABLED;
