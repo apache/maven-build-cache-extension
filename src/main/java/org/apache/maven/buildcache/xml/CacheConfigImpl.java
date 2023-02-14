@@ -82,6 +82,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     public static final String CONFIG_PATH_PROPERTY_NAME = "maven.build.cache.configPath";
     public static final String CACHE_ENABLED_PROPERTY_NAME = "maven.build.cache.enabled";
     public static final String CACHE_LOCATION_PROPERTY_NAME = "maven.build.cache.location";
+    public static final String REMOTE_ENABLED_PROPERTY_NAME = "maven.build.cache.remote.enabled";
     public static final String SAVE_TO_REMOTE_PROPERTY_NAME = "maven.build.cache.remote.save.enabled";
     public static final String SAVE_NON_OVERRIDEABLE_NAME = "maven.build.cache.remote.save.final";
     public static final String FAIL_FAST_PROPERTY_NAME = "maven.build.cache.failFast";
@@ -124,13 +125,13 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
         if (state == null) {
             synchronized (this) {
                 if (state == null) {
-                    final String enabled = getProperty(CACHE_ENABLED_PROPERTY_NAME, "true");
+                    final boolean enabled = getProperty(CACHE_ENABLED_PROPERTY_NAME, true);
 
                     if (!rtInfo.isMavenVersion("[3.9.0,)")) {
                         LOGGER.warn("Cache requires Maven >= 3.9, but version is " + rtInfo.getMavenVersion()
                                 + ". Disabling cache.");
                         state = CacheState.DISABLED;
-                    } else if (!Boolean.parseBoolean(enabled)) {
+                    } else if (!enabled) {
                         LOGGER.info("Cache disabled by command line flag, project will be built fully and not cached");
                         state = CacheState.DISABLED;
                     } else {
@@ -452,28 +453,29 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     @Override
     public boolean isRemoteCacheEnabled() {
         checkInitializedState();
-        return getRemote().getUrl() != null && getRemote().isEnabled();
+        return getRemote().getUrl() != null
+                && getProperty(REMOTE_ENABLED_PROPERTY_NAME, getRemote().isEnabled());
     }
 
     @Override
     public boolean isSaveToRemote() {
         checkInitializedState();
-        return Boolean.getBoolean(SAVE_TO_REMOTE_PROPERTY_NAME) || getRemote().isSaveToRemote();
+        return getProperty(SAVE_TO_REMOTE_PROPERTY_NAME, false) || getRemote().isSaveToRemote();
     }
 
     @Override
     public boolean isSaveFinal() {
-        return Boolean.getBoolean(SAVE_NON_OVERRIDEABLE_NAME);
+        return getProperty(SAVE_NON_OVERRIDEABLE_NAME, false);
     }
 
     @Override
     public boolean isSkipCache() {
-        return Boolean.getBoolean(CACHE_SKIP);
+        return getProperty(CACHE_SKIP, false);
     }
 
     @Override
     public boolean isFailFast() {
-        return Boolean.getBoolean(FAIL_FAST_PROPERTY_NAME);
+        return getProperty(FAIL_FAST_PROPERTY_NAME, false);
     }
 
     @Override
@@ -488,14 +490,12 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
 
     @Override
     public boolean isLazyRestore() {
-        final String lazyRestore = getProperty(LAZY_RESTORE_PROPERTY_NAME, "false");
-        return Boolean.parseBoolean(lazyRestore);
+        return getProperty(LAZY_RESTORE_PROPERTY_NAME, false);
     }
 
     @Override
     public boolean isRestoreGeneratedSources() {
-        final String restoreGeneratedSources = getProperty(RESTORE_GENERATED_SOURCES_PROPERTY_NAME, "true");
-        return Boolean.parseBoolean(restoreGeneratedSources);
+        return getProperty(RESTORE_GENERATED_SOURCES_PROPERTY_NAME, true);
     }
 
     @Override
@@ -596,5 +596,16 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
             }
         }
         return value;
+    }
+
+    private boolean getProperty(String key, boolean defaultValue) {
+        String value = session.getUserProperties().getProperty(key);
+        if (value == null) {
+            value = session.getSystemProperties().getProperty(key);
+            if (value == null) {
+                return defaultValue;
+            }
+        }
+        return Boolean.parseBoolean(value);
     }
 }

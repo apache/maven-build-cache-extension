@@ -109,7 +109,6 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
                 .map(content -> new Build(xmlService.loadBuild(content), CacheSource.REMOTE));
     }
 
-    @Nonnull
     @Override
     public boolean getArtifactContent(CacheContext context, Artifact artifact, Path target) throws IOException {
         return getResourceContent(getResourceUrl(context, artifact.getFileName()), target);
