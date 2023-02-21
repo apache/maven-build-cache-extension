@@ -57,7 +57,7 @@ Having extension run usual command, like `mvn package`. Verify the caching engin
   ```
   [INFO] Loading cache configuration from <project dir>/.mvn/maven-build-cache-config.xml
   ```
-* Navigate to your local repo directory - there should be a sibling directory `cache` next to the usual
+* Navigate to your local repo directory - there should be a sibling directory `build-cache` next to the usual
   local `repository`.
 * Find `buildinfo.xml` in the cache repository for typical module and review it. Ensure that
   * expected source code files are present in the build info
