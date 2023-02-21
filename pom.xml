@@ -65,7 +65,7 @@ under the License.
     <classWorldsVersion>2.6.0</classWorldsVersion>
 
     <!-- default maven version, can be override by maven3 profile -->
-    <mavenVersion>4.0.0-alpha-2</mavenVersion>
+    <mavenVersion>4.0.0-alpha-4</mavenVersion>
     <maven.dir>maven4</maven.dir>
     <maven.basedir>${project.build.directory}/${maven.dir}</maven.basedir>
 
@@ -228,47 +228,62 @@ under the License.
   </dependencies>
 
   <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <configuration>
+            <release>${javaVersion}</release>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <configuration>
+            <argLine>-Xmx256m --add-exports java.base/sun.nio.ch=ALL-UNNAMED</argLine>
+            <environmentVariables>
+              <JENKINS_MAVEN_AGENT_DISABLED>true</JENKINS_MAVEN_AGENT_DISABLED>
+              <TESTCONTAINERS_RYUK_DISABLED>true</TESTCONTAINERS_RYUK_DISABLED>
+            </environmentVariables>
+          </configuration>
+          <executions>
+            <execution>
+              <id>default-test</id>
+              <goals>
+                <goal>test</goal>
+              </goals>
+              <phase>test</phase>
+              <configuration>
+                <excludes>**/its/**</excludes>
+              </configuration>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-invoker-plugin</artifactId>
+          <version>3.5.0</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.rat</groupId>
+          <artifactId>apache-rat-plugin</artifactId>
+          <configuration>
+            <excludes>
+              <exclude>.mvn/maven.config</exclude>
+              <exclude>.asf.yaml</exclude>
+              <exclude>src/test/resources*/**</exclude>
+              <exclude>src/test/projects/**</exclude>
+              <exclude>src/test/remote-repo/**</exclude>
+              <exclude>src/build/maven-header.txt</exclude>
+              <exclude>.gitmodules</exclude>
+              <exclude>.gitattributes</exclude>
+            </excludes>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
     <plugins>
-      <plugin>
-        <groupId>org.apache.rat</groupId>
-        <artifactId>apache-rat-plugin</artifactId>
-        <configuration>
-          <excludes>
-            <exclude>.mvn/maven.config</exclude>
-            <exclude>.asf.yaml</exclude>
-            <exclude>src/test/resources*/**</exclude>
-            <exclude>src/test/projects/**</exclude>
-            <exclude>src/test/remote-repo/**</exclude>
-            <exclude>src/build/maven-header.txt</exclude>
-            <exclude>.gitmodules</exclude>
-            <exclude>.gitattributes</exclude>
-          </excludes>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-checkstyle-plugin</artifactId>
-        <!--
-                <version>3.1.2</version>
-                <configuration>
-                    <violationSeverity>info</violationSeverity>
-                    <suppressionsLocation>${maven.multiModuleProjectDirectory}/src/build/checkstyle-suppressions.xml</suppressionsLocation>
-                    <headerLocation>${maven.multiModuleProjectDirectory}/src/build/maven-header.txt</headerLocation>
-                </configuration>
-                <dependencies>
-                    <dependency>
-                        <groupId>com.puppycrawl.tools</groupId>
-                        <artifactId>checkstyle</artifactId>
-                        <version>8.41.1</version>
-                    </dependency>
-                    <dependency>
-                        <groupId>org.apache.maven.shared</groupId>
-                        <artifactId>maven-shared-resources</artifactId>
-                        <version>3</version>
-                    </dependency>
-                </dependencies>
-                -->
-      </plugin>
       <plugin>
         <groupId>org.codehaus.modello</groupId>
         <artifactId>modello-maven-plugin</artifactId>
@@ -334,14 +349,6 @@ under the License.
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.10.1</version>
-        <configuration>
-          <release>${javaVersion}</release>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
         <version>3.3.0</version>
         <executions>
@@ -367,35 +374,6 @@ under the License.
           </execution>
         </executions>
       </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <version>3.0.0-M7</version>
-        <configuration>
-          <argLine>-Xmx256m --add-exports java.base/sun.nio.ch=ALL-UNNAMED</argLine>
-          <environmentVariables>
-            <JENKINS_MAVEN_AGENT_DISABLED>true</JENKINS_MAVEN_AGENT_DISABLED>
-            <TESTCONTAINERS_RYUK_DISABLED>true</TESTCONTAINERS_RYUK_DISABLED>
-          </environmentVariables>
-        </configuration>
-        <executions>
-          <execution>
-            <id>default-test</id>
-            <goals>
-              <goal>test</goal>
-            </goals>
-            <phase>test</phase>
-            <configuration>
-              <excludes>**/its/**</excludes>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-javadoc-plugin</artifactId>
-        <version>3.4.0</version>
-      </plugin>
     </plugins>
   </build>
 
@@ -406,8 +384,7 @@ under the License.
         <plugins>
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-surefire-plugin</artifactId>
-            <version>3.0.0-M7</version>
+            <artifactId>maven-failsafe-plugin</artifactId>
             <configuration>
               <systemPropertyVariables>
                 <!-- local repo provided by m-invoker-p:install -->
@@ -416,17 +393,16 @@ under the License.
                 <maven.multiModuleProjectDirectory>${maven.multiModuleProjectDirectory}</maven.multiModuleProjectDirectory>
                 <maven.basedir>${maven.basedir}</maven.basedir>
               </systemPropertyVariables>
+              <includes>**/its/**</includes>
             </configuration>
             <executions>
               <execution>
-                <id>integration-test</id>
+                <id>it-tests</id>
                 <goals>
-                  <goal>test</goal>
+                  <goal>integration-test</goal>
+                  <goal>verify</goal>
                 </goals>
                 <phase>integration-test</phase>
-                <configuration>
-                  <includes>**/its/**</includes>
-                </configuration>
               </execution>
             </executions>
           </plugin>
