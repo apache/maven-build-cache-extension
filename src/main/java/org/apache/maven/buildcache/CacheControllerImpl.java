@@ -447,7 +447,7 @@ public class CacheControllerImpl implements CacheController {
                     completedExecution,
                     hashFactory.getAlgorithm());
             populateGitInfo(build, session);
-            build.getDto().set_final(cacheConfig.isSaveFinal());
+            build.getDto().set_final(cacheConfig.isSaveToRemoteFinal());
             cacheResults.put(getVersionlessProjectKey(project), rebuilded(cacheResult, build));
 
             // if package phase presence means new artifacts were packaged

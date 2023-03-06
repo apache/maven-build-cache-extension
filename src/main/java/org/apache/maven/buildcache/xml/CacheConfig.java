@@ -36,7 +36,7 @@ import org.apache.maven.model.PluginExecution;
 import org.apache.maven.plugin.MojoExecution;
 
 /**
- * CacheConfig
+ * A java interface to the information configured in the maven-build-cache-config.xml file
  */
 public interface CacheConfig {
 
@@ -93,7 +93,7 @@ public interface CacheConfig {
 
     boolean isSaveToRemote();
 
-    boolean isSaveFinal();
+    boolean isSaveToRemoteFinal();
 
     boolean isSkipCache();
 

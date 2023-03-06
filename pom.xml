@@ -72,7 +72,7 @@ under the License.
     <commonsCliVersion>1.4</commonsCliVersion>
     <commonsLangVersion>3.12.0</commonsLangVersion>
     <junitVersion>5.8.1</junitVersion>
-    <mockitoVersion>3.2.0</mockitoVersion>
+    <mockitoVersion>4.8.0</mockitoVersion>
     <plexusUtilsVersion>3.4.1</plexusUtilsVersion>
     <wagonVersion>3.4.3</wagonVersion>
     <securityDispatcherVersion>2.0</securityDispatcherVersion>
@@ -223,6 +223,12 @@ under the License.
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-params</artifactId>
       <version>${junitVersion}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-junit-jupiter</artifactId>
+      <version>${mockitoVersion}</version>
       <scope>test</scope>
     </dependency>
   </dependencies>

@@ -164,12 +164,10 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
 
                         // `maven.build.cache.enabled` overrides the `enabled` of the XML file
                         // to allow a disabled configuration to be enabled on the command line
-                        final String cacheEnabledProperty = getProperty(CACHE_ENABLED_PROPERTY_NAME, null);
-                        if (cacheEnabledProperty != null) {
-                            cacheConfig.getConfiguration().setEnabled(Boolean.parseBoolean(cacheEnabledProperty));
-                        }
+                        boolean cacheEnabled = getProperty(
+                                CACHE_ENABLED_PROPERTY_NAME, getConfiguration().isEnabled());
 
-                        if (!cacheConfig.getConfiguration().isEnabled()) {
+                        if (!cacheEnabled) {
                             state = CacheState.DISABLED;
                         } else {
                             String hashAlgorithm = null;
@@ -459,13 +457,13 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
 
     @Override
     public boolean isSaveToRemote() {
-        checkInitializedState();
-        return getProperty(SAVE_TO_REMOTE_PROPERTY_NAME, false) || getRemote().isSaveToRemote();
+        return isRemoteCacheEnabled()
+                && getProperty(SAVE_TO_REMOTE_PROPERTY_NAME, getRemote().isSaveToRemote());
     }
 
     @Override
-    public boolean isSaveFinal() {
-        return getProperty(SAVE_NON_OVERRIDEABLE_NAME, false);
+    public boolean isSaveToRemoteFinal() {
+        return isSaveToRemote() && getProperty(SAVE_NON_OVERRIDEABLE_NAME, false);
     }
 
     @Override
