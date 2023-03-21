@@ -108,8 +108,7 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
             if (!cacheIsDisabled) {
                 cacheState = cacheConfig.initialize();
             } else {
-                LOGGER.info(
-                        "Cache is explicitly disabled on project level for '{}' ", getVersionlessProjectKey(project));
+                LOGGER.info("Cache is explicitly disabled on project level for {}", getVersionlessProjectKey(project));
             }
             if (cacheState == INITIALIZED || skipCache) {
                 result = cacheController.findCachedBuild(session, project, mojoExecutions, skipCache);
