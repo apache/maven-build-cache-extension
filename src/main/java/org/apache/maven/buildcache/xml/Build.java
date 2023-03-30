@@ -169,7 +169,8 @@ public class Build {
             execMap = Collections.emptyMap();
             return execMap;
         }
-        execMap = executionsList.stream().collect(Collectors.toMap(CompletedExecution::getExecutionKey, v -> v));
+        execMap = executionsList.stream()
+                .collect(Collectors.toMap(CompletedExecution::getExecutionKey, v -> v, (oldV, newV) -> oldV));
         return execMap;
     }
 }
