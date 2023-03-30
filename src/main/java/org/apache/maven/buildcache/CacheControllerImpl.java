@@ -173,11 +173,14 @@ public class CacheControllerImpl implements CacheController {
             LOGGER.info("Attempting to restore project {} from build cache", projectName);
 
             // remote build first
-            result = findCachedBuild(mojoExecutions, context);
+            if (cacheConfig.isRemoteCacheEnabled()) {
+                result = findCachedBuild(mojoExecutions, context);
+                if (!result.isSuccess() && result.getContext() != null) {
+                    LOGGER.info("Remote cache is incomplete or missing, trying local build for {}", projectName);
+                }
+            }
 
             if (!result.isSuccess() && result.getContext() != null) {
-                LOGGER.info("Remote cache is incomplete or missing, trying local build for {}", projectName);
-
                 CacheResult localBuild = findLocalBuild(mojoExecutions, context);
                 if (localBuild.isSuccess() || (localBuild.isPartialSuccess() && !result.isPartialSuccess())) {
                     result = localBuild;
@@ -444,7 +447,7 @@ public class CacheControllerImpl implements CacheController {
                     completedExecution,
                     hashFactory.getAlgorithm());
             populateGitInfo(build, session);
-            build.getDto().set_final(cacheConfig.isSaveFinal());
+            build.getDto().set_final(cacheConfig.isSaveToRemoteFinal());
             cacheResults.put(getVersionlessProjectKey(project), rebuilded(cacheResult, build));
 
             // if package phase presence means new artifacts were packaged

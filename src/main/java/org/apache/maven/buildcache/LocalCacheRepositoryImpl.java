@@ -329,7 +329,7 @@ public class LocalCacheRepositoryImpl implements LocalCacheRepository {
     public void saveBuildInfo(CacheResult cacheResult, Build build) throws IOException {
         final Path path = localBuildPath(cacheResult.getContext(), BUILDINFO_XML, true);
         Files.write(path, xmlService.toBytes(build.getDto()), TRUNCATE_EXISTING, CREATE);
-        if (cacheConfig.isRemoteCacheEnabled() && cacheConfig.isSaveToRemote() && !cacheResult.isFinal()) {
+        if (cacheConfig.isSaveToRemote() && !cacheResult.isFinal()) {
             remoteRepository.saveBuildInfo(cacheResult, build);
         }
     }
@@ -343,7 +343,7 @@ public class LocalCacheRepositoryImpl implements LocalCacheRepository {
                 xmlService.toBytes(cacheReport),
                 TRUNCATE_EXISTING,
                 CREATE);
-        if (cacheConfig.isRemoteCacheEnabled() && cacheConfig.isSaveToRemote()) {
+        if (cacheConfig.isSaveToRemote()) {
             LOGGER.info("Saving cache report on build completion");
             remoteRepository.saveCacheReport(buildId, session, cacheReport);
         }
@@ -356,7 +356,7 @@ public class LocalCacheRepositoryImpl implements LocalCacheRepository {
         File artifactFile = artifact.getFile();
         Path cachePath = localBuildPath(cacheResult.getContext(), CacheUtils.normalizedName(artifact), true);
         Files.copy(artifactFile.toPath(), cachePath, StandardCopyOption.REPLACE_EXISTING);
-        if (cacheConfig.isRemoteCacheEnabled() && cacheConfig.isSaveToRemote() && !cacheResult.isFinal()) {
+        if (cacheConfig.isSaveToRemote() && !cacheResult.isFinal()) {
             remoteRepository.saveArtifactFile(cacheResult, artifact);
         }
     }
