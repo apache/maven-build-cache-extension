@@ -192,7 +192,7 @@ under the License.
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>log4j-over-slf4j</artifactId>
-      <version>1.7.35</version>
+      <version>1.7.36</version>
       <scope>test</scope>
     </dependency>
     <dependency>
