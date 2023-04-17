@@ -55,7 +55,6 @@ import org.apache.maven.buildcache.CacheUtils;
 import org.apache.maven.buildcache.MultiModuleSupport;
 import org.apache.maven.buildcache.NormalizedModelProvider;
 import org.apache.maven.buildcache.PluginScanConfig;
-import org.apache.maven.buildcache.ProjectInputCalculator;
 import org.apache.maven.buildcache.RemoteCacheRepository;
 import org.apache.maven.buildcache.ScanConfigProperties;
 import org.apache.maven.buildcache.Xpp3DomUtils;
