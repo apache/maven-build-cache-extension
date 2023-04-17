@@ -101,7 +101,6 @@ public class DefaultProjectInputCalculator implements ProjectInputCalculator {
                     project,
                     normalizedModelProvider,
                     multiModuleSupport,
-                    this,
                     mavenSession,
                     cacheConfig,
                     repoSystem,

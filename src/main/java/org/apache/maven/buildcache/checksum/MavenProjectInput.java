@@ -139,7 +139,6 @@ public class MavenProjectInput {
     private final List<Path> filteredOutPaths;
     private final NormalizedModelProvider normalizedModelProvider;
     private final MultiModuleSupport multiModuleSupport;
-    private final ProjectInputCalculator projectInputCalculator;
     private final Path baseDirPath;
     private final String dirGlob;
     private final boolean processPlugins;
@@ -150,7 +149,6 @@ public class MavenProjectInput {
             MavenProject project,
             NormalizedModelProvider normalizedModelProvider,
             MultiModuleSupport multiModuleSupport,
-            ProjectInputCalculator projectInputCalculator,
             MavenSession session,
             CacheConfig config,
             RepositorySystem repoSystem,
@@ -158,7 +156,6 @@ public class MavenProjectInput {
         this.project = project;
         this.normalizedModelProvider = normalizedModelProvider;
         this.multiModuleSupport = multiModuleSupport;
-        this.projectInputCalculator = projectInputCalculator;
         this.session = session;
         this.config = config;
         this.baseDirPath = project.getBasedir().toPath().toAbsolutePath();
@@ -667,8 +664,11 @@ public class MavenProjectInput {
             String projectHash;
             if (dependencyProject != null) // part of multi module
             {
-                projectHash =
-                        projectInputCalculator.calculateInput(dependencyProject).getChecksum();
+                // To avoid the current module (B) to be re-built if it depends on a module (A) of the current project
+                // which has some of its files edited.
+                // It would have no sense to re-build module B just because module A was edited.
+                // More info: https://issues.apache.org/jira/projects/MBUILDCACHE/issues/MBUILDCACHE-54
+                continue;
             } else // this is a snapshot dependency
             {
                 DigestItem resolved = resolveArtifact(repoSystem.createDependencyArtifact(dependency), false);
