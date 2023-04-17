@@ -90,6 +90,7 @@ import static org.apache.commons.lang3.StringUtils.startsWithAny;
 import static org.apache.commons.lang3.StringUtils.stripToEmpty;
 import static org.apache.maven.buildcache.CacheUtils.isPom;
 import static org.apache.maven.buildcache.CacheUtils.isSnapshot;
+import static org.apache.maven.buildcache.xml.CacheConfigImpl.CACHE_ENABLED_PROPERTY_NAME;
 import static org.apache.maven.buildcache.xml.CacheConfigImpl.CACHE_SKIP;
 import static org.apache.maven.buildcache.xml.CacheConfigImpl.RESTORE_GENERATED_SOURCES_PROPERTY_NAME;
 
@@ -733,6 +734,12 @@ public class MavenProjectInput {
         }
     }
 
+    /**
+     * Skip lookup on a per-project level via a property to force module rebuild
+     * e.g.{@code <maven.build.cache.skipCache>true<maven.build.cache.skipCache/>}
+     * @param project
+     * @return
+     */
     public static boolean isSkipCache(MavenProject project) {
         return Boolean.parseBoolean(project.getProperties().getProperty(CACHE_SKIP, "false"));
     }
@@ -747,5 +754,16 @@ public class MavenProjectInput {
     public static boolean isRestoreGeneratedSources(MavenProject project) {
         return Boolean.parseBoolean(
                 project.getProperties().getProperty(RESTORE_GENERATED_SOURCES_PROPERTY_NAME, "true"));
+    }
+
+    /**
+     * Allow disabling caching entirely on a per-project level via a property - both artifact lookup and upload
+     * Defaults to false
+     * {@code <maven.build.cache.enabled>false<maven.build.cache.enabled/>}
+     * @param project
+     * @return
+     */
+    public static boolean isCacheDisabled(MavenProject project) {
+        return !Boolean.parseBoolean(project.getProperties().getProperty(CACHE_ENABLED_PROPERTY_NAME, "true"));
     }
 }

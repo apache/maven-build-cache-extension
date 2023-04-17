@@ -99,12 +99,17 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
         CacheState cacheState = DISABLED;
         CacheResult result = CacheResult.empty();
         boolean skipCache = cacheConfig.isSkipCache() || MavenProjectInput.isSkipCache(project);
+        boolean cacheIsDisabled = MavenProjectInput.isCacheDisabled(project);
         if (source == Source.LIFECYCLE) {
             List<MojoExecution> cleanPhase = lifecyclePhasesHelper.getCleanSegment(project, mojoExecutions);
             for (MojoExecution mojoExecution : cleanPhase) {
                 mojoExecutionRunner.run(mojoExecution);
             }
-            cacheState = cacheConfig.initialize();
+            if (!cacheIsDisabled) {
+                cacheState = cacheConfig.initialize();
+            } else {
+                LOGGER.info("Cache is explicitly disabled on project level for {}", getVersionlessProjectKey(project));
+            }
             if (cacheState == INITIALIZED || skipCache) {
                 result = cacheController.findCachedBuild(session, project, mojoExecutions, skipCache);
             }

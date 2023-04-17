@@ -458,9 +458,17 @@ public class CacheControllerImpl implements CacheController {
                     localCache.saveArtifactFile(cacheResult, projectArtifact);
                 }
                 for (org.apache.maven.artifact.Artifact attachedArtifact : attachedArtifacts) {
-                    if (attachedArtifact.getFile() != null
-                            && isOutputArtifact(attachedArtifact.getFile().getName())) {
-                        localCache.saveArtifactFile(cacheResult, attachedArtifact);
+                    if (attachedArtifact.getFile() != null) {
+                        boolean storeArtifact =
+                                isOutputArtifact(attachedArtifact.getFile().getName());
+                        if (storeArtifact) {
+                            localCache.saveArtifactFile(cacheResult, attachedArtifact);
+                        } else {
+                            LOGGER.debug(
+                                    "Skipping attached project artifact '{}' = "
+                                            + " it is marked for exclusion from caching",
+                                    attachedArtifact.getFile().getName());
+                        }
                     }
                 }
             } else {
