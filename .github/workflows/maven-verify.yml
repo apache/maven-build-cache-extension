@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-name: Verify
+name: Verify 4.x
 
 on:
   push:
