@@ -622,9 +622,8 @@ public class CacheControllerImpl implements CacheController {
                 Method getter = getGetter(propertyName, mojo.getClass());
                 if (getter != null) {
                     Object value = getter.invoke(mojo);
-                    if (value != null) {
-                        DtoUtils.addProperty(execution, propertyName, value, baseDirPath, tracked);
-                    }
+                    DtoUtils.addProperty(execution, propertyName, value, baseDirPath, tracked);
+                    continue;
                 }
 
                 if (LOGGER.isWarnEnabled()) {
