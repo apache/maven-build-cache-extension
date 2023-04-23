@@ -25,6 +25,9 @@ import javax.inject.Named;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -609,9 +612,29 @@ public class CacheControllerImpl implements CacheController {
             }
 
             try {
-                final Object value = ReflectionUtils.getValueIncludingSuperclasses(propertyName, mojo);
-                DtoUtils.addProperty(execution, propertyName, value, baseDirPath, tracked);
-            } catch (IllegalAccessException e) {
+                Field field = ReflectionUtils.getFieldByNameIncludingSuperclasses(propertyName, mojo.getClass());
+                if (field != null) {
+                    final Object value = ReflectionUtils.getValueIncludingSuperclasses(propertyName, mojo);
+                    DtoUtils.addProperty(execution, propertyName, value, baseDirPath, tracked);
+                    continue;
+                }
+                // no field but maybe there is a getter with standard naming and no args
+                Method getter = getGetter(propertyName, mojo.getClass());
+                if (getter != null) {
+                    Object value = getter.invoke(mojo);
+                    if (value != null) {
+                        DtoUtils.addProperty(execution, propertyName, value, baseDirPath, tracked);
+                    }
+                }
+
+                if (LOGGER.isWarnEnabled()) {
+                    LOGGER.warn(
+                            "Cannot find a Mojo parameter '{}' to read for Mojo {}. This parameter should be ignored.",
+                            propertyName,
+                            mojoExecution);
+                }
+
+            } catch (IllegalAccessException | InvocationTargetException e) {
                 LOGGER.info("Cannot get property {} value from {}: {}", propertyName, mojo, e.getMessage());
                 if (tracked) {
                     throw new IllegalArgumentException("Property configured in cache introspection config " + "for "
@@ -619,6 +642,19 @@ public class CacheControllerImpl implements CacheController {
                 }
             }
         }
+    }
+
+    private static Method getGetter(String fieldName, Class<?> clazz) {
+        String getterMethodName = "get" + org.codehaus.plexus.util.StringUtils.capitalizeFirstLetter(fieldName);
+        Method[] methods = clazz.getMethods();
+        for (Method method : methods) {
+            if (method.getName().equals(getterMethodName)
+                    && !method.getReturnType().equals(Void.TYPE)
+                    && method.getParameterCount() == 0) {
+                return method;
+            }
+        }
+        return null;
     }
 
     private boolean isExcluded(
