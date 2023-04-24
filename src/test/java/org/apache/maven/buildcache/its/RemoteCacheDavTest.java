@@ -62,6 +62,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
+import static org.apache.maven.buildcache.xml.CacheConfigImpl.REMOTE_URL_PROPERTY_NAME;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -129,15 +130,15 @@ public class RemoteCacheDavTest {
 
         LOGGER.info("before clean in container result: {}", result);
 
-        result = dav.execInContainer("rm", "-rf", "/var/webdav/public");
+        result = dav.execInContainer("rm", "-rf", "/var/webdav/public/*");
 
         LOGGER.info("clean in container result: {}", result);
 
-        result = dav.execInContainer("ls", "-lrt", "/var/webdav/");
+        result = dav.execInContainer("ls", "-lrt", "/var/webdav/public/");
 
         LOGGER.info("after clean in container result: {}", result);
 
-        cleanDirs(localCache, remoteCache.resolve("mbce"));
+        cleanDirs(localCache);
 
         dav.close();
     }
@@ -178,7 +179,7 @@ public class RemoteCacheDavTest {
         assertTrue(hasBuildInfoXml(localCache), () -> error(localCache, "local", true));
         assertFalse(hasBuildInfoXml(remoteCache), () -> error(remoteCache, "remote", false));
 
-        cleanDirs(localCache, remoteCache.resolve("mbce"));
+        cleanDirs(localCache);
 
         verifier.getCliOptions().clear();
         verifier.addCliOption("--settings=" + settings);
@@ -200,6 +201,39 @@ public class RemoteCacheDavTest {
         verifier.addCliOption("-D" + WAGON_TRANSPORT_PRIORITY + "=" + ("wagon".equals(transport) ? "10" : "0"));
         verifier.addCliOption("-D" + MAVEN_BUILD_CACHE_REMOTE_SAVE_ENABLED + "=false");
         verifier.setLogFileName("../log-3.txt");
+        verifier.executeGoals(Arrays.asList("clean", "install"));
+        verifier.verifyErrorFreeLog();
+
+        assertTrue(hasBuildInfoXml(localCache), () -> error(localCache, "local", true));
+        assertTrue(hasBuildInfoXml(remoteCache), () -> error(remoteCache, "remote", true));
+
+        // replace url with a bad one to be sure cli property is used
+        substitute(
+                basedir.resolve(".mvn/maven-build-cache-config.xml"),
+                "url",
+                "http://foo.com",
+                "id",
+                REPO_ID,
+                "location",
+                localCache.toString());
+
+        cleanDirs(localCache);
+        try {
+            // depending on uid used for execution but can be different from the one using docker and so different file
+            // permissions..
+            dav.execInContainer("rm", "-rf", "/var/webdav/public/*");
+        } catch (InterruptedException e) {
+            throw new IOException("cannot delete remote cache");
+        }
+
+        verifier.getCliOptions().clear();
+        verifier.addCliOption("--settings=" + settings);
+        verifier.addCliOption("-X");
+        verifier.addCliOption("-D" + HTTP_TRANSPORT_PRIORITY + "=" + ("wagon".equals(transport) ? "0" : "10"));
+        verifier.addCliOption("-D" + WAGON_TRANSPORT_PRIORITY + "=" + ("wagon".equals(transport) ? "10" : "0"));
+        verifier.addCliOption("-D" + MAVEN_BUILD_CACHE_REMOTE_SAVE_ENABLED + "=true");
+        verifier.setSystemProperty(REMOTE_URL_PROPERTY_NAME, url);
+        verifier.setLogFileName("../log-4.txt");
         verifier.executeGoals(Arrays.asList("clean", "install"));
         verifier.verifyErrorFreeLog();
 
@@ -229,6 +263,7 @@ public class RemoteCacheDavTest {
         for (int i = 0; i < strings.length / 2; i++) {
             str = str.replaceAll(Pattern.quote("${" + strings[i * 2] + "}"), strings[i * 2 + 1]);
         }
+        Files.deleteIfExists(path);
         Files.write(path, str.getBytes(StandardCharsets.UTF_8));
     }
 
