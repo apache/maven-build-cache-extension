@@ -125,8 +125,7 @@ public class RemoteCacheDavTest {
     @AfterEach
     public void cleanup() throws Exception {
 
-        org.testcontainers.containers.Container.ExecResult result =
-                dav.execInContainer("ls", "-lrt", "/var/webdav");
+        org.testcontainers.containers.Container.ExecResult result = dav.execInContainer("ls", "-lrt", "/var/webdav");
 
         LOGGER.info("before clean in container result: {}", result);
 
