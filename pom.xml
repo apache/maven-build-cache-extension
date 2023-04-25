@@ -64,8 +64,8 @@ under the License.
     <minimalJavaBuildVersion>11</minimalJavaBuildVersion>
     <classWorldsVersion>2.6.0</classWorldsVersion>
 
-    <!-- default maven version, can be override by maven3 profile -->
-    <mavenVersion>4.0.0-alpha-4</mavenVersion>
+    <!-- default maven version, will be override by maven3 profile -->
+    <mavenVersion>4.0.0-alpha-5</mavenVersion>
     <maven.dir>maven4</maven.dir>
     <maven.basedir>${project.build.directory}/${maven.dir}</maven.basedir>
 
