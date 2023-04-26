@@ -329,6 +329,7 @@ public class LocalCacheRepositoryImpl implements LocalCacheRepository {
     public void saveBuildInfo(CacheResult cacheResult, Build build) throws IOException {
         final Path path = localBuildPath(cacheResult.getContext(), BUILDINFO_XML, true);
         Files.write(path, xmlService.toBytes(build.getDto()), TRUNCATE_EXISTING, CREATE);
+        LOGGER.info("Saved Build to local file: {}", path);
         if (cacheConfig.isSaveToRemote() && !cacheResult.isFinal()) {
             remoteRepository.saveBuildInfo(cacheResult, build);
         }
@@ -338,11 +339,9 @@ public class LocalCacheRepositoryImpl implements LocalCacheRepository {
     public void saveCacheReport(String buildId, MavenSession session, CacheReport cacheReport) throws IOException {
         Path path = getMultimoduleRoot(session).resolve("target").resolve("maven-incremental");
         Files.createDirectories(path);
-        Files.write(
-                path.resolve("cache-report." + buildId + ".xml"),
-                xmlService.toBytes(cacheReport),
-                TRUNCATE_EXISTING,
-                CREATE);
+        Path reportPath = path.resolve("cache-report." + buildId + ".xml");
+        Files.write(reportPath, xmlService.toBytes(cacheReport), TRUNCATE_EXISTING, CREATE);
+        LOGGER.debug("Save cache-report to local file: {}", reportPath);
         if (cacheConfig.isSaveToRemote()) {
             LOGGER.info("Saving cache report on build completion");
             remoteRepository.saveCacheReport(buildId, session, cacheReport);
