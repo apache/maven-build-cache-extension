@@ -133,6 +133,13 @@ OR
 -Dmaven.resolver.transport=wagon
 ```
 
+Or configure your remote with the following configuration (`dav:url`)
+```xml
+<remote enabled="true">
+    <url>dav:http://your-buildcache-url</url>
+</remote>
+```
+
 ## Common issues
 
 ### Issue 1: Local checkout is with different line endings
