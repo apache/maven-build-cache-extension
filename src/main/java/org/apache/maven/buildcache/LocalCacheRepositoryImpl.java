@@ -340,11 +340,7 @@ public class LocalCacheRepositoryImpl implements LocalCacheRepository {
         Path path = getMultimoduleRoot(session).resolve("target").resolve("maven-incremental");
         Files.createDirectories(path);
         Path reportPath = path.resolve("cache-report." + buildId + ".xml");
-        Files.write(
-                reportPath,
-                xmlService.toBytes(cacheReport),
-                TRUNCATE_EXISTING,
-                CREATE);
+        Files.write(reportPath, xmlService.toBytes(cacheReport), TRUNCATE_EXISTING, CREATE);
         LOGGER.debug("Save cache-report to local file: {}", reportPath);
         if (cacheConfig.isSaveToRemote()) {
             LOGGER.info("Saving cache report on build completion");
