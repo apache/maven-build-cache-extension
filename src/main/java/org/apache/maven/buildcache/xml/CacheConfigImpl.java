@@ -83,6 +83,8 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     public static final String CACHE_ENABLED_PROPERTY_NAME = "maven.build.cache.enabled";
     public static final String CACHE_LOCATION_PROPERTY_NAME = "maven.build.cache.location";
     public static final String REMOTE_ENABLED_PROPERTY_NAME = "maven.build.cache.remote.enabled";
+    public static final String REMOTE_URL_PROPERTY_NAME = "maven.build.cache.remote.url";
+    public static final String REMOTE_SERVER_ID_PROPERTY_NAME = "maven.build.cache.remote.server.id";
     public static final String SAVE_TO_REMOTE_PROPERTY_NAME = "maven.build.cache.remote.save.enabled";
     public static final String SAVE_NON_OVERRIDEABLE_NAME = "maven.build.cache.remote.save.final";
     public static final String FAIL_FAST_PROPERTY_NAME = "maven.build.cache.failFast";
@@ -504,13 +506,13 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     @Override
     public String getId() {
         checkInitializedState();
-        return getRemote().getId();
+        return getProperty(REMOTE_SERVER_ID_PROPERTY_NAME, getRemote().getId());
     }
 
     @Override
     public String getUrl() {
         checkInitializedState();
-        return getRemote().getUrl();
+        return getProperty(REMOTE_URL_PROPERTY_NAME, getRemote().getUrl());
     }
 
     @Override
