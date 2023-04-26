@@ -453,7 +453,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     @Override
     public boolean isRemoteCacheEnabled() {
         checkInitializedState();
-        return getRemote().getUrl() != null
+        return getUrl() != null
                 && getProperty(REMOTE_ENABLED_PROPERTY_NAME, getRemote().isEnabled());
     }
 
