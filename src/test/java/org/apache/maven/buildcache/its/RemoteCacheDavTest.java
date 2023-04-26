@@ -62,6 +62,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
+import static org.apache.maven.buildcache.xml.CacheConfigImpl.REMOTE_SERVER_ID_PROPERTY_NAME;
 import static org.apache.maven.buildcache.xml.CacheConfigImpl.REMOTE_URL_PROPERTY_NAME;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -206,13 +207,13 @@ public class RemoteCacheDavTest {
         assertTrue(hasBuildInfoXml(localCache), () -> error(localCache, "local", true));
         assertTrue(hasBuildInfoXml(remoteCache), () -> error(remoteCache, "remote", true));
 
-        // replace url with a bad one to be sure cli property is used
+        // replace url and server id with a bad one to be sure cli property is used
         substitute(
                 basedir.resolve(".mvn/maven-build-cache-config.xml"),
                 "url",
                 "http://foo.com",
                 "id",
-                REPO_ID,
+                "foo",
                 "location",
                 localCache.toString());
 
@@ -232,6 +233,7 @@ public class RemoteCacheDavTest {
         verifier.addCliOption("-D" + WAGON_TRANSPORT_PRIORITY + "=" + ("wagon".equals(transport) ? "10" : "0"));
         verifier.addCliOption("-D" + MAVEN_BUILD_CACHE_REMOTE_SAVE_ENABLED + "=true");
         verifier.setSystemProperty(REMOTE_URL_PROPERTY_NAME, url);
+        verifier.setSystemProperty(REMOTE_SERVER_ID_PROPERTY_NAME, REPO_ID);
         verifier.setLogFileName("../log-4.txt");
         verifier.executeGoals(Arrays.asList("clean", "install"));
         verifier.verifyErrorFreeLog();
