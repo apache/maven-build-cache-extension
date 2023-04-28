@@ -71,7 +71,7 @@ under the License.
 
     <commonsCliVersion>1.4</commonsCliVersion>
     <commonsLangVersion>3.12.0</commonsLangVersion>
-    <junitVersion>5.9.3</junitVersion>
+    <junit.version>5.9.3</junit.version>
     <mockitoVersion>4.11.0</mockitoVersion>
     <plexusUtilsVersion>3.5.1</plexusUtilsVersion>
     <wagonVersion>3.4.3</wagonVersion>
@@ -95,6 +95,13 @@ under the License.
         <groupId>org.testcontainers</groupId>
         <artifactId>testcontainers-bom</artifactId>
         <version>1.18.0</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.junit</groupId>
+        <artifactId>junit-bom</artifactId>
+        <version>${junit.version}</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -158,7 +165,6 @@ under the License.
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-engine</artifactId>
-      <version>5.9.2</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -222,7 +228,6 @@ under the License.
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-params</artifactId>
-      <version>${junitVersion}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
