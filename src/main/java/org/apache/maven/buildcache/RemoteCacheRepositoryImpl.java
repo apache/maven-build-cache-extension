@@ -111,7 +111,7 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
     }
 
     @Override
-    public boolean getArtifactContent(CacheContext context, Artifact artifact, Path target) throws IOException {
+    public boolean getArtifactContent(CacheContext context, Artifact artifact, Path target) {
         return getResourceContent(getResourceUrl(context, artifact.getFileName()), target);
     }
 
@@ -145,19 +145,32 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
      * @return null or content
      */
     @Nonnull
-    public Optional<byte[]> getResourceContent(String url) throws IOException {
+    public Optional<byte[]> getResourceContent(String url) {
+        String fullUrl = getFullUrl(url);
         try {
-            LOGGER.info("Downloading {}", getFullUrl(url));
+            LOGGER.info("Downloading {}", fullUrl);
             GetTask task = new GetTask(new URI(url));
             transporter.get(task);
             return Optional.of(task.getDataBytes());
-        } catch (Exception e) {
-            LOGGER.info("Cannot download {}", getFullUrl(url), e);
+        } catch (ResourceDoesNotExistException e) {
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Cache item not found: {}", fullUrl, e);
+            } else {
+                LOGGER.info("Cache item not found: {}", fullUrl);
+            }
             return Optional.empty();
+        } catch (Exception e) {
+            if (cacheConfig.isFailFast()) {
+                LOGGER.error("Error downloading cache item: {}", fullUrl, e);
+                throw new RuntimeException("Error downloading cache item: " + fullUrl, e);
+            } else {
+                LOGGER.error("Error downloading cache item: {}", fullUrl);
+                return Optional.empty();
+            }
         }
     }
 
-    public boolean getResourceContent(String url, Path target) throws IOException {
+    public boolean getResourceContent(String url, Path target) {
         try {
             LOGGER.info("Downloading {}", getFullUrl(url));
             GetTask task = new GetTask(new URI(url)).setDataFile(target.toFile());
