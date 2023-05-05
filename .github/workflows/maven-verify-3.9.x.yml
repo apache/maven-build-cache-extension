@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-name: Verify 4.x
+name: Verify 3.9.x
 
 on:
   push:
@@ -26,7 +26,7 @@ jobs:
     name: Verify
     uses: apache/maven-gh-actions-shared/.github/workflows/maven-verify.yml@v3
     with:
-      maven-args: '-D"maven.test.redirectTestOutputToFile=false"'
+      maven-args: '-D"maven.test.redirectTestOutputToFile=false -Pmaven3"'
       maven-matrix: '[ "3.9.1", "4.0.0-alpha-5" ]'
       matrix-exclude: >
         [ 

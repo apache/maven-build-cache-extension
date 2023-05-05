@@ -183,6 +183,9 @@ public class RemoteCacheDavTest {
 
         verifier.getCliOptions().clear();
         verifier.addCliOption("--settings=" + settings);
+        if (!"wagon".equals(transport)) {
+            verifier.setSystemProperty("aether.connector.http.supportWebDav", "true");
+        }
         verifier.addCliOption("-D" + HTTP_TRANSPORT_PRIORITY + "=" + ("wagon".equals(transport) ? "0" : "10"));
         verifier.addCliOption("-D" + WAGON_TRANSPORT_PRIORITY + "=" + ("wagon".equals(transport) ? "10" : "0"));
         verifier.addCliOption("-D" + MAVEN_BUILD_CACHE_REMOTE_SAVE_ENABLED + "=true");
@@ -197,6 +200,9 @@ public class RemoteCacheDavTest {
 
         verifier.getCliOptions().clear();
         verifier.addCliOption("--settings=" + settings);
+        if (!"wagon".equals(transport)) {
+            verifier.setSystemProperty("aether.connector.http.supportWebDav", "true");
+        }
         verifier.addCliOption("-D" + HTTP_TRANSPORT_PRIORITY + "=" + ("wagon".equals(transport) ? "0" : "10"));
         verifier.addCliOption("-D" + WAGON_TRANSPORT_PRIORITY + "=" + ("wagon".equals(transport) ? "10" : "0"));
         verifier.addCliOption("-D" + MAVEN_BUILD_CACHE_REMOTE_SAVE_ENABLED + "=false");

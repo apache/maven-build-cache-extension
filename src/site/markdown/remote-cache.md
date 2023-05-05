@@ -125,6 +125,21 @@ Review `buildsdiff.xml` file and eliminate detected discrepancies. You can also 
 low level insights. See techniques to configure cache in [How-To](how-to.md) and troubleshooting of typical issues
 in the section below.
 
+If you are using a webdav remote server (which is the most easiest to use to create directories on a remote server), from Maven 3.9.1 and 4.0.0-alpha5, support of webdav has been removed per default.
+You need to use the following extra configuration:
+```bash
+-Daether.connector.http.supportWebDav=true
+OR
+-Dmaven.resolver.transport=wagon
+```
+
+Or configure your remote with the following configuration (`dav:url`)
+```xml
+<remote enabled="true">
+    <url>dav:http://your-buildcache-url</url>
+</remote>
+```
+
 ## Common issues
 
 ### Issue 1: Local checkout is with different line endings
