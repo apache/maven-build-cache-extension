@@ -64,6 +64,8 @@ public class IntegrationTestExtension implements BeforeAllCallback, BeforeEachCa
                 .orElseThrow(() -> new IllegalStateException("Could not find maven home"));
         System.setProperty("maven.home", mavenHome.toString());
         mavenHome.resolve("bin/mvn").toFile().setExecutable(true);
+
+        deleteDir(Paths.get("target/build-cache/"));
     }
 
     @Override
@@ -76,8 +78,8 @@ public class IntegrationTestExtension implements BeforeAllCallback, BeforeEachCa
         if (rawProjectDir == null) {
             throw new IllegalStateException("@IntegrationTest must be set");
         }
-        final Path testDir =
-                Paths.get("target/mvnd-tests/" + className + "/" + methodName).toAbsolutePath();
+        final Path testDir = Paths.get("target/mvn-cache-tests/" + className + "/" + methodName)
+                .toAbsolutePath();
         deleteDir(testDir);
         Files.createDirectories(testDir);
         final Path testExecutionDir;
@@ -139,7 +141,7 @@ public class IntegrationTestExtension implements BeforeAllCallback, BeforeEachCa
 
             final String className = context.getRequiredTestClass().getSimpleName();
             String methodName = context.getRequiredTestMethod().getName();
-            final Path testDir = Paths.get("target/mvnd-tests/" + className + "/" + methodName)
+            final Path testDir = Paths.get("target/mvn-cache-tests/" + className + "/" + methodName)
                     .toAbsolutePath();
 
             deleteDir(testDir);
