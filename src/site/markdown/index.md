@@ -19,102 +19,111 @@
 
 Build cache is an extension targeted to simplify and make more efficient work with large builds in Maven.
 
-That is achieved by a combination of features:
+A combination of features achieves that:
 
-* Incremental builds over the changed project graph part only
-* Subtree support in multimodule projects (caches discovered from the larger project)
+* Incremental builds works on the modified part of the project graph part only
+* Subtree support for multimodule projects to work on the part of the codebase in isolation
 * Version normalization to support project version agnostic caches
 * Project state restoration (partial) to avoid expensive tasks (code generation and similar)
 
-Large projects usually pose scalability challenges and work with such projects require build tool which scales. Cache
-extension addresses that with incremental build execution and ability to efficiently work on sub-parts of a larger
+Large projects usually pose scalability challenges, and working with such projects requires a build tool that scales.
+The cache
+extension addresses that with incremental build execution and the ability to efficiently work on sub-parts of a larger
 project without building and installing dependencies from the larger project. Though, features implemented in Maven
-should give noticeable benefits in medium and small sized projects as well.
+should also give noticeable benefits in medium and small-sized projects.
 
 ### Cache concepts
 
-The idea of the build cache is to calculate key from module inputs, store outputs in cache and restore them later
-transparently to the standard Maven core. In order to calculate the key cache engine analyzes source code, build flow,
-plugins and their parameters. This allows to deterministically associate each project state with unique key and restore
-up-to-date (not changed) projects from cache and rebuild out-of-date(changed) ones. Restoring artifacts associated with
-a particular project state improves build times by avoiding re-building unnecessary modules. Cache does not make any
-interventions to actual build execution process and fully delegates build work to Maven core. This ensures that
-artifacts produced in presence of cache are equivalent to result produced by a standard Maven build.   
-To achieve accurate key calculation incremental Maven combines automatic introspection
-of [project object model](https://maven.apache.org/pom.html#What_is_the_POM) and allows fine-grained tuning by means of
-configuration file and xml attributes. Source code content fingerprinting is digests based which is more reliable over
-widely used file timestamps in tools like Make or Apache Ant. Deterministic build state allows reliably cache outputs
-even of the build in progress and share them between teams using remote cache. Deterministic inputs calculation allows
-distributed and parallel builds running in heterogeneous environments (like cloud of build agents)
-could efficiently reuse cached build artifacts. Therefore, incremental Maven is particularly well-suited for large Maven
-projects that have significant number of small modules. Remote cache in conjunction with relocatable inputs
-identification effectively enables "change once - build once" approach across all environments.
+The idea of the build cache is to calculate a key from module inputs, store outputs in the cache, and restore them later
+transparently to the standard Maven core. The cache deterministically associates each project state with a unique key
+and restores it in subsequent builds. It analyzes source code, project model,
+plugins, and their parameters. Projects with the same key are up-to-date (not changed) and could be safely restored from
+the cache. Projects producing different keys are out-of-date (changed), and the cache fully rebuilds them. In the latter
+case, the cache does not make any
+interventions to the build execution logic and delegates build work to the standard maven Maven core. This approach
+ensures that
+artifacts produced in the presence of a cache are equivalent to the result produced by a standard Maven build.   
+To achieve an accurate key calculation, the build-cache extension combines automatic introspection
+of [project object model](https://maven.apache.org/pom.html#What_is_the_POM) and fine-grained tuning using
+a configuration file. Source code content fingerprinting is digests based, which is more reliable over
+widely used file timestamps in tools like Make or Apache Ant. Cache outputs could be shared using a remote cache.
+Deterministic inputs calculation allows distributed and parallel builds running in heterogeneous environments (like a
+cloud of build agents) efficiently reuse cached build artifacts as soon as they are published. Therefore, incremental
+Maven is particularly well-suited for large Maven
+projects that have a significant number of small modules. Remote cache, combined with relocatable inputs
+identification, effectively enables the "change once - build once" approach across all environments.
 
 ### Maven insights
 
-The challenge of implementing build cache in Maven is that domain model is overly generic and doesn't have dedicated api
-for build inputs. Because of that, even 2 identically looking builds from the same source code could normally produce 2
-different results. The question here is tolerance level - can you accept particular discrepancies or not. For most of
-teams artifacts produced in the same build environment from the same source code will be considered equivalent and
-technical differences between them (like different timestamps in jar manifests) could be ignored. Now consider scenario
-when artifact is first produced with compiler X and cached. Later, without touching source code, compiler changes to Y
-and build yields significantly different outcomes of compilation. Should the produced artifacts be considered as
-equivalent? Both Yes and No answers are possible and could be even desirable in different scenarios. When productivity
-and performance are the primary concerns it could be desirable to tolerate insignificant discrepancies and maximise
-reuse of cached builds. As long as correctness is in focus there could be demand to comply with the exact release
-process. In the same way as with classic Maven, correctness is ensured by proper build configuration and controllable
-build environments. In the same way as with classic Maven the previous build is just an approximation of today build
-with some tolerance (implementation, configuration and environment driven).
+Maven is a proven tool with a long history and core design established many years ago. Historically, Maven's core was
+designed with generic stable interfaces that don't have a concept of inputs and outputs. It just runs as configured, but
+the core does not control the inputs and effects of the run. Most commonly, artifacts produced in the same build
+environment from the same source code will be considered equivalent. But even two identically looking builds from the
+same source code could have two different results. The question here is tolerance level - can you accept particular
+discrepancies? Though technical differences between artifacts like timestamps in manifests are largely ignored, when
+compilers used are of different levels, it is likely a critical difference. Should the produced artifacts be considered
+equivalents? Yes and No answers are possible and could be desirable in different scenarios. When productivity
+and performance are the primary concerns, it could be beneficial to tolerate insignificant discrepancies and maximize
+the reuse. As long as correctness is in focus, there could be a demand to comply with the exact release requirements. In
+the same way as Maven, the cache correctness is ensured by proper build configuration and control over the build
+environment. As Maven itself, the cached result is just an approximation of another build with some tolerance level
+(implementation, configuration, and environment driven) that must be configured to meet your needs.
 
 ### Implementation insights
 
-At very simple form, the build cache Maven is essentially a hash function which takes Maven project and produces cache
-key for a project. Then the key is used to store and restore build results. Because of different factors there could be
-collisions and instabilities in the produced key. Collision could happen if the same key produced from the semantically
-different build states and will result in unintended reuse. Instability means that same input yields different key in
-different runs resulting in cache misses. The ultimate target is to find tradeoff between correctness and performance by
-means of configuration. In current implementation this is achieved by configuring cache processing rules in xml file.
+Simply put, the build cache is a hash function that takes a Maven project and produces a unique key. Then the key is
+used to store and restore build results. Because of different factors, there could be
+collisions and instabilities in the produced key. A collision happens when the semantically different builds have the
+same key and will result in unintended reuse. Instability means that the same input yields different keys resulting in
+cache misses. The ultimate target is to find a tradeoff between correctness and performance by configuring cache
+processing rules in an xml file.
 
-In order to achieve better correctness need to:
+To maximize correctness:
 
-* Verify that every relevant file is selected as input to engine
-* Add critical plugin parameters to reconciliation (because they could be overridden from command line)
+* Select every relevant file as input to the engine
+* Add all the functional plugin parameters to the reconciliation
 
-In order to achieve better reuse need to:
+To maximize reuse you need to:
 
-* ensure that non-critical files (test logs, readme and similar) are filtered out from build inputs.
-* non-critical plugin parameters (like number of threads in build)  are filtered out from build inputs
-* Source code is relocatable and build parameters are relocatable (not environment specific)
+* Filter out non-essential files (documentation, IDE configs, and similar)
+* Minimize the overall number of controlled plugin parameters and exclude behavioral plugin parameters (like the number
+  of threads or log level)
+* Make source code relocatable (environment agnostic)
 
-Essentially cache setup is a process of inspecting build, taking these decision and reflect them in the cache
+Effectively, cache setup involves inspecting the build, taking these decisions, and reflecting them in the cache
 configuration.
 
-Please notice though idea of perfectly matching builds might be tempting, but it is not practical with regard to
-caching. Perfect correctness could lead to prevailing hit misses and render caching useless when applied to real
-projects. In practice, configuring sufficient(good enough) correctness might yield the best outcomes. Incremental Maven
-provides flexible and transparent control over caching policy and allows achieving desired outcomes - maximize usability
-or maximize equivalence(correctness) between pre-cached candidates and requested builds.
+Though strict, comprehensive cache rules aiming for 100% coverage of all parameters and files might be tempting, it is
+rarely the optimal decision. When applied to real projects, perfect correctness could lead to prevailing hit misses and
+render caching useless. Configuring sufficient (good enough) correctness might yield the best outcomes. Incremental
+Maven
+provides flexible and transparent control over caching policy and allows achieving desired results - maximizes usability
+or maximize equivalency between pre-cached candidates and requested builds.
 
 ## Usage
 
-Cache extension is an opt-in feature. It is delivered as is and though the tool went through careful verification it's
-still build owner's responsibility to verify build outcomes.
+Cache extension is an opt-in feature. It is delivered as is, and though the tool went through careful verification, it's
+still the build owner's responsibility to verify build outcomes.
 
 ### Recommended Scenarios
 
-Given all the information above, the Incremental Maven is recommended to use in scenarios when productivity and
+Given all the information above, the build-cache extension is recommended to use in scenarios when productivity and
 performance are in priority. Typical cases are:
 
-* Continuous integration. In conjunction with remote cache, the extension could drastically reduce build times,
-  validate pull requests faster and reduce load on CI nodes
-* Speedup developer builds. By reusing cached builds developers could verify changes much faster and be more productive.
+* Continuous integration. In conjunction with the remote cache, the extension could drastically reduce build times,
+  validate pull requests faster and reduce the load on CI nodes
+* Speedup developer builds. By reusing cached builds, developers could verify changes much faster and be more
+  productive.
   No more `-DskipTests` and similar.
-* Assemble artifacts faster. In some development models it might be critical to have as fast build/deploy cycle as
-  possible. Caching helps to cut down time drastically in such scenarios because it doesn't require to build cached
+* Assemble artifacts faster. In some development models, it might be critical to have a build/deploy turnaround as fast
+  as
+  possible. Caching helps to cut down time drastically in such scenarios because it doesn't require building cached
   dependencies.
 
-For cases there correctness must be ensured (eg prod builds), it is recommended to disable cache and do clean builds.
-Such scheme allows to validate cache correctness by reconciling outcomes of cached builds against the reference builds.
+For cases when users must ensure the correctness (e.g. prod builds), it is recommended to disable the cache and do clean
+builds instead.
+Such a scheme allows cache correctness validation by reconciling the outcomes of cached builds against the reference
+builds.
 
 ## See also
 
@@ -125,4 +134,3 @@ Such scheme allows to validate cache correctness by reconciling outcomes of cach
 * [Performance](performance.html) - performance tuning
 * [Cache Parameters](parameters.html) - description of supported parameters
 * [Sample config file](maven-build-cache-config.xml)
-
