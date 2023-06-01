@@ -103,8 +103,7 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
         // Forked execution should be thought as a part of originating mojo internal implementation
         // If forkedExecution is detected, it means that originating mojo is not cached so forks should rerun too
         boolean forkedExecution = lifecyclePhasesHelper.isForkedProject(project);
-        if (source == Source.LIFECYCLE && !forkedExecution)
-        {
+        if (source == Source.LIFECYCLE && !forkedExecution) {
             List<MojoExecution> cleanPhase = lifecyclePhasesHelper.getCleanSegment(project, mojoExecutions);
             for (MojoExecution mojoExecution : cleanPhase) {
                 mojoExecutionRunner.run(mojoExecution);
