@@ -106,8 +106,7 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
         if (source == Source.LIFECYCLE && !forkedExecution)
         {
             List<MojoExecution> cleanPhase = lifecyclePhasesHelper.getCleanSegment(project, mojoExecutions);
-            for (MojoExecution mojoExecution : cleanPhase)
-            {
+            for (MojoExecution mojoExecution : cleanPhase) {
                 mojoExecutionRunner.run(mojoExecution);
             }
             if (!cacheIsDisabled) {
