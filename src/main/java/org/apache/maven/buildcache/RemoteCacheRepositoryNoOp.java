@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -18,11 +18,13 @@
  */
 package org.apache.maven.buildcache;
 
+import javax.annotation.Nonnull;
+import javax.inject.Named;
+
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Optional;
-import javax.annotation.Nonnull;
-import javax.inject.Named;
+
 import org.apache.maven.SessionScoped;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.buildcache.xml.Build;
@@ -31,53 +33,40 @@ import org.apache.maven.execution.MavenSession;
 import org.apache.maven.project.MavenProject;
 
 @SessionScoped
-@Named( "noop" )
-public class RemoteCacheRepositoryNoOp implements RemoteCacheRepository
-{
+@Named("noop")
+public class RemoteCacheRepositoryNoOp implements RemoteCacheRepository {
 
     @Nonnull
     @Override
-    public Optional<Build> findBuild( CacheContext context ) throws IOException
-    {
+    public Optional<Build> findBuild(CacheContext context) throws IOException {
         return Optional.empty();
     }
 
     @Override
-    public void saveBuildInfo( CacheResult cacheResult, Build build ) throws IOException
-    {
-
-    }
+    public void saveBuildInfo(CacheResult cacheResult, Build build) throws IOException {}
 
     @Override
-    public void saveArtifactFile( CacheResult cacheResult, Artifact artifact ) throws IOException
-    {
-
-    }
+    public void saveArtifactFile(CacheResult cacheResult, Artifact artifact) throws IOException {}
 
     @Override
-    public void saveCacheReport( String buildId, MavenSession session, CacheReport cacheReport ) throws IOException
-    {
-
-    }
+    public void saveCacheReport(String buildId, MavenSession session, CacheReport cacheReport) throws IOException {}
 
     @Override
-    public boolean getArtifactContent( CacheContext context, org.apache.maven.buildcache.xml.build.Artifact artifact,
-            Path target ) throws IOException
-    {
+    public boolean getArtifactContent(
+            CacheContext context, org.apache.maven.buildcache.xml.build.Artifact artifact, Path target)
+            throws IOException {
         return false;
     }
 
     @Nonnull
     @Override
-    public String getResourceUrl( CacheContext context, String filename )
-    {
+    public String getResourceUrl(CacheContext context, String filename) {
         return null;
     }
 
     @Nonnull
     @Override
-    public Optional<Build> findBaselineBuild( MavenProject project )
-    {
+    public Optional<Build> findBaselineBuild(MavenProject project) {
         return Optional.empty();
     }
 }

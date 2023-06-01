@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -25,47 +25,36 @@ import java.util.Objects;
 /**
  * ThreadLocalDigest
  */
-public class ThreadLocalDigest
-{
+public class ThreadLocalDigest {
 
-    public static MessageDigest get( ThreadLocal<MessageDigest> local, String algorithm )
-    {
+    public static MessageDigest get(ThreadLocal<MessageDigest> local, String algorithm) {
         final MessageDigest digest = local.get();
-        if ( digest == null )
-        {
-            return create( local, algorithm );
+        if (digest == null) {
+            return create(local, algorithm);
         }
 
-        if ( Objects.equals( digest.getAlgorithm(), algorithm ) )
-        {
-            return reset( digest );
+        if (Objects.equals(digest.getAlgorithm(), algorithm)) {
+            return reset(digest);
         }
 
-        reset( digest );
-        return create( local, algorithm );
+        reset(digest);
+        return create(local, algorithm);
     }
 
-    private static MessageDigest create( ThreadLocal<MessageDigest> local, String algorithm )
-    {
-        try
-        {
-            final MessageDigest digest = MessageDigest.getInstance( algorithm );
-            local.set( digest );
+    private static MessageDigest create(ThreadLocal<MessageDigest> local, String algorithm) {
+        try {
+            final MessageDigest digest = MessageDigest.getInstance(algorithm);
+            local.set(digest);
             return digest;
-        }
-        catch ( NoSuchAlgorithmException e )
-        {
-            throw new RuntimeException( "Cannot create message digest with algorithm: " + algorithm, e );
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("Cannot create message digest with algorithm: " + algorithm, e);
         }
     }
 
-    private static MessageDigest reset( MessageDigest digest )
-    {
+    private static MessageDigest reset(MessageDigest digest) {
         digest.reset();
         return digest;
     }
 
-    private ThreadLocalDigest()
-    {
-    }
+    private ThreadLocalDigest() {}
 }

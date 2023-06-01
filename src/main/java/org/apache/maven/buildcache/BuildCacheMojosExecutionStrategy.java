@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -18,13 +18,15 @@
  */
 package org.apache.maven.buildcache;
 
+import javax.annotation.Priority;
+import javax.inject.Inject;
+import javax.inject.Named;
+
 import java.io.File;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
-import javax.annotation.Priority;
-import javax.inject.Inject;
-import javax.inject.Named;
+
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.SessionScoped;
@@ -61,12 +63,11 @@ import static org.apache.maven.buildcache.xml.CacheState.INITIALIZED;
  */
 @SessionScoped
 @Named
-@Priority( 10 )
-@SuppressWarnings( "unused" )
-public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy
-{
+@Priority(10)
+@SuppressWarnings("unused")
+public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger( BuildCacheMojosExecutionStrategy.class );
+    private static final Logger LOGGER = LoggerFactory.getLogger(BuildCacheMojosExecutionStrategy.class);
 
     private final CacheController cacheController;
     private final CacheConfig cacheConfig;
@@ -80,8 +81,7 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy
             CacheConfig cacheConfig,
             MojoParametersListener mojoListener,
             LifecyclePhasesHelper lifecyclePhasesHelper,
-            MavenPluginManager mavenPluginManager )
-    {
+            MavenPluginManager mavenPluginManager) {
         this.cacheController = cacheController;
         this.cacheConfig = cacheConfig;
         this.mojoListener = mojoListener;
@@ -89,264 +89,224 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy
         this.mavenPluginManager = mavenPluginManager;
     }
 
-    public void execute( List<MojoExecution> mojoExecutions,
-            MavenSession session,
-            MojoExecutionRunner mojoExecutionRunner )
-            throws LifecycleExecutionException
-    {
+    public void execute(
+            List<MojoExecution> mojoExecutions, MavenSession session, MojoExecutionRunner mojoExecutionRunner)
+            throws LifecycleExecutionException {
         final MavenProject project = session.getCurrentProject();
-        final Source source = getSource( mojoExecutions );
+        final Source source = getSource(mojoExecutions);
 
         // execute clean bound goals before restoring to not interfere/slowdown clean
         CacheState cacheState = DISABLED;
         CacheResult result = CacheResult.empty();
-        boolean skipCache = cacheConfig.isSkipCache() || MavenProjectInput.isSkipCache( project );
+        boolean skipCache = cacheConfig.isSkipCache() || MavenProjectInput.isSkipCache(project);
+        boolean cacheIsDisabled = MavenProjectInput.isCacheDisabled(project);
         // Forked execution should be thought as a part of originating mojo internal implementation
         // If forkedExecution is detected, it means that originating mojo is not cached so forks should rerun too
-        boolean forkedExecution = lifecyclePhasesHelper.isForkedProject( project );
-        if ( source == Source.LIFECYCLE && !forkedExecution )
+        boolean forkedExecution = lifecyclePhasesHelper.isForkedProject(project);
+        if (source == Source.LIFECYCLE && !forkedExecution)
         {
-            List<MojoExecution> cleanPhase = lifecyclePhasesHelper.getCleanSegment( project, mojoExecutions );
-            for ( MojoExecution mojoExecution : cleanPhase )
+            List<MojoExecution> cleanPhase = lifecyclePhasesHelper.getCleanSegment(project, mojoExecutions);
+            for (MojoExecution mojoExecution : cleanPhase)
             {
-                mojoExecutionRunner.run( mojoExecution );
+                mojoExecutionRunner.run(mojoExecution);
             }
-            cacheState = cacheConfig.initialize();
-            if ( cacheState == INITIALIZED || skipCache )
-            {
-                result = cacheController.findCachedBuild( session, project, mojoExecutions, skipCache );
+            if (!cacheIsDisabled) {
+                cacheState = cacheConfig.initialize();
+            } else {
+                LOGGER.info("Cache is explicitly disabled on project level for {}", getVersionlessProjectKey(project));
+            }
+            if (cacheState == INITIALIZED || skipCache) {
+                result = cacheController.findCachedBuild(session, project, mojoExecutions, skipCache);
             }
         }
 
         boolean restorable = result.isSuccess() || result.isPartialSuccess();
         boolean restored = result.isSuccess(); // if partially restored need to save increment
-        if ( restorable )
-        {
-            restored &= restoreProject( result, mojoExecutions, mojoExecutionRunner, cacheConfig );
-        }
-        else
-        {
-            for ( MojoExecution mojoExecution : mojoExecutions )
-            {
-                if ( source == Source.CLI
+        if (restorable) {
+            restored &= restoreProject(result, mojoExecutions, mojoExecutionRunner, cacheConfig);
+        } else {
+            for (MojoExecution mojoExecution : mojoExecutions) {
+                if (source == Source.CLI
                         || mojoExecution.getLifecyclePhase() == null
-                        || lifecyclePhasesHelper.isLaterPhaseThanClean( mojoExecution.getLifecyclePhase() ) )
-                {
-                    mojoExecutionRunner.run( mojoExecution );
+                        || lifecyclePhasesHelper.isLaterPhaseThanClean(mojoExecution.getLifecyclePhase())) {
+                    mojoExecutionRunner.run(mojoExecution);
                 }
             }
         }
 
-        if ( cacheState == INITIALIZED && ( !restorable || !restored ) )
-        {
-            final Map<String, MojoExecutionEvent> executionEvents = mojoListener.getProjectExecutions( project );
-            cacheController.save( result, mojoExecutions, executionEvents );
+        if (cacheState == INITIALIZED && (!restorable || !restored)) {
+            final Map<String, MojoExecutionEvent> executionEvents = mojoListener.getProjectExecutions(project);
+            cacheController.save(result, mojoExecutions, executionEvents);
         }
 
-        if ( cacheConfig.isFailFast() && !result.isSuccess() && !skipCache && !forkedExecution )
-        {
+        if (cacheConfig.isFailFast() && !result.isSuccess() && !skipCache && !forkedExecution) {
             throw new LifecycleExecutionException(
-                    "Failed to restore project[" + getVersionlessProjectKey( project ) + "] from cache, failing build.",
-                    project );
+                    "Failed to restore project[" + getVersionlessProjectKey(project) + "] from cache, failing build.",
+                    project);
         }
     }
 
-    private Source getSource( List<MojoExecution> mojoExecutions )
-    {
-        if ( mojoExecutions == null || mojoExecutions.isEmpty() )
-        {
+    private Source getSource(List<MojoExecution> mojoExecutions) {
+        if (mojoExecutions == null || mojoExecutions.isEmpty()) {
             return null;
         }
-        for ( MojoExecution mojoExecution : mojoExecutions )
-        {
-            if ( mojoExecution.getSource() == Source.CLI )
-            {
+        for (MojoExecution mojoExecution : mojoExecutions) {
+            if (mojoExecution.getSource() == Source.CLI) {
                 return Source.CLI;
             }
         }
         return Source.LIFECYCLE;
     }
 
-    private boolean restoreProject( CacheResult cacheResult,
+    private boolean restoreProject(
+            CacheResult cacheResult,
             List<MojoExecution> mojoExecutions,
             MojoExecutionRunner mojoExecutionRunner,
-            CacheConfig cacheConfig ) throws LifecycleExecutionException
-    {
+            CacheConfig cacheConfig)
+            throws LifecycleExecutionException {
         final Build build = cacheResult.getBuildInfo();
         final MavenProject project = cacheResult.getContext().getProject();
         final MavenSession session = cacheResult.getContext().getSession();
-        final List<MojoExecution> cachedSegment = lifecyclePhasesHelper.getCachedSegment( project, mojoExecutions,
-                build );
+        final List<MojoExecution> cachedSegment =
+                lifecyclePhasesHelper.getCachedSegment(project, mojoExecutions, build);
 
-        boolean restored = cacheController.restoreProjectArtifacts( cacheResult );
-        if ( !restored )
-        {
-            LOGGER.info( "Cannot restore project artifacts, continuing with non cached build" );
+        boolean restored = cacheController.restoreProjectArtifacts(cacheResult);
+        if (!restored) {
+            LOGGER.info("Cannot restore project artifacts, continuing with non cached build");
             return false;
         }
 
-        for ( MojoExecution cacheCandidate : cachedSegment )
-        {
-            if ( cacheController.isForcedExecution( project, cacheCandidate ) )
-            {
-                LOGGER.info( "Mojo execution is forced by project property: {}",
-                        cacheCandidate.getMojoDescriptor().getFullGoalName() );
-                mojoExecutionRunner.run( cacheCandidate );
-            }
-            else
-            {
-                restored = verifyCacheConsistency( cacheCandidate, build, project, session,
-                        mojoExecutionRunner, cacheConfig );
-                if ( !restored )
-                {
+        for (MojoExecution cacheCandidate : cachedSegment) {
+            if (cacheController.isForcedExecution(project, cacheCandidate)) {
+                LOGGER.info(
+                        "Mojo execution is forced by project property: {}",
+                        cacheCandidate.getMojoDescriptor().getFullGoalName());
+                mojoExecutionRunner.run(cacheCandidate);
+            } else {
+                restored = verifyCacheConsistency(
+                        cacheCandidate, build, project, session, mojoExecutionRunner, cacheConfig);
+                if (!restored) {
                     break;
                 }
             }
         }
 
-        if ( !restored )
-        {
+        if (!restored) {
             // cleanup partial state
-            project.getArtifact().setFile( null );
-            project.getArtifact().setResolved( false );
-            mojoListener.remove( project );
+            project.getArtifact().setFile(null);
+            project.getArtifact().setResolved(false);
+            mojoListener.remove(project);
             // build as usual
-            for ( MojoExecution mojoExecution : cachedSegment )
-            {
-                mojoExecutionRunner.run( mojoExecution );
+            for (MojoExecution mojoExecution : cachedSegment) {
+                mojoExecutionRunner.run(mojoExecution);
             }
         }
 
-        List<MojoExecution> postCachedSegment = lifecyclePhasesHelper.getPostCachedSegment( project, mojoExecutions,
-                build );
-        for ( MojoExecution mojoExecution : postCachedSegment )
-        {
-            mojoExecutionRunner.run( mojoExecution );
+        List<MojoExecution> postCachedSegment =
+                lifecyclePhasesHelper.getPostCachedSegment(project, mojoExecutions, build);
+        for (MojoExecution mojoExecution : postCachedSegment) {
+            mojoExecutionRunner.run(mojoExecution);
         }
         return restored;
     }
 
-    private boolean verifyCacheConsistency( MojoExecution cacheCandidate,
+    private boolean verifyCacheConsistency(
+            MojoExecution cacheCandidate,
             Build cachedBuild,
             MavenProject project,
             MavenSession session,
             MojoExecutionRunner mojoExecutionRunner,
-            CacheConfig cacheConfig ) throws LifecycleExecutionException
-    {
+            CacheConfig cacheConfig)
+            throws LifecycleExecutionException {
         long createdTimestamp = System.currentTimeMillis();
         boolean consistent = true;
 
-        if ( !cacheConfig.getTrackedProperties( cacheCandidate ).isEmpty() )
-        {
+        if (!cacheConfig.getTrackedProperties(cacheCandidate).isEmpty()) {
             Mojo mojo = null;
-            try
-            {
-                mojo = mavenPluginManager.getConfiguredMojo( Mojo.class, session, cacheCandidate );
-                final CompletedExecution completedExecution = cachedBuild.findMojoExecutionInfo( cacheCandidate );
+            try {
+                mojo = mavenPluginManager.getConfiguredMojo(Mojo.class, session, cacheCandidate);
+                final CompletedExecution completedExecution = cachedBuild.findMojoExecutionInfo(cacheCandidate);
                 final String fullGoalName = cacheCandidate.getMojoDescriptor().getFullGoalName();
 
-                if ( completedExecution != null
-                        && !isParamsMatched( project, cacheCandidate, mojo, completedExecution ) )
-                {
-                    LOGGER.info( "Mojo cached parameters mismatch with actual, forcing full project build. Mojo: {}",
-                            fullGoalName );
+                if (completedExecution != null && !isParamsMatched(project, cacheCandidate, mojo, completedExecution)) {
+                    LOGGER.info(
+                            "Mojo cached parameters mismatch with actual, forcing full project build. Mojo: {}",
+                            fullGoalName);
                     consistent = false;
                 }
 
-                if ( consistent )
-                {
+                if (consistent) {
                     long elapsed = System.currentTimeMillis() - createdTimestamp;
-                    LOGGER.info( "Skipping plugin execution (reconciled in {} millis): {}", elapsed, fullGoalName );
+                    LOGGER.info("Skipping plugin execution (reconciled in {} millis): {}", elapsed, fullGoalName);
                 }
 
-                if ( LOGGER.isDebugEnabled() )
-                {
-                    LOGGER.debug( "Checked {}, resolved mojo: {}, cached params: {}",
-                            fullGoalName, mojo, completedExecution );
+                if (LOGGER.isDebugEnabled()) {
+                    LOGGER.debug(
+                            "Checked {}, resolved mojo: {}, cached params: {}", fullGoalName, mojo, completedExecution);
+                }
+            } catch (PluginContainerException | PluginConfigurationException e) {
+                throw new LifecycleExecutionException("Cannot get configured mojo", e);
+            } finally {
+                if (mojo != null) {
+                    mavenPluginManager.releaseMojo(mojo, cacheCandidate);
                 }
             }
-            catch ( PluginContainerException | PluginConfigurationException e )
-            {
-                throw new LifecycleExecutionException( "Cannot get configured mojo", e );
-            }
-            finally
-            {
-                if ( mojo != null )
-                {
-                    mavenPluginManager.releaseMojo( mojo, cacheCandidate );
-                }
-            }
-        }
-        else
-        {
-            LOGGER.info( "Skipping plugin execution (cached): {}",
-                    cacheCandidate.getMojoDescriptor().getFullGoalName() );
+        } else {
+            LOGGER.info(
+                    "Skipping plugin execution (cached): {}",
+                    cacheCandidate.getMojoDescriptor().getFullGoalName());
         }
 
         return consistent;
     }
 
-    boolean isParamsMatched( MavenProject project,
-            MojoExecution mojoExecution,
-            Mojo mojo,
-            CompletedExecution completedExecution )
-    {
-        List<TrackedProperty> tracked = cacheConfig.getTrackedProperties( mojoExecution );
+    boolean isParamsMatched(
+            MavenProject project, MojoExecution mojoExecution, Mojo mojo, CompletedExecution completedExecution) {
+        List<TrackedProperty> tracked = cacheConfig.getTrackedProperties(mojoExecution);
 
-        for ( TrackedProperty trackedProperty : tracked )
-        {
+        for (TrackedProperty trackedProperty : tracked) {
             final String propertyName = trackedProperty.getPropertyName();
 
-            String expectedValue = DtoUtils.findPropertyValue( propertyName, completedExecution );
-            if ( expectedValue == null )
-            {
+            String expectedValue = DtoUtils.findPropertyValue(propertyName, completedExecution);
+            if (expectedValue == null) {
                 expectedValue = trackedProperty.getDefaultValue() != null ? trackedProperty.getDefaultValue() : "null";
             }
 
             final String currentValue;
-            try
-            {
-                Object value = ReflectionUtils.getValueIncludingSuperclasses( propertyName, mojo );
+            try {
+                Object value = ReflectionUtils.getValueIncludingSuperclasses(propertyName, mojo);
 
-                if ( value instanceof File )
-                {
+                if (value instanceof File) {
                     Path baseDirPath = project.getBasedir().toPath();
-                    Path path = ( ( File ) value ).toPath();
-                    currentValue = normalizedPath( path, baseDirPath );
-                }
-                else if ( value instanceof Path )
-                {
+                    Path path = ((File) value).toPath();
+                    currentValue = normalizedPath(path, baseDirPath);
+                } else if (value instanceof Path) {
                     Path baseDirPath = project.getBasedir().toPath();
-                    currentValue = normalizedPath( ( ( Path ) value ), baseDirPath );
+                    currentValue = normalizedPath(((Path) value), baseDirPath);
+                } else if (value != null && value.getClass().isArray()) {
+                    currentValue = ArrayUtils.toString(value);
+                } else {
+                    currentValue = String.valueOf(value);
                 }
-                else if ( value != null && value.getClass().isArray() )
-                {
-                    currentValue = ArrayUtils.toString( value );
-                }
-                else
-                {
-                    currentValue = String.valueOf( value );
-                }
-            }
-            catch ( IllegalAccessException e )
-            {
-                LOGGER.error( "Cannot extract plugin property {} from mojo {}", propertyName, mojo, e );
+            } catch (IllegalAccessException e) {
+                LOGGER.error("Cannot extract plugin property {} from mojo {}", propertyName, mojo, e);
                 return false;
             }
 
-            if ( !StringUtils.equals( currentValue, expectedValue ) )
-            {
-                if ( !StringUtils.equals( currentValue, trackedProperty.getSkipValue() ) )
-                {
-                    LOGGER.info( "Plugin parameter mismatch found. Parameter: {}, expected: {}, actual: {}",
-                            propertyName, expectedValue, currentValue );
+            if (!StringUtils.equals(currentValue, expectedValue)) {
+                if (!StringUtils.equals(currentValue, trackedProperty.getSkipValue())) {
+                    LOGGER.info(
+                            "Plugin parameter mismatch found. Parameter: {}, expected: {}, actual: {}",
+                            propertyName,
+                            expectedValue,
+                            currentValue);
                     return false;
-                }
-                else
-                {
-                    LOGGER.warn( "Cache contains plugin execution with skip flag and might be incomplete. "
-                            + "Property: {}, execution {}",
-                            propertyName, mojoExecutionKey( mojoExecution ) );
+                } else {
+                    LOGGER.warn(
+                            "Cache contains plugin execution with skip flag and might be incomplete. "
+                                    + "Property: {}, execution {}",
+                            propertyName,
+                            mojoExecutionKey(mojoExecution));
                 }
             }
         }
@@ -360,11 +320,22 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy
      * - all relative paths are considered portable and should not be touched
      * - absolute paths outside of project directory could not be deterministically relativized and not touched
      */
-    private static String normalizedPath( Path path, Path baseDirPath )
-    {
-        boolean isProjectSubdir = path.isAbsolute() && path.startsWith( baseDirPath );
-        Path preparedPath = isProjectSubdir ? baseDirPath.relativize( path ) : path;
-        return preparedPath.normalize().toString();
+    private static String normalizedPath(Path path, Path baseDirPath) {
+        boolean isProjectSubdir = path.isAbsolute() && path.startsWith(baseDirPath);
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug(
+                    "normalizedPath isProjectSubdir {} path '{}' - baseDirPath '{}', path.isAbsolute() {}, path.startsWith(baseDirPath) {}",
+                    isProjectSubdir,
+                    path,
+                    baseDirPath,
+                    path.isAbsolute(),
+                    path.startsWith(baseDirPath));
+        }
+        Path preparedPath = isProjectSubdir ? baseDirPath.relativize(path) : path;
+        String normalizedPath = preparedPath.normalize().toString();
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("normalizedPath '{}' - {} return {}", path, baseDirPath, normalizedPath);
+        }
+        return normalizedPath;
     }
-
 }

@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -20,15 +20,15 @@ package org.apache.maven.buildcache;
 
 import java.io.IOException;
 import java.nio.file.Path;
+
 import org.apache.maven.project.MavenProject;
 
-public interface RestoredArtifactHandler
-{
+public interface RestoredArtifactHandler {
 
-    //we might store in cache artifact which was build with previous version
-    //1.0-SNAPSHOT is kept in cache but real version of project is 2.0
-    //for pom packaging this is done automatically by maven but for jar and other there might be
-    //sensitive metadata with previous version. Versions mismatch could lead errors
-    Path adjustArchiveArtifactVersion( MavenProject project, String originalArtifactVersion, Path artifactFile )
+    // we might store in cache artifact which was build with previous version
+    // 1.0-SNAPSHOT is kept in cache but real version of project is 2.0
+    // for pom packaging this is done automatically by maven but for jar and other there might be
+    // sensitive metadata with previous version. Versions mismatch could lead errors
+    Path adjustArchiveArtifactVersion(MavenProject project, String originalArtifactVersion, Path artifactFile)
             throws IOException;
 }

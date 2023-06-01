@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -24,23 +24,19 @@ import java.nio.file.Path;
 /**
  * HashAlgorithm
  */
-public class HashAlgorithm
-{
+public class HashAlgorithm {
 
     private final Hash.Algorithm algorithm;
 
-    HashAlgorithm( Hash.Algorithm algorithm )
-    {
+    HashAlgorithm(Hash.Algorithm algorithm) {
         this.algorithm = algorithm;
     }
 
-    public String hash( Path path ) throws IOException
-    {
-        return HexUtils.encode( algorithm.hash( path ) );
+    public String hash(Path path) throws IOException {
+        return HexUtils.encode(algorithm.hash(path));
     }
 
-    public String hash( byte[] bytes )
-    {
-        return HexUtils.encode( algorithm.hash( bytes ) );
+    public String hash(byte[] bytes) {
+        return HexUtils.encode(algorithm.hash(bytes));
     }
 }

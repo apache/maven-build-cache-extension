@@ -17,53 +17,63 @@
 
 ## Normal usage
 
-Once extension is activated, cache will kick-in automatically on every lifecycle build of phase `package` or higher.
+Once the extension is activated, the cache automatically kicks in on every `package` or higher phase.
 
 ## Subtree builds
 
-Build could be invoked on any module in project and will try to discover cache by introspecting dependencies. In order
-to identify which dependencies are part of cacheable project the cache engine needs to know:
+The build could be invoked on any module in the project and will try to discover the cache by introspecting
+dependencies. In order
+to identify which dependencies are cacheable, the cache introspects the following:
 
-* Full project root location which must be passed with `-Dmaven.multiModuleProjectDirectory`
-* Profiles which activate full graph in project build. Underlying implementation logic is to introspect reactor
-  graph in `full` mode to discover which dependencies are part of the full project and cacheable. This information will
-  be used when subtree is being build to identify dependencies as a part of a wider project and process them from cache:
+* Project root location passed with `-Dmaven.multiModuleProjectDirectory`
+* Profiles that activate full graph in the project build. The cache uses this `full` mode to categorize project modules
+  as cacheable or not:
 
 ```xml
+
 <configuration>
-  ...
-  <multiModule>
-    <discovery>
-      <scanProfiles>
-        <scanProfile>my-full-project-profile</scanProfile>
-      </scanProfiles>
-    </discovery>
-  </multiModule>
-  ...
+    ...
+    <multiModule>
+        <discovery>
+            <scanProfiles>
+                <scanProfile>my-full-project-profile</scanProfile>
+            </scanProfiles>
+        </discovery>
+    </multiModule>
+    ...
 </configuration>
 ```
 
 ## Disable cache
 
 Disable in config:
+
 ```xml
+
 <cache>
   <configuration>
-    <enabled>true</enabled>
+    <enabled>false</enabled>
   </configuration>
 </cache>
 ```
-On command line:
+
+On the command line:
+
 ```
 -Dmaven.build.cache.enabled=false
+```
+
+When a configuration is disabled by default in the config, it can be enabled via the command line with:
+```
+-Dmaven.build.cache.enabled=true
 ```
 
 ## IDE support
 
 Build cache extension is generally compatible with IDEs with one limitation:
 
-* The cache doesn't restore full project state. Compiled classes and other output directories will not be restored from
-  cache if `clean` was invoked. In order to work efficiently, IDE should be configured to not use Maven
-  output (`target`) directories for compilation. In that case compilation caches will be maintained by IDE leveraging
-  both fast builds and fast compilation
-
+* The cache doesn't restore the entire project state. Compiled classes, unpacked artifacts, and similar ones typically
+  will not be restored in the build directory (aka `target`). Configure your IDE to not use Maven
+  build (`target`) directories for compilation and execution. In that case, IDE will provide fast compilation using
+  native caches, and
+  the build cache will supplement that with fast builds.

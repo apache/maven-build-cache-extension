@@ -31,7 +31,9 @@
     </encoder>
   </appender>
 
-  <root level="DEBUG">
+  <logger name="org.apache.maven.buildcache.BuildCacheMojosExecutionStrategy" level="debug"/>
+
+  <root level="INFO">
     <appender-ref ref="CONSOLE" />
   </root>
 

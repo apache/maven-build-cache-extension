@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -18,10 +18,12 @@
  */
 package org.apache.maven.buildcache;
 
+import javax.annotation.Nonnull;
+
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Optional;
-import javax.annotation.Nonnull;
+
 import org.apache.maven.buildcache.xml.Build;
 import org.apache.maven.buildcache.xml.CacheSource;
 import org.apache.maven.buildcache.xml.build.Artifact;
@@ -31,18 +33,17 @@ import org.apache.maven.model.Dependency;
 /**
  * Local cache repository.
  */
-public interface LocalCacheRepository extends CacheRepository
-{
+public interface LocalCacheRepository extends CacheRepository {
 
-    void beforeSave( CacheContext environment ) throws IOException;
+    void beforeSave(CacheContext environment) throws IOException;
 
-    Path getArtifactFile( CacheContext context, CacheSource source, Artifact artifact ) throws IOException;
+    Path getArtifactFile(CacheContext context, CacheSource source, Artifact artifact) throws IOException;
 
-    void clearCache( CacheContext context );
-
-    @Nonnull
-    Optional<Build> findBestMatchingBuild( MavenSession session, Dependency dependency ) throws IOException;
+    void clearCache(CacheContext context);
 
     @Nonnull
-    Optional<Build> findLocalBuild( CacheContext context ) throws IOException;
+    Optional<Build> findBestMatchingBuild(MavenSession session, Dependency dependency) throws IOException;
+
+    @Nonnull
+    Optional<Build> findLocalBuild(CacheContext context) throws IOException;
 }

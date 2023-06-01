@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -35,6 +35,7 @@ import java.util.function.Supplier;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.handler.ArtifactHandler;
@@ -54,118 +55,96 @@ import static org.apache.maven.artifact.Artifact.SNAPSHOT_VERSION;
 /**
  * Cache Utils
  */
-public class CacheUtils
-{
+public class CacheUtils {
 
-    public static boolean isPom( MavenProject project )
-    {
-        return project.getPackaging().equals( "pom" );
+    public static boolean isPom(MavenProject project) {
+        return project.getPackaging().equals("pom");
     }
 
-    public static boolean isPom( Dependency dependency )
-    {
-        return dependency.getType().equals( "pom" );
+    public static boolean isPom(Dependency dependency) {
+        return dependency.getType().equals("pom");
     }
 
-    public static boolean isSnapshot( String version )
-    {
-        return version.endsWith( SNAPSHOT_VERSION ) || version.endsWith( LATEST_VERSION );
+    public static boolean isSnapshot(String version) {
+        return version.endsWith(SNAPSHOT_VERSION) || version.endsWith(LATEST_VERSION);
     }
 
-    public static String normalizedName( Artifact artifact )
-    {
-        if ( artifact.getFile() == null )
-        {
+    public static String normalizedName(Artifact artifact) {
+        if (artifact.getFile() == null) {
             return null;
         }
 
-        StringBuilder filename = new StringBuilder( artifact.getArtifactId() );
+        StringBuilder filename = new StringBuilder(artifact.getArtifactId());
 
-        if ( artifact.hasClassifier() )
-        {
-            filename.append( "-" ).append( artifact.getClassifier() );
+        if (artifact.hasClassifier()) {
+            filename.append("-").append(artifact.getClassifier());
         }
 
         final ArtifactHandler artifactHandler = artifact.getArtifactHandler();
-        if ( artifactHandler != null && StringUtils.isNotBlank( artifactHandler.getExtension() ) )
-        {
-            filename.append( "." ).append( artifactHandler.getExtension() );
+        if (artifactHandler != null && StringUtils.isNotBlank(artifactHandler.getExtension())) {
+            filename.append(".").append(artifactHandler.getExtension());
         }
         return filename.toString();
     }
 
-    public static String mojoExecutionKey( MojoExecution mojo )
-    {
-        return StringUtils.join( Arrays.asList(
-                StringUtils.defaultIfEmpty( mojo.getExecutionId(), "emptyExecId" ),
-                StringUtils.defaultIfEmpty( mojo.getGoal(), "emptyGoal" ),
-                StringUtils.defaultIfEmpty( mojo.getLifecyclePhase(), "emptyLifecyclePhase" ),
-                StringUtils.defaultIfEmpty( mojo.getArtifactId(), "emptyArtifactId" ),
-                StringUtils.defaultIfEmpty( mojo.getGroupId(), "emptyGroupId" ) ), ":" );
+    public static String mojoExecutionKey(MojoExecution mojo) {
+        return StringUtils.join(
+                Arrays.asList(
+                        StringUtils.defaultIfEmpty(mojo.getExecutionId(), "emptyExecId"),
+                        StringUtils.defaultIfEmpty(mojo.getGoal(), "emptyGoal"),
+                        StringUtils.defaultIfEmpty(mojo.getLifecyclePhase(), "emptyLifecyclePhase"),
+                        StringUtils.defaultIfEmpty(mojo.getArtifactId(), "emptyArtifactId"),
+                        StringUtils.defaultIfEmpty(mojo.getGroupId(), "emptyGroupId")),
+                ":");
     }
 
-    public static Path getMultimoduleRoot( MavenSession session )
-    {
+    public static Path getMultimoduleRoot(MavenSession session) {
         return session.getRequest().getMultiModuleProjectDirectory().toPath();
     }
 
-    public static Scm readGitInfo( MavenSession session ) throws IOException
-    {
+    public static Scm readGitInfo(MavenSession session) throws IOException {
         final Scm scmCandidate = new Scm();
-        final Path gitDir = getMultimoduleRoot( session ).resolve( ".git" );
-        if ( Files.isDirectory( gitDir ) )
-        {
-            final Path headFile = gitDir.resolve( "HEAD" );
-            if ( Files.exists( headFile ) )
-            {
-                String headRef = readFirstLine( headFile, "<missing branch>" );
-                if ( headRef.startsWith( "ref: " ) )
-                {
-                    String branch = trim( removeStart( headRef, "ref: " ) );
-                    scmCandidate.setSourceBranch( branch );
-                    final Path refPath = gitDir.resolve( branch );
-                    if ( Files.exists( refPath ) )
-                    {
-                        String revision = readFirstLine( refPath, "<missing revision>" );
-                        scmCandidate.setRevision( trim( revision ) );
+        final Path gitDir = getMultimoduleRoot(session).resolve(".git");
+        if (Files.isDirectory(gitDir)) {
+            final Path headFile = gitDir.resolve("HEAD");
+            if (Files.exists(headFile)) {
+                String headRef = readFirstLine(headFile, "<missing branch>");
+                if (headRef.startsWith("ref: ")) {
+                    String branch = trim(removeStart(headRef, "ref: "));
+                    scmCandidate.setSourceBranch(branch);
+                    final Path refPath = gitDir.resolve(branch);
+                    if (Files.exists(refPath)) {
+                        String revision = readFirstLine(refPath, "<missing revision>");
+                        scmCandidate.setRevision(trim(revision));
                     }
-                }
-                else
-                {
-                    scmCandidate.setSourceBranch( headRef );
-                    scmCandidate.setRevision( headRef );
+                } else {
+                    scmCandidate.setSourceBranch(headRef);
+                    scmCandidate.setRevision(headRef);
                 }
             }
         }
         return scmCandidate;
     }
 
-    private static String readFirstLine( Path path, String defaultValue ) throws IOException
-    {
-        return Files.lines( path, StandardCharsets.UTF_8 ).findFirst().orElse( defaultValue );
+    private static String readFirstLine(Path path, String defaultValue) throws IOException {
+        return Files.lines(path, StandardCharsets.UTF_8).findFirst().orElse(defaultValue);
     }
 
-    public static <T> T getLast( List<T> list )
-    {
+    public static <T> T getLast(List<T> list) {
         int size = list.size();
-        if ( size > 0 )
-        {
-            return list.get( size - 1 );
+        if (size > 0) {
+            return list.get(size - 1);
         }
         throw new NoSuchElementException();
     }
 
-    public static <T> T getOrCreate( MavenSession session, Object key, Supplier<T> supplier )
-    {
+    public static <T> T getOrCreate(MavenSession session, Object key, Supplier<T> supplier) {
         SessionData data = session.getRepositorySession().getData();
-        while ( true )
-        {
-            T t = ( T ) data.get( key );
-            if ( t == null )
-            {
+        while (true) {
+            T t = (T) data.get(key);
+            if (t == null) {
                 t = supplier.get();
-                if ( data.set( key, null, t ) )
-                {
+                if (data.set(key, null, t)) {
                     continue;
                 }
             }
@@ -173,79 +152,62 @@ public class CacheUtils
         }
     }
 
-    public static boolean isArchive( File file )
-    {
+    public static boolean isArchive(File file) {
         String fileName = file.getName();
-        if ( !file.isFile() || file.isHidden() )
-        {
+        if (!file.isFile() || file.isHidden()) {
             return false;
         }
-        return StringUtils.endsWithAny( fileName, ".jar", ".zip", ".war", ".ear" );
+        return StringUtils.endsWithAny(fileName, ".jar", ".zip", ".war", ".ear");
     }
 
-    public static void zip( Path dir, Path zip ) throws IOException
-    {
-        try ( ZipOutputStream zipOutputStream = new ZipOutputStream( Files.newOutputStream( zip ) ) )
-        {
-            Files.walkFileTree( dir, new SimpleFileVisitor<Path>()
-            {
+    public static void zip(Path dir, Path zip) throws IOException {
+        try (ZipOutputStream zipOutputStream = new ZipOutputStream(Files.newOutputStream(zip))) {
+            Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
 
                 @Override
-                public FileVisitResult visitFile( Path path, BasicFileAttributes basicFileAttributes )
-                        throws IOException
-                {
-                    final ZipEntry zipEntry = new ZipEntry( dir.relativize( path ).toString() );
-                    zipOutputStream.putNextEntry( zipEntry );
-                    Files.copy( path, zipOutputStream );
+                public FileVisitResult visitFile(Path path, BasicFileAttributes basicFileAttributes)
+                        throws IOException {
+                    final ZipEntry zipEntry = new ZipEntry(dir.relativize(path).toString());
+                    zipOutputStream.putNextEntry(zipEntry);
+                    Files.copy(path, zipOutputStream);
                     zipOutputStream.closeEntry();
                     return FileVisitResult.CONTINUE;
                 }
-            } );
+            });
         }
     }
 
-    public static void unzip( Path zip, Path out ) throws IOException
-    {
-        try ( ZipInputStream zis = new ZipInputStream( Files.newInputStream( zip ) ) )
-        {
+    public static void unzip(Path zip, Path out) throws IOException {
+        try (ZipInputStream zis = new ZipInputStream(Files.newInputStream(zip))) {
             ZipEntry entry = zis.getNextEntry();
-            while ( entry != null )
-            {
-                Path file = out.resolve( entry.getName() );
-                if ( !file.normalize().startsWith( out.normalize() ) )
-                {
-                    throw new RuntimeException( "Bad zip entry" );
+            while (entry != null) {
+                Path file = out.resolve(entry.getName());
+                if (!file.normalize().startsWith(out.normalize())) {
+                    throw new RuntimeException("Bad zip entry");
                 }
-                if ( entry.isDirectory() )
-                {
-                    Files.createDirectory( file );
-                }
-                else
-                {
+                if (entry.isDirectory()) {
+                    Files.createDirectory(file);
+                } else {
                     Path parent = file.getParent();
-                    Files.createDirectories( parent );
-                    Files.copy( zis, file );
+                    Files.createDirectories(parent);
+                    Files.copy(zis, file);
                 }
-                Files.setLastModifiedTime( file, FileTime.fromMillis( entry.getTime() ) );
+                Files.setLastModifiedTime(file, FileTime.fromMillis(entry.getTime()));
                 entry = zis.getNextEntry();
             }
         }
     }
 
-    public static <T> void debugPrintCollection( Logger logger, Collection<T> values, String heading,
-            String elementCaption )
-    {
-        if ( logger.isDebugEnabled() && values != null && !values.isEmpty() )
-        {
+    public static <T> void debugPrintCollection(
+            Logger logger, Collection<T> values, String heading, String elementCaption) {
+        if (logger.isDebugEnabled() && values != null && !values.isEmpty()) {
             final int size = values.size();
             int i = 0;
-            logger.debug( "{} (total {})", heading, size );
-            for ( T value : values )
-            {
+            logger.debug("{} (total {})", heading, size);
+            for (T value : values) {
                 i++;
-                logger.debug( "{} {} of {} : {}", elementCaption, i, size, value );
+                logger.debug("{} {} of {} : {}", elementCaption, i, size, value);
             }
         }
     }
-
 }

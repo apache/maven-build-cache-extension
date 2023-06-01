@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -18,6 +18,11 @@
  */
 package org.apache.maven.buildcache.xml;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import javax.inject.Inject;
+import javax.inject.Named;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -26,10 +31,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import javax.inject.Inject;
-import javax.inject.Named;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.SessionScoped;
 import org.apache.maven.buildcache.DefaultPluginScanConfig;
@@ -74,14 +76,15 @@ import static org.apache.maven.buildcache.CacheUtils.getMultimoduleRoot;
  */
 @SessionScoped
 @Named
-@SuppressWarnings( "unused" )
-public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheConfig
-{
+@SuppressWarnings("unused")
+public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheConfig {
 
     public static final String CONFIG_PATH_PROPERTY_NAME = "maven.build.cache.configPath";
     public static final String CACHE_ENABLED_PROPERTY_NAME = "maven.build.cache.enabled";
     public static final String CACHE_LOCATION_PROPERTY_NAME = "maven.build.cache.location";
-    public static final String REMOTE_URL_PROPERTY_NAME = "maven.build.cache.remoteUrl";
+    public static final String REMOTE_ENABLED_PROPERTY_NAME = "maven.build.cache.remote.enabled";
+    public static final String REMOTE_URL_PROPERTY_NAME = "maven.build.cache.remote.url";
+    public static final String REMOTE_SERVER_ID_PROPERTY_NAME = "maven.build.cache.remote.server.id";
     public static final String SAVE_TO_REMOTE_PROPERTY_NAME = "maven.build.cache.remote.save.enabled";
     public static final String SAVE_NON_OVERRIDEABLE_NAME = "maven.build.cache.remote.save.final";
     public static final String FAIL_FAST_PROPERTY_NAME = "maven.build.cache.failFast";
@@ -100,7 +103,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
      */
     public static final String CACHE_SKIP = "maven.build.cache.skipCache";
 
-    private static final Logger LOGGER = LoggerFactory.getLogger( CacheConfigImpl.class );
+    private static final Logger LOGGER = LoggerFactory.getLogger(CacheConfigImpl.class);
 
     private final XmlService xmlService;
     private final MavenSession session;
@@ -112,8 +115,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     private List<Pattern> excludePatterns;
 
     @Inject
-    public CacheConfigImpl( XmlService xmlService, MavenSession session, RuntimeInformation rtInfo )
-    {
+    public CacheConfigImpl(XmlService xmlService, MavenSession session, RuntimeInformation rtInfo) {
         this.xmlService = xmlService;
         this.session = session;
         this.rtInfo = rtInfo;
@@ -121,81 +123,63 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
 
     @Nonnull
     @Override
-    public CacheState initialize()
-    {
-        if ( state == null )
-        {
-            synchronized ( this )
-            {
-                if ( state == null )
-                {
-                    final String enabled = getProperty( CACHE_ENABLED_PROPERTY_NAME, "true" );
+    public CacheState initialize() {
+        if (state == null) {
+            synchronized (this) {
+                if (state == null) {
+                    final boolean enabled = getProperty(CACHE_ENABLED_PROPERTY_NAME, true);
 
-                    if ( !rtInfo.isMavenVersion( "[3.9.0-SNAPSHOT,)" ) )
-                    {
-                        LOGGER.warn( "Cache requires Maven >= 3.9, but version is " + rtInfo.getMavenVersion()
-                                + ". Disabling cache." );
+                    if (!rtInfo.isMavenVersion("[3.9.0,)")) {
+                        LOGGER.warn("Cache requires Maven >= 3.9, but version is " + rtInfo.getMavenVersion()
+                                + ". Disabling cache.");
                         state = CacheState.DISABLED;
-                    }
-                    else if ( !Boolean.parseBoolean( enabled ) )
-                    {
-                        LOGGER.info(
-                                "Cache disabled by command line flag, project will be built fully and not cached" );
+                    } else if (!enabled) {
+                        LOGGER.info("Cache disabled by command line flag, project will be built fully and not cached");
                         state = CacheState.DISABLED;
-                    }
-                    else
-                    {
+                    } else {
                         Path configPath;
 
-                        String configPathText = getProperty( CONFIG_PATH_PROPERTY_NAME, null );
-                        if ( StringUtils.isNotBlank( configPathText ) )
-                        {
-                            configPath = Paths.get( configPathText );
-                        }
-                        else
-                        {
-                            configPath = getMultimoduleRoot( session ).resolve( ".mvn" )
-                                    .resolve( "maven-build-cache-config.xml" );
+                        String configPathText = getProperty(CONFIG_PATH_PROPERTY_NAME, null);
+                        if (StringUtils.isNotBlank(configPathText)) {
+                            configPath = Paths.get(configPathText);
+                        } else {
+                            configPath =
+                                    getMultimoduleRoot(session).resolve(".mvn").resolve("maven-build-cache-config.xml");
                         }
 
-                        if ( !Files.exists( configPath ) )
-                        {
-                            LOGGER.info( "Cache configuration is not available at configured path {}, "
-                                    + "cache is enabled with defaults", configPath );
+                        if (!Files.exists(configPath)) {
+                            LOGGER.info(
+                                    "Cache configuration is not available at configured path {}, "
+                                            + "cache is enabled with defaults",
+                                    configPath);
                             cacheConfig = new CacheConfig();
-                        }
-                        else
-                        {
-                            try
-                            {
-                                LOGGER.info( "Loading cache configuration from {}", configPath );
-                                cacheConfig = xmlService.loadCacheConfig( configPath.toFile() );
-                            }
-                            catch ( Exception e )
-                            {
+                        } else {
+                            try {
+                                LOGGER.info("Loading cache configuration from {}", configPath);
+                                cacheConfig = xmlService.loadCacheConfig(configPath.toFile());
+                            } catch (Exception e) {
                                 throw new IllegalArgumentException(
-                                        "Cannot initialize cache because xml config is not valid or not available", e );
+                                        "Cannot initialize cache because xml config is not valid or not available", e);
                             }
                         }
-                        fillWithDefaults( cacheConfig );
+                        fillWithDefaults(cacheConfig);
 
-                        if ( !cacheConfig.getConfiguration().isEnabled() )
-                        {
+                        // `maven.build.cache.enabled` overrides the `enabled` of the XML file
+                        // to allow a disabled configuration to be enabled on the command line
+                        boolean cacheEnabled = getProperty(
+                                CACHE_ENABLED_PROPERTY_NAME, getConfiguration().isEnabled());
+
+                        if (!cacheEnabled) {
                             state = CacheState.DISABLED;
-                        }
-                        else
-                        {
+                        } else {
                             String hashAlgorithm = null;
-                            try
-                            {
+                            try {
                                 hashAlgorithm = getConfiguration().getHashAlgorithm();
-                                hashFactory = HashFactory.of( hashAlgorithm );
-                                LOGGER.info( "Using {} hash algorithm for cache", hashAlgorithm );
-                            }
-                            catch ( Exception e )
-                            {
-                                throw new IllegalArgumentException( "Unsupported hashing algorithm: " + hashAlgorithm,
-                                        e );
+                                hashFactory = HashFactory.of(hashAlgorithm);
+                                LOGGER.info("Using {} hash algorithm for cache", hashAlgorithm);
+                            } catch (Exception e) {
+                                throw new IllegalArgumentException(
+                                        "Unsupported hashing algorithm: " + hashAlgorithm, e);
                             }
 
                             excludePatterns = compileExcludePatterns();
@@ -208,82 +192,67 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
         return state;
     }
 
-    private void fillWithDefaults( CacheConfig cacheConfig )
-    {
-        if ( cacheConfig.getConfiguration() == null )
-        {
-            cacheConfig.setConfiguration( new Configuration() );
+    private void fillWithDefaults(CacheConfig cacheConfig) {
+        if (cacheConfig.getConfiguration() == null) {
+            cacheConfig.setConfiguration(new Configuration());
         }
         Configuration configuration = cacheConfig.getConfiguration();
-        if ( configuration.getLocal() == null )
-        {
-            configuration.setLocal( new Local() );
+        if (configuration.getLocal() == null) {
+            configuration.setLocal(new Local());
         }
-        if ( configuration.getRemote() == null )
-        {
-            configuration.setRemote( new Remote() );
+        if (configuration.getRemote() == null) {
+            configuration.setRemote(new Remote());
         }
-        if ( cacheConfig.getInput() == null )
-        {
-            cacheConfig.setInput( new Input() );
+        if (cacheConfig.getInput() == null) {
+            cacheConfig.setInput(new Input());
         }
         Input input = cacheConfig.getInput();
-        if ( input.getGlobal() == null )
-        {
-            input.setGlobal( new PathSet() );
+        if (input.getGlobal() == null) {
+            input.setGlobal(new PathSet());
         }
     }
 
     @Nonnull
     @Override
-    public List<TrackedProperty> getTrackedProperties( MojoExecution mojoExecution )
-    {
+    public List<TrackedProperty> getTrackedProperties(MojoExecution mojoExecution) {
         checkInitializedState();
-        final GoalReconciliation reconciliationConfig = findReconciliationConfig( mojoExecution );
-        if ( reconciliationConfig != null )
-        {
+        final GoalReconciliation reconciliationConfig = findReconciliationConfig(mojoExecution);
+        if (reconciliationConfig != null) {
             return reconciliationConfig.getReconciles();
-        }
-        else
-        {
+        } else {
             return Collections.emptyList();
         }
     }
 
     @Override
-    public boolean isLogAllProperties( MojoExecution mojoExecution )
-    {
-        final GoalReconciliation reconciliationConfig = findReconciliationConfig( mojoExecution );
-        if ( reconciliationConfig != null && reconciliationConfig.isLogAll() )
-        {
+    public boolean isLogAllProperties(MojoExecution mojoExecution) {
+        final GoalReconciliation reconciliationConfig = findReconciliationConfig(mojoExecution);
+        if (reconciliationConfig != null && reconciliationConfig.isLogAll()) {
             return true;
         }
-        return cacheConfig.getExecutionControl() != null && cacheConfig.getExecutionControl().getReconcile() != null
+        return cacheConfig.getExecutionControl() != null
+                && cacheConfig.getExecutionControl().getReconcile() != null
                 && cacheConfig.getExecutionControl().getReconcile().isLogAllProperties();
     }
 
-    private GoalReconciliation findReconciliationConfig( MojoExecution mojoExecution )
-    {
-        if ( cacheConfig.getExecutionControl() == null )
-        {
+    private GoalReconciliation findReconciliationConfig(MojoExecution mojoExecution) {
+        if (cacheConfig.getExecutionControl() == null) {
             return null;
         }
 
         final ExecutionControl executionControl = cacheConfig.getExecutionControl();
-        if ( executionControl.getReconcile() == null )
-        {
+        if (executionControl.getReconcile() == null) {
             return null;
         }
 
-        final List<GoalReconciliation> reconciliation = executionControl.getReconcile().getPlugins();
+        final List<GoalReconciliation> reconciliation =
+                executionControl.getReconcile().getPlugins();
 
-        for ( GoalReconciliation goalReconciliationConfig : reconciliation )
-        {
+        for (GoalReconciliation goalReconciliationConfig : reconciliation) {
             final String goal = mojoExecution.getGoal();
 
-            if ( isPluginMatch( mojoExecution.getPlugin(), goalReconciliationConfig ) && StringUtils.equals( goal,
-                    goalReconciliationConfig.getGoal() ) )
-            {
+            if (isPluginMatch(mojoExecution.getPlugin(), goalReconciliationConfig)
+                    && StringUtils.equals(goal, goalReconciliationConfig.getGoal())) {
                 return goalReconciliationConfig;
             }
         }
@@ -292,46 +261,36 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
 
     @Nonnull
     @Override
-    public List<PropertyName> getLoggedProperties( MojoExecution mojoExecution )
-    {
+    public List<PropertyName> getLoggedProperties(MojoExecution mojoExecution) {
         checkInitializedState();
 
-        final GoalReconciliation reconciliationConfig = findReconciliationConfig( mojoExecution );
-        if ( reconciliationConfig != null )
-        {
+        final GoalReconciliation reconciliationConfig = findReconciliationConfig(mojoExecution);
+        if (reconciliationConfig != null) {
             return reconciliationConfig.getLogs();
-        }
-        else
-        {
+        } else {
             return Collections.emptyList();
         }
     }
 
     @Nonnull
     @Override
-    public List<PropertyName> getNologProperties( MojoExecution mojoExecution )
-    {
+    public List<PropertyName> getNologProperties(MojoExecution mojoExecution) {
         checkInitializedState();
-        final GoalReconciliation reconciliationConfig = findReconciliationConfig( mojoExecution );
-        if ( reconciliationConfig != null )
-        {
+        final GoalReconciliation reconciliationConfig = findReconciliationConfig(mojoExecution);
+        if (reconciliationConfig != null) {
             return reconciliationConfig.getNologs();
-        }
-        else
-        {
+        } else {
             return Collections.emptyList();
         }
     }
 
     @Nonnull
     @Override
-    public List<String> getEffectivePomExcludeProperties( Plugin plugin )
-    {
+    public List<String> getEffectivePomExcludeProperties(Plugin plugin) {
         checkInitializedState();
-        final PluginConfigurationScan pluginConfig = findPluginScanConfig( plugin );
+        final PluginConfigurationScan pluginConfig = findPluginScanConfig(plugin);
 
-        if ( pluginConfig != null && pluginConfig.getEffectivePom() != null )
-        {
+        if (pluginConfig != null && pluginConfig.getEffectivePom() != null) {
             return pluginConfig.getEffectivePom().getExcludeProperties();
         }
         return Collections.emptyList();
@@ -339,79 +298,65 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
 
     @Nullable
     @Override
-    public MultiModule getMultiModule()
-    {
+    public MultiModule getMultiModule() {
         checkInitializedState();
         return cacheConfig.getConfiguration().getMultiModule();
     }
 
-    private PluginConfigurationScan findPluginScanConfig( Plugin plugin )
-    {
-        if ( cacheConfig.getInput() == null )
-        {
+    private PluginConfigurationScan findPluginScanConfig(Plugin plugin) {
+        if (cacheConfig.getInput() == null) {
             return null;
         }
 
-        final List<PluginConfigurationScan> pluginConfigs = cacheConfig.getInput().getPlugins();
-        for ( PluginConfigurationScan pluginConfig : pluginConfigs )
-        {
-            if ( isPluginMatch( plugin, pluginConfig ) )
-            {
+        final List<PluginConfigurationScan> pluginConfigs =
+                cacheConfig.getInput().getPlugins();
+        for (PluginConfigurationScan pluginConfig : pluginConfigs) {
+            if (isPluginMatch(plugin, pluginConfig)) {
                 return pluginConfig;
             }
         }
         return null;
     }
 
-    private boolean isPluginMatch( Plugin plugin, CoordinatesBase pluginConfig )
-    {
-        return StringUtils.equals( pluginConfig.getArtifactId(),
-                plugin.getArtifactId() )
-                && ( pluginConfig.getGroupId() == null || StringUtils.equals(
-                        pluginConfig.getGroupId(), plugin.getGroupId() ) );
+    private boolean isPluginMatch(Plugin plugin, CoordinatesBase pluginConfig) {
+        return StringUtils.equals(pluginConfig.getArtifactId(), plugin.getArtifactId())
+                && (pluginConfig.getGroupId() == null
+                        || StringUtils.equals(pluginConfig.getGroupId(), plugin.getGroupId()));
     }
 
     @Nonnull
     @Override
-    public PluginScanConfig getPluginDirScanConfig( Plugin plugin )
-    {
+    public PluginScanConfig getPluginDirScanConfig(Plugin plugin) {
         checkInitializedState();
-        final PluginConfigurationScan pluginConfig = findPluginScanConfig( plugin );
-        if ( pluginConfig == null || pluginConfig.getDirScan() == null )
-        {
+        final PluginConfigurationScan pluginConfig = findPluginScanConfig(plugin);
+        if (pluginConfig == null || pluginConfig.getDirScan() == null) {
             return new DefaultPluginScanConfig();
         }
 
-        return new PluginScanConfigImpl( pluginConfig.getDirScan() );
+        return new PluginScanConfigImpl(pluginConfig.getDirScan());
     }
 
     @Nonnull
     @Override
-    public PluginScanConfig getExecutionDirScanConfig( Plugin plugin, PluginExecution exec )
-    {
+    public PluginScanConfig getExecutionDirScanConfig(Plugin plugin, PluginExecution exec) {
         checkInitializedState();
-        final PluginConfigurationScan pluginScanConfig = findPluginScanConfig( plugin );
+        final PluginConfigurationScan pluginScanConfig = findPluginScanConfig(plugin);
 
-        if ( pluginScanConfig != null )
-        {
-            final ExecutionConfigurationScan executionScanConfig = findExecutionScanConfig( exec,
-                    pluginScanConfig.getExecutions() );
-            if ( executionScanConfig != null && executionScanConfig.getDirScan() != null )
-            {
-                return new PluginScanConfigImpl( executionScanConfig.getDirScan() );
+        if (pluginScanConfig != null) {
+            final ExecutionConfigurationScan executionScanConfig =
+                    findExecutionScanConfig(exec, pluginScanConfig.getExecutions());
+            if (executionScanConfig != null && executionScanConfig.getDirScan() != null) {
+                return new PluginScanConfigImpl(executionScanConfig.getDirScan());
             }
         }
 
         return new DefaultPluginScanConfig();
     }
 
-    private ExecutionConfigurationScan findExecutionScanConfig( PluginExecution execution,
-            List<ExecutionConfigurationScan> scanConfigs )
-    {
-        for ( ExecutionConfigurationScan executionScanConfig : scanConfigs )
-        {
-            if ( executionScanConfig.getExecIds().contains( execution.getId() ) )
-            {
+    private ExecutionConfigurationScan findExecutionScanConfig(
+            PluginExecution execution, List<ExecutionConfigurationScan> scanConfigs) {
+        for (ExecutionConfigurationScan executionScanConfig : scanConfigs) {
+            if (executionScanConfig.getExecIds().contains(execution.getId())) {
                 return executionScanConfig;
             }
         }
@@ -419,94 +364,80 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     }
 
     @Override
-    public String isProcessPlugins()
-    {
+    public String isProcessPlugins() {
         checkInitializedState();
         return TRUE.toString();
     }
 
     @Override
-    public String getDefaultGlob()
-    {
+    public String getDefaultGlob() {
         checkInitializedState();
-        return StringUtils.trim( cacheConfig.getInput().getGlobal().getGlob() );
+        return StringUtils.trim(cacheConfig.getInput().getGlobal().getGlob());
     }
 
     @Nonnull
     @Override
-    public List<Include> getGlobalIncludePaths()
-    {
+    public List<Include> getGlobalIncludePaths() {
         checkInitializedState();
         return cacheConfig.getInput().getGlobal().getIncludes();
     }
 
     @Nonnull
     @Override
-    public List<Exclude> getGlobalExcludePaths()
-    {
+    public List<Exclude> getGlobalExcludePaths() {
         checkInitializedState();
         return cacheConfig.getInput().getGlobal().getExcludes();
     }
 
     @Nonnull
     @Override
-    public HashFactory getHashFactory()
-    {
+    public HashFactory getHashFactory() {
         checkInitializedState();
         return hashFactory;
     }
 
     @Override
-    public boolean canIgnore( MojoExecution mojoExecution )
-    {
+    public boolean canIgnore(MojoExecution mojoExecution) {
         checkInitializedState();
-        if ( cacheConfig.getExecutionControl() == null || cacheConfig.getExecutionControl().getIgnoreMissing() == null )
-        {
+        if (cacheConfig.getExecutionControl() == null
+                || cacheConfig.getExecutionControl().getIgnoreMissing() == null) {
             return false;
         }
 
-        return executionMatches( mojoExecution, cacheConfig.getExecutionControl().getIgnoreMissing() );
+        return executionMatches(mojoExecution, cacheConfig.getExecutionControl().getIgnoreMissing());
     }
 
     @Override
-    public boolean isForcedExecution( MojoExecution execution )
-    {
+    public boolean isForcedExecution(MojoExecution execution) {
         checkInitializedState();
-        if ( cacheConfig.getExecutionControl() == null || cacheConfig.getExecutionControl().getRunAlways() == null )
-        {
+        if (cacheConfig.getExecutionControl() == null
+                || cacheConfig.getExecutionControl().getRunAlways() == null) {
             return false;
         }
 
-        return executionMatches( execution, cacheConfig.getExecutionControl().getRunAlways() );
+        return executionMatches(execution, cacheConfig.getExecutionControl().getRunAlways());
     }
 
-    private boolean executionMatches( MojoExecution execution, Executables executablesType )
-    {
+    private boolean executionMatches(MojoExecution execution, Executables executablesType) {
         final List<PluginSet> pluginConfigs = executablesType.getPlugins();
-        for ( PluginSet pluginConfig : pluginConfigs )
-        {
-            if ( isPluginMatch( execution.getPlugin(), pluginConfig ) )
-            {
+        for (PluginSet pluginConfig : pluginConfigs) {
+            if (isPluginMatch(execution.getPlugin(), pluginConfig)) {
                 return true;
             }
         }
 
         final List<ExecutionIdsList> executionIds = executablesType.getExecutions();
-        for ( ExecutionIdsList executionConfig : executionIds )
-        {
-            if ( isPluginMatch( execution.getPlugin(), executionConfig ) && executionConfig.getExecIds().contains(
-                    execution.getExecutionId() ) )
-            {
+        for (ExecutionIdsList executionConfig : executionIds) {
+            if (isPluginMatch(execution.getPlugin(), executionConfig)
+                    && executionConfig.getExecIds().contains(execution.getExecutionId())) {
                 return true;
             }
         }
 
         final List<GoalsList> pluginsGoalsList = executablesType.getGoalsLists();
-        for ( GoalsList pluginGoals : pluginsGoalsList )
-        {
-            if ( isPluginMatch( execution.getPlugin(), pluginGoals ) && pluginGoals.getGoals().contains(
-                    execution.getGoal() ) )
-            {
+        for (GoalsList pluginGoals : pluginsGoalsList) {
+            if (isPluginMatch(execution.getPlugin(), pluginGoals)
+                    && pluginGoals.getGoals().contains(execution.getGoal())) {
                 return true;
             }
         }
@@ -515,189 +446,166 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     }
 
     @Override
-    public boolean isEnabled()
-    {
+    public boolean isEnabled() {
         return state == CacheState.INITIALIZED;
     }
 
     @Override
-    public boolean isRemoteCacheEnabled()
-    {
+    public boolean isRemoteCacheEnabled() {
         checkInitializedState();
-        return getRemote().getUrl() != null && getRemote().isEnabled();
+        return getUrl() != null
+                && getProperty(REMOTE_ENABLED_PROPERTY_NAME, getRemote().isEnabled());
     }
 
     @Override
-    public boolean isSaveToRemote()
-    {
+    public boolean isSaveToRemote() {
+        return isRemoteCacheEnabled()
+                && getProperty(SAVE_TO_REMOTE_PROPERTY_NAME, getRemote().isSaveToRemote());
+    }
+
+    @Override
+    public boolean isSaveToRemoteFinal() {
+        return isSaveToRemote() && getProperty(SAVE_NON_OVERRIDEABLE_NAME, false);
+    }
+
+    @Override
+    public boolean isSkipCache() {
+        return getProperty(CACHE_SKIP, false);
+    }
+
+    @Override
+    public boolean isFailFast() {
+        return getProperty(FAIL_FAST_PROPERTY_NAME, false);
+    }
+
+    @Override
+    public boolean isBaselineDiffEnabled() {
+        return getProperty(BASELINE_BUILD_URL_PROPERTY_NAME, null) != null;
+    }
+
+    @Override
+    public String getBaselineCacheUrl() {
+        return getProperty(BASELINE_BUILD_URL_PROPERTY_NAME, null);
+    }
+
+    @Override
+    public boolean isLazyRestore() {
+        return getProperty(LAZY_RESTORE_PROPERTY_NAME, false);
+    }
+
+    @Override
+    public boolean isRestoreGeneratedSources() {
+        return getProperty(RESTORE_GENERATED_SOURCES_PROPERTY_NAME, true);
+    }
+
+    @Override
+    public String getAlwaysRunPlugins() {
+        return getProperty(ALWAYS_RUN_PLUGINS, null);
+    }
+
+    @Override
+    public String getId() {
         checkInitializedState();
-        return Boolean.getBoolean( SAVE_TO_REMOTE_PROPERTY_NAME ) || getRemote().isSaveToRemote();
+        return getProperty(REMOTE_SERVER_ID_PROPERTY_NAME, getRemote().getId());
     }
 
     @Override
-    public boolean isSaveFinal()
-    {
-        return Boolean.getBoolean( SAVE_NON_OVERRIDEABLE_NAME );
-    }
-
-    @Override
-    public boolean isSkipCache()
-    {
-        return Boolean.getBoolean( CACHE_SKIP );
-    }
-
-    @Override
-    public boolean isFailFast()
-    {
-        return Boolean.getBoolean( FAIL_FAST_PROPERTY_NAME );
-    }
-
-    @Override
-    public boolean isBaselineDiffEnabled()
-    {
-        return getProperty( BASELINE_BUILD_URL_PROPERTY_NAME, null ) != null;
-    }
-
-    @Override
-    public String getBaselineCacheUrl()
-    {
-        return getProperty( BASELINE_BUILD_URL_PROPERTY_NAME, null );
-    }
-
-    @Override
-    public boolean isLazyRestore()
-    {
-        final String lazyRestore = getProperty( LAZY_RESTORE_PROPERTY_NAME, "false" );
-        return Boolean.parseBoolean( lazyRestore );
-    }
-
-    @Override
-    public boolean isRestoreGeneratedSources()
-    {
-        final String restoreGeneratedSources = getProperty( RESTORE_GENERATED_SOURCES_PROPERTY_NAME, "true" );
-        return Boolean.parseBoolean( restoreGeneratedSources );
-    }
-
-    @Override
-    public String getAlwaysRunPlugins()
-    {
-        return getProperty( ALWAYS_RUN_PLUGINS, null );
-    }
-
-    @Override
-    public String getId()
-    {
+    public String getUrl() {
         checkInitializedState();
-        return getRemote().getId();
+        return getProperty(REMOTE_URL_PROPERTY_NAME, getRemote().getUrl());
     }
 
     @Override
-    public String getUrl()
-    {
-        checkInitializedState();
-        return getProperty( REMOTE_URL_PROPERTY_NAME, getRemote().getUrl() );
-    }
-
-    @Override
-    public String getTransport()
-    {
+    public String getTransport() {
         checkInitializedState();
         return getRemote().getTransport();
     }
 
     @Override
-    public int getMaxLocalBuildsCached()
-    {
+    public int getMaxLocalBuildsCached() {
         checkInitializedState();
         return getLocal().getMaxBuildsCached();
     }
 
     @Override
-    public String getLocalRepositoryLocation()
-    {
+    public String getLocalRepositoryLocation() {
         checkInitializedState();
-        return getProperty( CACHE_LOCATION_PROPERTY_NAME, getLocal().getLocation() );
+        return getProperty(CACHE_LOCATION_PROPERTY_NAME, getLocal().getLocation());
     }
 
     @Override
-    public List<String> getAttachedOutputs()
-    {
+    public List<String> getAttachedOutputs() {
         checkInitializedState();
         final AttachedOutputs attachedOutputs = getConfiguration().getAttachedOutputs();
         return attachedOutputs == null ? Collections.emptyList() : attachedOutputs.getDirNames();
     }
 
     @Override
-    public boolean adjustMetaInfVersion()
-    {
-        if ( isEnabled() )
-        {
-            return Optional.ofNullable( getConfiguration().getProjectVersioning() )
-                    .map( ProjectVersioning::isAdjustMetaInf )
-                    .orElse( false );
-        }
-        else
-        {
+    public boolean adjustMetaInfVersion() {
+        if (isEnabled()) {
+            return Optional.ofNullable(getConfiguration().getProjectVersioning())
+                    .map(ProjectVersioning::isAdjustMetaInf)
+                    .orElse(false);
+        } else {
             return false;
         }
     }
 
     @Nonnull
     @Override
-    public List<Pattern> getExcludePatterns()
-    {
+    public List<Pattern> getExcludePatterns() {
         checkInitializedState();
         return excludePatterns;
     }
 
-    private List<Pattern> compileExcludePatterns()
-    {
-        if ( cacheConfig.getOutput() != null && cacheConfig.getOutput().getExclude() != null )
-        {
+    private List<Pattern> compileExcludePatterns() {
+        if (cacheConfig.getOutput() != null && cacheConfig.getOutput().getExclude() != null) {
             List<Pattern> patterns = new ArrayList<>();
-            for ( String pattern : cacheConfig.getOutput().getExclude().getPatterns() )
-            {
-                patterns.add( Pattern.compile( pattern ) );
+            for (String pattern : cacheConfig.getOutput().getExclude().getPatterns()) {
+                patterns.add(Pattern.compile(pattern));
             }
             return patterns;
         }
         return Collections.emptyList();
     }
 
-    private Remote getRemote()
-    {
+    private Remote getRemote() {
         return getConfiguration().getRemote();
     }
 
-    private Local getLocal()
-    {
+    private Local getLocal() {
         return getConfiguration().getLocal();
     }
 
-    private Configuration getConfiguration()
-    {
+    private Configuration getConfiguration() {
         return cacheConfig.getConfiguration();
     }
 
-    private void checkInitializedState()
-    {
-        if ( state != CacheState.INITIALIZED )
-        {
-            throw new IllegalStateException( "Cache is not initialized. Actual state: " + state );
+    private void checkInitializedState() {
+        if (state != CacheState.INITIALIZED) {
+            throw new IllegalStateException("Cache is not initialized. Actual state: " + state);
         }
     }
 
-    private String getProperty( String key, String defaultValue )
-    {
-        String value = session.getUserProperties().getProperty( key );
-        if ( value == null )
-        {
-            value = session.getSystemProperties().getProperty( key );
-            if ( value == null )
-            {
+    private String getProperty(String key, String defaultValue) {
+        String value = session.getUserProperties().getProperty(key);
+        if (value == null) {
+            value = session.getSystemProperties().getProperty(key);
+            if (value == null) {
                 value = defaultValue;
             }
         }
         return value;
+    }
+
+    private boolean getProperty(String key, boolean defaultValue) {
+        String value = session.getUserProperties().getProperty(key);
+        if (value == null) {
+            value = session.getSystemProperties().getProperty(key);
+            if (value == null) {
+                return defaultValue;
+            }
+        }
+        return Boolean.parseBoolean(value);
     }
 }
