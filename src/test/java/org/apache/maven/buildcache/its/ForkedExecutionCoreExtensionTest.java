@@ -66,10 +66,11 @@ public class ForkedExecutionCoreExtensionTest {
         verifier.verifyTextInLog("Started forked project");
         // forked execution actually runs
         verifier.verifyTextInLog(
-                "[DEBUG] Starting mojo execution: pmd:pmd:emptyLifecyclePhase:maven-pmd-plugin:org.apache.maven.plugins" );
+                "[DEBUG] Starting mojo execution: pmd:pmd:emptyLifecyclePhase:maven-pmd-plugin:org.apache.maven.plugins");
         // checking that forked execution doesn't hook into lifecycle
-        assertThrows(VerificationException.class, () ->
-                verifier.verifyTextInLog(
+        assertThrows(
+                VerificationException.class,
+                () -> verifier.verifyTextInLog(
                         "Mojo execution pmd:pmd:emptyLifecyclePhase:maven-pmd-plugin:org.apache.maven.plugins is forked,"
                                 + " returning phase verify from originating mojo "
                                 + "default:check:verify:maven-pmd-plugin:org.apache.maven.plugins"));
@@ -80,13 +81,16 @@ public class ForkedExecutionCoreExtensionTest {
         verifier.verifyErrorFreeLog();
         verifier.verifyTextInLog("Found cached build, restoring " + PROJECT_NAME + " from cache");
         // checking that fork originating mojo pmd:check is cached
-        verifier.verifyTextInLog( "[INFO] Skipping plugin execution (cached): pmd:check" );
+        verifier.verifyTextInLog("[INFO] Skipping plugin execution (cached): pmd:check");
         // and because of that forked execution pmd:pmd didn't run
-        assertThrows(VerificationException.class, () -> verifier.verifyTextInLog(
-                "[DEBUG] Starting mojo execution: pmd:pmd:emptyLifecyclePhase:maven-pmd-plugin:org.apache.maven.plugins"));
+        assertThrows(
+                VerificationException.class,
+                () -> verifier.verifyTextInLog(
+                        "[DEBUG] Starting mojo execution: pmd:pmd:emptyLifecyclePhase:maven-pmd-plugin:org.apache.maven.plugins"));
         // and didn't appear in cache lifecycle
-        assertThrows(VerificationException.class, () -> verifier.verifyTextInLog(
-                "[INFO] Skipping plugin execution (cached): pmd:pmd"));
+        assertThrows(
+                VerificationException.class,
+                () -> verifier.verifyTextInLog("[INFO] Skipping plugin execution (cached): pmd:pmd"));
         verifier.verifyTextInLog("[INFO] BUILD SUCCESS");
     }
 }
