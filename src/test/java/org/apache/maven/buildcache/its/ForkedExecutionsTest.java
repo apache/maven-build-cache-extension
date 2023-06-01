@@ -89,7 +89,7 @@ public class ForkedExecutionsTest {
         verifier.setMavenDebug(true);
         verifier.setCliOptions(Lists.newArrayList(
                 "-Dmaven.build.cache.location=" + tempDirectory.toAbsolutePath(),
-                "-Dmaven.build.cache.remoteUrl=http:////localhost:"
+                "-Dmaven.build.cache.remote.url=http:////localhost:"
                         + wm.getRuntimeInfo().getHttpPort(),
                 "-Dmaven.build.cache.remote.save.enabled=true"));
         verifier.executeGoal("verify");
