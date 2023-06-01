@@ -100,7 +100,10 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
         CacheResult result = CacheResult.empty();
         boolean skipCache = cacheConfig.isSkipCache() || MavenProjectInput.isSkipCache(project);
         boolean cacheIsDisabled = MavenProjectInput.isCacheDisabled(project);
-        if (source == Source.LIFECYCLE) {
+        // Forked execution should be thought as a part of originating mojo internal implementation
+        // If forkedExecution is detected, it means that originating mojo is not cached so forks should rerun too
+        boolean forkedExecution = lifecyclePhasesHelper.isForkedProject(project);
+        if (source == Source.LIFECYCLE && !forkedExecution) {
             List<MojoExecution> cleanPhase = lifecyclePhasesHelper.getCleanSegment(project, mojoExecutions);
             for (MojoExecution mojoExecution : cleanPhase) {
                 mojoExecutionRunner.run(mojoExecution);
@@ -134,7 +137,7 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
             cacheController.save(result, mojoExecutions, executionEvents);
         }
 
-        if (cacheConfig.isFailFast() && !result.isSuccess() && !skipCache) {
+        if (cacheConfig.isFailFast() && !result.isSuccess() && !skipCache && !forkedExecution) {
             throw new LifecycleExecutionException(
                     "Failed to restore project[" + getVersionlessProjectKey(project) + "] from cache, failing build.",
                     project);

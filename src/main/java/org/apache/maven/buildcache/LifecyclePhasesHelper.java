@@ -213,4 +213,8 @@ public class LifecyclePhasesHelper extends AbstractExecutionListener {
         }
         return list;
     }
+
+    public boolean isForkedProject(MavenProject project) {
+        return forkedProjectToOrigin.containsKey(project);
+    }
 }
