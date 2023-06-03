@@ -26,9 +26,7 @@
 This project provides a Build Cache Extension feature which calculates out-of-date modules in the build dependencies graph and improves build times by avoiding re-building unnecessary modules.
 Read [cache guide](https://maven.apache.org/extensions/maven-build-cache-extension/index.html) for more details.
 
-Status
---------
-The code currently relies on un-released modifications in the core Maven project, available both for latest 3.9.x and for 4.0-alpha-x SNAPSHOTS described in [MNG-7391](https://issues.apache.org/jira/browse/MNG-7391).
+Requires Maven 3.9+ ([MNG-7391](https://issues.apache.org/jira/browse/MNG-7391)).
 
 License
 -------
