@@ -21,11 +21,11 @@ package org.apache.maven.buildcache.its;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 
 import com.github.tomakehurst.wiremock.common.ConsoleNotifier;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
-import com.google.common.collect.Lists;
 import org.apache.commons.io.FileUtils;
 import org.apache.maven.buildcache.its.junit.IntegrationTest;
 import org.apache.maven.it.VerificationException;
@@ -87,7 +87,7 @@ public class ForkedExecutionsTest {
 
         verifier.setLogFileName("../log-1.txt");
         verifier.setMavenDebug(true);
-        verifier.setCliOptions(Lists.newArrayList(
+        verifier.setCliOptions(Arrays.asList(
                 "-Dmaven.build.cache.location=" + tempDirectory.toAbsolutePath(),
                 "-Dmaven.build.cache.remote.url=http:////localhost:"
                         + wm.getRuntimeInfo().getHttpPort(),
