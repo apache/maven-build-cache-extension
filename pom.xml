@@ -59,12 +59,13 @@ under the License.
   </distributionManagement>
 
   <properties>
+    <project.build.outputTimestamp>2023-06-05T23:12:49Z</project.build.outputTimestamp>
     <javaVersion>8</javaVersion>
     <minimalMavenBuildVersion>3.5.0</minimalMavenBuildVersion>
     <minimalJavaBuildVersion>11</minimalJavaBuildVersion>
     <classWorldsVersion>2.6.0</classWorldsVersion>
 
-    <!-- default maven version, will be override by maven3 profile -->
+    <!-- default maven version, will be overridden by maven3 profile -->
     <mavenVersion>4.0.0-alpha-5</mavenVersion>
     <maven.dir>maven4</maven.dir>
     <maven.basedir>${project.build.directory}/${maven.dir}</maven.basedir>
