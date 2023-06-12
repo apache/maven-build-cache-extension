@@ -34,14 +34,19 @@ import static java.nio.file.StandardOpenOption.READ;
  */
 public class Zah implements Hash.Factory {
 
+    public enum MemoryPolicy {
+        Standard,
+        MemoryMappedBuffers
+    }
+
     private final String name;
     private final LongHashFunction hash;
-    private final boolean useMemoryMappedBuffers;
+    private final MemoryPolicy memoryPolicy;
 
-    public Zah(String name, LongHashFunction hash, boolean useMemoryMappedBuffers) {
+    public Zah(String name, LongHashFunction hash, MemoryPolicy memoryPolicy) {
         this.name = name;
         this.hash = hash;
-        this.useMemoryMappedBuffers = useMemoryMappedBuffers;
+        this.memoryPolicy = memoryPolicy != null ? memoryPolicy : MemoryPolicy.Standard;
     }
 
     @Override
@@ -51,7 +56,12 @@ public class Zah implements Hash.Factory {
 
     @Override
     public Hash.Algorithm algorithm() {
-        return useMemoryMappedBuffers ? new AlgorithmWithMM() : new Algorithm();
+        switch (memoryPolicy) {
+            case MemoryMappedBuffers:
+                return new AlgorithmWithMM();
+            default:
+                return new Algorithm();
+        }
     }
 
     @Override

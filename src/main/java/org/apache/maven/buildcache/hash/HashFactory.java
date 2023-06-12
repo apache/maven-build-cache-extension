@@ -32,10 +32,10 @@ public enum HashFactory {
     SHA256(new SHA("SHA-256")),
     SHA384(new SHA("SHA-384")),
     SHA512(new SHA("SHA-512")),
-    XX(new Zah("XX", LongHashFunction.xx(), false)),
-    XXMM(new Zah("XXMM", LongHashFunction.xx(), true)),
-    METRO(new Zah("METRO", LongHashFunction.metro(), false)),
-    METRO_MM(new Zah("METRO+MM", LongHashFunction.metro(), true));
+    XX(new Zah("XX", LongHashFunction.xx(), Zah.MemoryPolicy.Standard)),
+    XXMM(new Zah("XXMM", LongHashFunction.xx(), Zah.MemoryPolicy.MemoryMappedBuffers)),
+    METRO(new Zah("METRO", LongHashFunction.metro(), Zah.MemoryPolicy.Standard)),
+    METRO_MM(new Zah("METRO+MM", LongHashFunction.metro(), Zah.MemoryPolicy.MemoryMappedBuffers));
 
     private static final Map<String, HashFactory> LOOKUP = new HashMap<>();
 
