@@ -31,6 +31,13 @@ XXMM (XX with memory-mapped files) could provide better performance, depending o
 <hashAlgorithm>XX</hashAlgorithm>
 ```
 
+Also note that the usage of the XXMM or METRO+MM algorithms require the creation of a file `.mvn/jvm.config` in the 
+top directory with the following line to run successfully on JDK >= 17.
+```
+--add-opens java.base/sun.nio.ch=ALL-UNNAMED
+```
+
+
 ### Filter out unnecessary artifacts
 
 The price of uploading and downloading huge artifacts could be significant. In many scenarios assembling WAR,
