@@ -32,10 +32,10 @@ import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -136,7 +136,8 @@ public class MavenProjectInput {
     private final RepositorySystem repoSystem;
     private final CacheConfig config;
     private final PathIgnoringCaseComparator fileComparator;
-    private final List<Path> filteredOutPaths;
+    private final Set<String> filenameExclusions = new LinkedHashSet<>();
+    private final Set<String> filePathExclusions = new LinkedHashSet<>();
     private final NormalizedModelProvider normalizedModelProvider;
     private final MultiModuleSupport multiModuleSupport;
     private final ProjectInputCalculator projectInputCalculator;
@@ -171,37 +172,47 @@ public class MavenProjectInput {
         this.tmpDir = System.getProperty("java.io.tmpdir");
 
         org.apache.maven.model.Build build = project.getBuild();
-        filteredOutPaths = new ArrayList<>(Arrays.asList(
-                normalizedPath(build.getDirectory()), // target by default
-                normalizedPath(build.getOutputDirectory()),
-                normalizedPath(build.getTestOutputDirectory())));
+        filePathExclusions.add(normalizedPath(build.getDirectory()).toString()); // target by default
+        filePathExclusions.add(normalizedPath(build.getOutputDirectory()).toString()); // target/classes by default
+        filePathExclusions.add(
+                normalizedPath(build.getTestOutputDirectory()).toString()); // target/test-classes by default
 
         List<Exclude> excludes = config.getGlobalExcludePaths();
         for (Exclude excludePath : excludes) {
-            filteredOutPaths.add(Paths.get(excludePath.getValue()));
+            addToExcludedSection(excludePath.getValue());
         }
 
         for (String propertyName : properties.stringPropertyNames()) {
             if (propertyName.startsWith(CACHE_EXCLUDE_NAME)) {
                 String propertyValue = properties.getProperty(propertyName);
-                Path path = Paths.get(propertyValue);
-                filteredOutPaths.add(path);
+                addToExcludedSection(propertyValue);
+
                 if (LOGGER.isDebugEnabled()) {
                     LOGGER.debug(
-                            "Adding an excludePath from property '{}', values is '{}', path is '{}' ",
-                            propertyName,
-                            propertyValue,
-                            path);
+                            "Adding an excludePath from property '{}', value is '{}'", propertyName, propertyValue);
                 }
             }
         }
-        CacheUtils.debugPrintCollection(
-                LOGGER,
-                filteredOutPaths,
-                "List of excluded paths (checked either by fileName or by startsWith prefix)",
-                "Path entry");
+        CacheUtils.debugPrintCollection(LOGGER, filePathExclusions, "List of excluded paths", "Path entry");
+
+        CacheUtils.debugPrintCollection(LOGGER, filenameExclusions, "List of excluded files", "File entry");
 
         this.fileComparator = new PathIgnoringCaseComparator();
+    }
+
+    /**
+     * Add a value from the excluded section list to the directories and/or the filenames ban list.
+     * @param excludedValue a value from the exclude list
+     */
+    private void addToExcludedSection(String excludedValue) {
+        Path excluded = Paths.get(excludedValue);
+        // If the string can be a filename, we add it to the filename exclusion
+        if (excluded.equals(excluded.getFileName())) {
+            filenameExclusions.add(excludedValue);
+        }
+        // And we always add it to the filePath exclusion, since files and directories names can't be differentiated on
+        // some OS.
+        filePathExclusions.add(convertToAbsolutePath(excluded).toString());
     }
 
     public ProjectsInputInfo calculateChecksum() throws IOException {
@@ -410,13 +421,17 @@ public class MavenProjectInput {
         return sorted;
     }
 
+    private Path convertToAbsolutePath(Path path) {
+        Path resolvedPath = path.isAbsolute() ? path : baseDirPath.resolve(path);
+        return resolvedPath.toAbsolutePath().normalize();
+    }
+
     /**
      * entry point for directory walk
      */
     private void startWalk(
             Path candidate, String glob, boolean recursive, List<Path> collectedFiles, Set<WalkKey> visitedDirs) {
-        Path normalized = candidate.isAbsolute() ? candidate : baseDirPath.resolve(candidate);
-        normalized = normalized.toAbsolutePath().normalize();
+        Path normalized = convertToAbsolutePath(candidate);
         WalkKey key = new WalkKey(normalized, glob, recursive);
         if (visitedDirs.contains(key) || !Files.exists(normalized)) {
             return;
@@ -506,8 +521,7 @@ public class MavenProjectInput {
                     return FileVisitResult.SKIP_SUBTREE;
                 }
 
-                walkDirectoryFiles(path, collectedFiles, key.getGlob(), entry -> filteredOutPaths.stream()
-                        .anyMatch(it -> it.getFileName().equals(entry.getFileName())));
+                walkDirectoryFiles(path, collectedFiles, key.getGlob(), entry -> entryMustBeSkipped(entry));
 
                 if (!key.isRecursive()) {
                     LOGGER.debug("Skipping subtree (non recursive): {}", path);
@@ -524,6 +538,18 @@ public class MavenProjectInput {
                 return FileVisitResult.SKIP_SUBTREE;
             }
         });
+    }
+
+    private boolean entryMustBeSkipped(Path entry) {
+        if (filePathExclusions.stream()
+                .anyMatch(it -> entry.toAbsolutePath().toString().startsWith(it))) {
+            // skip file entry defined by a path + a full or prefixed filename (exclusion only via path is handled at a
+            // higher level)
+            return true;
+        }
+        // skip file entry defined without a path (full or prefixed filename)
+        return filenameExclusions.stream()
+                .anyMatch(it -> entry.getFileName().toString().startsWith(it));
     }
 
     private void addInputsFromPluginConfigs(
@@ -634,12 +660,7 @@ public class MavenProjectInput {
 
     private boolean isFilteredOutSubpath(Path path) {
         Path normalized = path.normalize();
-        for (Path filteredOutDir : filteredOutPaths) {
-            if (normalized.startsWith(filteredOutDir)) {
-                return true;
-            }
-        }
-        return false;
+        return filePathExclusions.stream().anyMatch(it -> normalized.toString().startsWith(it));
     }
 
     private SortedMap<String, String> getMutableDependencies() throws IOException {
