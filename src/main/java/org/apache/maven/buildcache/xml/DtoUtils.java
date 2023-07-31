@@ -74,6 +74,7 @@ public class DtoUtils {
         dit.setHash(projectChecksum);
         dit.setFileChecksum(artifact.getFileHash());
         dit.setValue(getArtifactKey(artifact));
+        dit.setInfo(artifact.getGroupId() + ":" + artifact.getArtifactId() + ":" + artifact.getVersion());
         return dit;
     }
 
@@ -83,6 +84,7 @@ public class DtoUtils {
         dit.setHash(fileHash);
         dit.setFileChecksum(fileHash);
         dit.setValue(getArtifactKey(artifact));
+        dit.setInfo(artifact.getGroupId() + ":" + artifact.getArtifactId() + ":" + artifact.getVersion());
         return dit;
     }
 

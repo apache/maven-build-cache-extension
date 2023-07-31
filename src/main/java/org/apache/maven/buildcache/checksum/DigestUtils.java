@@ -49,14 +49,15 @@ public class DigestUtils {
     private static final ThreadLocal<UniversalDetector> ENCODING_DETECTOR =
             ThreadLocal.withInitial(() -> new UniversalDetector(null));
 
-    public static DigestItem pom(HashChecksum checksum, String effectivePom) {
-        return item("pom", effectivePom, checksum.update(effectivePom.getBytes(UTF_8)));
+    public static DigestItem pom(HashChecksum checksum, String effectivePom, String info) {
+        return item("pom", effectivePom, checksum.update(effectivePom.getBytes(UTF_8)), info);
     }
 
     public static DigestItem file(HashChecksum checksum, Path basedir, Path file) throws IOException {
         byte[] content = Files.readAllBytes(file);
         String normalized = normalize(basedir, file);
-        DigestItem item = item("file", normalized, checksum.update(content));
+        DigestItem item = item(
+                "file", normalized, checksum.update(content), file.getFileName().toString());
         try {
             populateContentDetails(file, content, item);
         } catch (IOException ignore) {
@@ -122,8 +123,8 @@ public class DigestUtils {
                         "application/pdf");
     }
 
-    public static DigestItem dependency(HashChecksum checksum, String key, String hash) {
-        return item("dependency", key, checksum.update(hash));
+    public static DigestItem dependency(HashChecksum checksum, String key, String hash, String info) {
+        return item("dependency", key, checksum.update(hash), info);
     }
 
     private static String normalize(Path basedirPath, Path file) {
@@ -138,11 +139,12 @@ public class DigestUtils {
         }
     }
 
-    private static DigestItem item(String type, String reference, String hash) {
+    private static DigestItem item(String type, String reference, String hash, String info) {
         final DigestItem item = new DigestItem();
         item.setType(type);
         item.setValue(reference);
         item.setHash(hash);
+        item.setInfo(info);
         return item;
     }
 

@@ -379,6 +379,10 @@ under the License.
           <name>eol</name>
           <type>String</type>
         </field>
+        <field xml.attribute="true">
+          <name>info</name>
+          <type>String</type>
+        </field>
       </fields>
     </class>
 

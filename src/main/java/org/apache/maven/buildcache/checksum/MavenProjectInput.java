@@ -31,20 +31,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Properties;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.SortedSet;
-import java.util.TreeMap;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.function.Predicate;
 
 import org.apache.commons.lang3.StringUtils;
@@ -209,7 +196,7 @@ public class MavenProjectInput {
 
         final String effectivePom = getEffectivePom(normalizedModelProvider.normalizedModel(project));
         final SortedSet<Path> inputFiles = isPom(project) ? Collections.emptySortedSet() : getInputFiles();
-        final SortedMap<String, String> dependenciesChecksum = getMutableDependencies();
+        final SortedMap<String, DependencyInfo> dependenciesChecksum = getMutableDependencies();
 
         final long t1 = System.currentTimeMillis();
 
@@ -224,7 +211,10 @@ public class MavenProjectInput {
                     remoteCache.findBaselineBuild(project).map(b -> b.getDto().getProjectsInputInfo());
         }
 
-        DigestItem effectivePomChecksum = DigestUtils.pom(checksum, effectivePom);
+        DigestItem effectivePomChecksum = DigestUtils.pom(
+                checksum,
+                effectivePom,
+                project.getGroupId() + ":" + project.getArtifactId() + ":" + project.getVersion());
         items.add(effectivePomChecksum);
         final boolean compareWithBaseline = config.isBaselineDiffEnabled() && baselineHolder.isPresent();
         if (compareWithBaseline) {
@@ -244,8 +234,9 @@ public class MavenProjectInput {
         }
 
         boolean dependenciesMatched = true;
-        for (Map.Entry<String, String> entry : dependenciesChecksum.entrySet()) {
-            DigestItem dependencyDigest = DigestUtils.dependency(checksum, entry.getKey(), entry.getValue());
+        for (Map.Entry<String, DependencyInfo> entry : dependenciesChecksum.entrySet()) {
+            DigestItem dependencyDigest =
+                    DigestUtils.dependency(checksum, entry.getKey(), entry.getValue().hash, entry.getValue().info);
             items.add(dependencyDigest);
             if (compareWithBaseline) {
                 dependenciesMatched &= checkItemMatchesBaseline(baselineHolder.get(), dependencyDigest);
@@ -262,9 +253,17 @@ public class MavenProjectInput {
 
         final long t2 = System.currentTimeMillis();
 
-        for (DigestItem item : projectsInputInfoType.getItems()) {
-            LOGGER.debug("Hash calculated, item: {}, hash: {}", item.getType(), item.getHash());
+        if (LOGGER.isDebugEnabled()) {
+            projectsInputInfoType.getItems().sort(INSTANCE);
+            for (DigestItem item : projectsInputInfoType.getItems()) {
+                LOGGER.debug(
+                        "Hash calculated, item type: {}, info: {}, hash: {}",
+                        item.getType(),
+                        item.getInfo(),
+                        item.getHash());
+            }
         }
+
         LOGGER.info(
                 "Project inputs calculated in {} ms. {} checksum [{}] calculated in {} ms.",
                 t1 - t0,
@@ -272,6 +271,26 @@ public class MavenProjectInput {
                 projectsInputInfoType.getChecksum(),
                 t2 - t1);
         return projectsInputInfoType;
+    }
+
+    private static final DigestItemInfoComparator INSTANCE = new DigestItemInfoComparator();
+
+    private static class DigestItemInfoComparator implements Comparator<DigestItem> {
+        @Override
+        public int compare(DigestItem o1, DigestItem o2) {
+            String s1 = o1.getInfo();
+            String s2 = o2.getInfo();
+            if (s1 == null && s2 == null) {
+                return 0;
+            }
+            if (s1 == null) {
+                return -1;
+            }
+            if (s2 == null) {
+                return 1;
+            }
+            return s1.compareTo(s2);
+        }
     }
 
     private void checkEffectivePomMatch(ProjectsInputInfo baselineBuild, DigestItem effectivePomChecksum) {
@@ -401,7 +420,7 @@ public class MavenProjectInput {
         }
 
         LOGGER.info(
-                "Found {} input files. Project dir processing: {}, plugins: {} millis",
+                "Found {} input files. Project dir processing: {} ms, plugins: {} millis",
                 sorted.size(),
                 walkKnownPathsFinished,
                 pluginsFinished);
@@ -642,8 +661,18 @@ public class MavenProjectInput {
         return false;
     }
 
-    private SortedMap<String, String> getMutableDependencies() throws IOException {
-        SortedMap<String, String> result = new TreeMap<>();
+    private static class DependencyInfo {
+        private final String hash;
+        private final String info;
+
+        DependencyInfo(String hash, String info) {
+            this.hash = hash;
+            this.info = info;
+        }
+    }
+
+    private SortedMap<String, DependencyInfo> getMutableDependencies() throws IOException {
+        SortedMap<String, DependencyInfo> result = new TreeMap<>();
 
         for (Dependency dependency : project.getDependencies()) {
 
@@ -675,7 +704,8 @@ public class MavenProjectInput {
                 projectHash = resolved.getHash();
             }
             result.put(
-                    KeyUtils.getVersionlessArtifactKey(repoSystem.createDependencyArtifact(dependency)), projectHash);
+                    KeyUtils.getVersionlessArtifactKey(repoSystem.createDependencyArtifact(dependency)),
+                    new DependencyInfo(projectHash, dependency.toString()));
         }
         return result;
     }
