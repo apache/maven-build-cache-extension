@@ -29,6 +29,7 @@ import org.apache.maven.buildcache.xml.CacheConfig;
 import org.apache.maven.buildcache.xml.build.CompletedExecution;
 import org.apache.maven.buildcache.xml.build.PropertyValue;
 import org.apache.maven.buildcache.xml.config.TrackedProperty;
+import org.apache.maven.execution.scope.internal.MojoExecutionScope;
 import org.apache.maven.plugin.MavenPluginManager;
 import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.project.MavenProject;
@@ -62,7 +63,8 @@ class BuildCacheMojosExecutionStrategyTest {
                     cacheConfigMock,
                     mock(MojoParametersListener.class),
                     mock(LifecyclePhasesHelper.class),
-                    mock(MavenPluginManager.class));
+                    mock(MavenPluginManager.class),
+                    mock(MojoExecutionScope.class));
 
             projectMock = mock(MavenProject.class);
             executionMock = mock(MojoExecution.class);
