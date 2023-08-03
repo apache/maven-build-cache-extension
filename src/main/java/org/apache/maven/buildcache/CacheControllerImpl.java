@@ -44,10 +44,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.Future;
-import java.util.concurrent.FutureTask;
+import java.util.concurrent.*;
 import java.util.regex.Pattern;
 
 import org.apache.commons.io.FileUtils;
@@ -55,6 +52,7 @@ import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.maven.SessionScoped;
+import org.apache.maven.artifact.InvalidArtifactRTException;
 import org.apache.maven.artifact.handler.ArtifactHandler;
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.buildcache.artifact.RestoredArtifact;
@@ -401,6 +399,26 @@ public class CacheControllerImpl implements CacheController {
         });
         if (!cacheConfig.isLazyRestore()) {
             downloadTask.run();
+            try {
+                downloadTask.get();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new InvalidArtifactRTException(
+                        artifact.getGroupId(),
+                        artifact.getArtifactId(),
+                        artifact.getVersion(),
+                        artifact.getType(),
+                        RestoredArtifact.MSG_INTERRUPTED_WHILE_RETRIEVING_ARTIFACT_FILE,
+                        e);
+            } catch (ExecutionException e) {
+                throw new InvalidArtifactRTException(
+                        artifact.getGroupId(),
+                        artifact.getArtifactId(),
+                        artifact.getVersion(),
+                        artifact.getType(),
+                        RestoredArtifact.MSG_ERROR_RETRIEVING_ARTIFACT_FILE,
+                        e.getCause());
+            }
         }
         return downloadTask;
     }
