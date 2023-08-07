@@ -35,7 +35,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -109,11 +108,6 @@ public class MavenProjectInput {
      */
     private static final String CACHE_INPUT_GLOB_NAME = "maven.build.cache.input.glob";
     /**
-     * default glob, bbsdk/abfx specific
-     */
-    public static final String DEFAULT_GLOB = "{*.java,*.groovy,*.yaml,*.svcd,*.proto,*assembly.xml,assembly"
-            + "*.xml,*logback.xml,*.vm,*.ini,*.jks,*.properties,*.sh,*.bat}";
-    /**
      * property name prefix to pass input files with project properties. smth like maven.build.cache.input.1 will be
      * accepted
      */
@@ -127,6 +121,14 @@ public class MavenProjectInput {
      * Flag to control if we should check values from plugin configs as file system objects
      */
     private static final String CACHE_PROCESS_PLUGINS = "maven.build.cache.processPlugins";
+    /**
+     * Glob prefix for path matchers
+     */
+    private static final String GLOB_PX = "glob:";
+    /**
+     * Glob suffix meaning "all files in this directory or any sub-directory"
+     */
+    private static final String GLOB_SX_ALL_SUB_FILES = "/**";
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MavenProjectInput.class);
 
@@ -136,13 +138,29 @@ public class MavenProjectInput {
     private final RepositorySystem repoSystem;
     private final CacheConfig config;
     private final PathIgnoringCaseComparator fileComparator;
-    private final Set<String> filenameExclusions = new LinkedHashSet<>();
-    private final Set<String> filePathExclusions = new LinkedHashSet<>();
+    /**
+     * A path matcher used only on directories
+     */
+    private final List<TreeWalkerPathMatcher> inputExcludeDirectoryPathMatchers = new ArrayList<>();
+    /**
+     * A path matcher used on files and directories
+     */
+    private final List<TreeWalkerPathMatcher> inputExcludePathMatchers = new ArrayList<>();
+
+    private final List<String> inputExcludePathMatcherString = new ArrayList<>();
     private final NormalizedModelProvider normalizedModelProvider;
     private final MultiModuleSupport multiModuleSupport;
     private final ProjectInputCalculator projectInputCalculator;
     private final Path baseDirPath;
-    private final String dirGlob;
+    /**
+     * The filename glob to use every time there is no override
+     */
+    private final String defaultFilenameGlob;
+    /**
+     * The glob representing the base directory
+     */
+    private final String baseDirectoryGlob;
+
     private final boolean processPlugins;
     private final String tmpDir;
 
@@ -166,26 +184,39 @@ public class MavenProjectInput {
         this.repoSystem = repoSystem;
         this.remoteCache = remoteCache;
         Properties properties = project.getProperties();
-        this.dirGlob = properties.getProperty(CACHE_INPUT_GLOB_NAME, config.getDefaultGlob());
+        this.defaultFilenameGlob = properties.getProperty(CACHE_INPUT_GLOB_NAME, config.getDefaultGlob());
         this.processPlugins =
                 Boolean.parseBoolean(properties.getProperty(CACHE_PROCESS_PLUGINS, config.isProcessPlugins()));
         this.tmpDir = System.getProperty("java.io.tmpdir");
 
+        this.baseDirectoryGlob = baseDirPath.toString().replace("\\", "/") + "/";
+
         org.apache.maven.model.Build build = project.getBuild();
-        filePathExclusions.add(normalizedPath(build.getDirectory()).toString()); // target by default
-        filePathExclusions.add(normalizedPath(build.getOutputDirectory()).toString()); // target/classes by default
-        filePathExclusions.add(
-                normalizedPath(build.getTestOutputDirectory()).toString()); // target/test-classes by default
+        addToExcludedSection(
+                convertToPathMatcherFileSeperator(
+                                normalizedPath(build.getDirectory()).toString())
+                        + GLOB_SX_ALL_SUB_FILES,
+                false); // target by default
+        addToExcludedSection(
+                convertToPathMatcherFileSeperator(
+                                normalizedPath(build.getOutputDirectory()).toString())
+                        + GLOB_SX_ALL_SUB_FILES,
+                false); // target/classes by default
+        addToExcludedSection(
+                convertToPathMatcherFileSeperator(
+                                normalizedPath(build.getTestOutputDirectory()).toString())
+                        + GLOB_SX_ALL_SUB_FILES,
+                false); // target/test-classes by default
 
         List<Exclude> excludes = config.getGlobalExcludePaths();
         for (Exclude excludePath : excludes) {
-            addToExcludedSection(excludePath.getValue());
+            addToExcludedSection(excludePath.getValue(), true);
         }
 
         for (String propertyName : properties.stringPropertyNames()) {
             if (propertyName.startsWith(CACHE_EXCLUDE_NAME)) {
                 String propertyValue = properties.getProperty(propertyName);
-                addToExcludedSection(propertyValue);
+                addToExcludedSection(propertyValue, true);
 
                 if (LOGGER.isDebugEnabled()) {
                     LOGGER.debug(
@@ -193,26 +224,52 @@ public class MavenProjectInput {
                 }
             }
         }
-        CacheUtils.debugPrintCollection(LOGGER, filePathExclusions, "List of excluded paths", "Path entry");
-
-        CacheUtils.debugPrintCollection(LOGGER, filenameExclusions, "List of excluded files", "File entry");
+        CacheUtils.debugPrintCollection(
+                LOGGER, inputExcludePathMatcherString, "List of excluded glob patterns", "Pattern");
 
         this.fileComparator = new PathIgnoringCaseComparator();
+    }
+
+    private String convertToPathMatcherFileSeperator(String path) {
+        return path.replace("\\", "/");
     }
 
     /**
      * Add a value from the excluded section list to the directories and/or the filenames ban list.
      * @param excludedValue a value from the exclude list
      */
-    private void addToExcludedSection(String excludedValue) {
-        Path excluded = Paths.get(excludedValue);
-        // If the string can be a filename, we add it to the filename exclusion
-        if (excluded.equals(excluded.getFileName())) {
-            filenameExclusions.add(excludedValue);
+    private void addToExcludedSection(String excludedValue, boolean addProjectBaseDir) {
+
+        String pathMatcherGlob = GLOB_PX
+                +
+                // Add the base directory to any input directly coming from user configuration
+                (addProjectBaseDir ? baseDirectoryGlob : "")
+                +
+                // If the glob start with "/", we remove it since it's already added in the added basedir glob
+                (excludedValue.startsWith("/") ? excludedValue.substring(1) : excludedValue);
+
+        // In order to skip unnecessary subtree dir walking, we use a different PathMatcher list for "directories" or
+        // "files + directories"
+        inputExcludePathMatchers.add(new TreeWalkerPathMatcher(pathMatcherGlob, false));
+
+        // Globs ending with "**" should end any sub-directory inspection
+        if (pathMatcherGlob.endsWith("**")) {
+            inputExcludeDirectoryPathMatchers.add(new TreeWalkerPathMatcher(pathMatcherGlob, true));
+        } else {
+            inputExcludeDirectoryPathMatchers.add(new TreeWalkerPathMatcher(pathMatcherGlob, false));
         }
-        // And we always add it to the filePath exclusion, since files and directories names can't be differentiated on
-        // some OS.
-        filePathExclusions.add(convertToAbsolutePath(excluded).toString());
+
+        // If the pattern ends with "/**", the directory exclude list gets an extra version without this suffix.
+        // ex : "/src/main/generated" does not match "**/generated/**". But every files in it will match.
+        // So we will use "**/generated" in the directory matching and avoid checking sub-files one by one
+        // The original pattern is still needed in case the input inspection starts too low
+        if (pathMatcherGlob.endsWith(GLOB_SX_ALL_SUB_FILES)) {
+            inputExcludeDirectoryPathMatchers.add(new TreeWalkerPathMatcher(
+                    pathMatcherGlob.substring(0, (pathMatcherGlob.length() - GLOB_SX_ALL_SUB_FILES.length())), true));
+        }
+
+        // The string version is saved for detailed debug log purposes only.
+        inputExcludePathMatcherString.add(pathMatcherGlob);
     }
 
     public ProjectsInputInfo calculateChecksum() throws IOException {
@@ -365,28 +422,34 @@ public class MavenProjectInput {
         org.apache.maven.model.Build build = project.getBuild();
 
         final boolean recursive = true;
-        startWalk(Paths.get(build.getSourceDirectory()), dirGlob, recursive, collectedFiles, visitedDirs);
+        startWalk(Paths.get(build.getSourceDirectory()), defaultFilenameGlob, recursive, collectedFiles, visitedDirs);
         for (Resource resource : build.getResources()) {
-            startWalk(Paths.get(resource.getDirectory()), dirGlob, recursive, collectedFiles, visitedDirs);
+            startWalk(Paths.get(resource.getDirectory()), defaultFilenameGlob, recursive, collectedFiles, visitedDirs);
         }
 
-        startWalk(Paths.get(build.getTestSourceDirectory()), dirGlob, recursive, collectedFiles, visitedDirs);
+        startWalk(
+                Paths.get(build.getTestSourceDirectory()), defaultFilenameGlob, recursive, collectedFiles, visitedDirs);
         for (Resource testResource : build.getTestResources()) {
-            startWalk(Paths.get(testResource.getDirectory()), dirGlob, recursive, collectedFiles, visitedDirs);
+            startWalk(
+                    Paths.get(testResource.getDirectory()),
+                    defaultFilenameGlob,
+                    recursive,
+                    collectedFiles,
+                    visitedDirs);
         }
 
         Properties properties = project.getProperties();
         for (String name : properties.stringPropertyNames()) {
             if (name.startsWith(CACHE_INPUT_NAME)) {
                 String path = properties.getProperty(name);
-                startWalk(Paths.get(path), dirGlob, recursive, collectedFiles, visitedDirs);
+                startWalk(Paths.get(path), defaultFilenameGlob, recursive, collectedFiles, visitedDirs);
             }
         }
 
         List<Include> includes = config.getGlobalIncludePaths();
         for (Include include : includes) {
             final String path = include.getValue();
-            final String glob = defaultIfEmpty(include.getGlob(), dirGlob);
+            final String glob = defaultIfEmpty(include.getGlob(), defaultFilenameGlob);
             startWalk(Paths.get(path), glob, include.isRecursive(), collectedFiles, visitedDirs);
         }
 
@@ -448,7 +511,7 @@ public class MavenProjectInput {
                 throw new RuntimeException(e);
             }
         } else {
-            if (!isFilteredOutSubpath(normalized)) {
+            if (!entryMustBeSkipped(normalized)) {
                 LOGGER.debug("Adding: {}", normalized);
                 collectedFiles.add(normalized);
             }
@@ -540,16 +603,8 @@ public class MavenProjectInput {
         });
     }
 
-    private boolean entryMustBeSkipped(Path entry) {
-        if (filePathExclusions.stream()
-                .anyMatch(it -> entry.toAbsolutePath().toString().startsWith(it))) {
-            // skip file entry defined by a path + a full or prefixed filename (exclusion only via path is handled at a
-            // higher level)
-            return true;
-        }
-        // skip file entry defined without a path (full or prefixed filename)
-        return filenameExclusions.stream()
-                .anyMatch(it -> entry.getFileName().toString().startsWith(it));
+    private boolean entryMustBeSkipped(Path path) {
+        return inputExcludePathMatchers.stream().anyMatch(pathMatcher -> pathMatcher.matches(path));
     }
 
     private void addInputsFromPluginConfigs(
@@ -575,7 +630,7 @@ public class MavenProjectInput {
             addInputsFromPluginConfigs(Xpp3DomUtils.getChildren(configChild), scanConfig, files, visitedDirs);
 
             final ScanConfigProperties propertyConfig = scanConfig.getTagScanProperties(tagName);
-            final String glob = defaultIfEmpty(propertyConfig.getGlob(), dirGlob);
+            final String glob = defaultIfEmpty(propertyConfig.getGlob(), defaultFilenameGlob);
             if ("true".equals(Xpp3DomUtils.getAttribute(configChild, CACHE_INPUT_NAME))) {
                 LOGGER.info(
                         "Found tag marked with {} attribute. Tag: {}, value: {}", CACHE_INPUT_NAME, tagName, tagValue);
@@ -659,8 +714,7 @@ public class MavenProjectInput {
     }
 
     private boolean isFilteredOutSubpath(Path path) {
-        Path normalized = path.normalize();
-        return filePathExclusions.stream().anyMatch(it -> normalized.toString().startsWith(it));
+        return inputExcludeDirectoryPathMatchers.stream().anyMatch(matcher -> matcher.stopTreeWalking(path));
     }
 
     private SortedMap<String, String> getMutableDependencies() throws IOException {
