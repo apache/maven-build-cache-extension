@@ -18,6 +18,10 @@
  */
 package org.apache.maven.buildcache.its;
 
+import java.io.File;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.apache.maven.buildcache.its.junit.IntegrationTest;
 import org.apache.maven.buildcache.util.LogFileUtils;
 import org.apache.maven.it.VerificationException;
@@ -27,6 +31,8 @@ import org.junit.jupiter.api.Test;
 
 @IntegrationTest("src/test/projects/include-exclude")
 public class IncludeExcludeTest {
+
+    private static final Pattern NB_SRC_PATTERN = Pattern.compile("^(.*Found )([0-9]*)( input files.*)");
 
     private static final String PROJECT_NAME = "org.apache.maven.caching.test.include-exclude:include-exclude";
 
@@ -53,15 +59,18 @@ public class IncludeExcludeTest {
     }
 
     private void verifyLogs(Verifier verifier) throws VerificationException {
-        final int nbFilesToFind = 7;
+        final String nbFilesToFind = "9";
 
         verifier.verifyErrorFreeLog();
 
         // Verify that there is a line like "Found 7 input files." in the logs
         String foundXFiles = LogFileUtils.findFirstLineContainingTextsInLogs(verifier, "Found ", " input files.");
+
+        Matcher m = NB_SRC_PATTERN.matcher(foundXFiles);
         Assertions.assertTrue(
-                foundXFiles.contains("Found " + nbFilesToFind + " input files."),
-                "Expecting " + nbFilesToFind + " files as input.");
+                m.find(), "Found XX input files string not found in log. This test might need an update?");
+
+        Assertions.assertEquals(nbFilesToFind, m.group(2), "Expected " + nbFilesToFind + " as source.");
 
         // Verify and inspect the line describing precisely which input files were chosen
         String srcInputLine = LogFileUtils.findFirstLineContainingTextsInLogs(verifier, "Src input: [");
@@ -76,6 +85,15 @@ public class IncludeExcludeTest {
         findLineContaining(srcInputs, "from_second_folder.txt");
         findLineContaining(srcInputs, "will_be_scanned.txt");
         findLineContaining(srcInputs, "Test.java");
+        findLineContaining(srcInputs, "second_circle.txt");
+        findLineContaining(srcInputs, "third_circle.txt");
+
+        // Verify that excluded directories are "cut" from inspection as soon as possible
+        String blacklistedLine = LogFileUtils.findFirstLineContainingTextsInLogs(
+                verifier, "Skipping subtree (blacklisted)", "buildcache" + File.separator + "not");
+        Assertions.assertNotNull(
+                blacklistedLine,
+                "Expecting a debug line saying that \"src/main/java/org/apache/maven/buildcache/not\" is excluded from tree walking.");
     }
 
     private void findLineContaining(String[] lines, String text) throws VerificationException {

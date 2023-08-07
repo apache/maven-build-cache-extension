@@ -33,7 +33,7 @@
         <maven.build.cache.input.extraFile>extraFile.txt</maven.build.cache.input.extraFile>
         <maven.build.cache.input.extraFolder>second_folder_outside_src</maven.build.cache.input.extraFolder>
         <!-- Exclude directory in an extra included folder  -->
-        <maven.build.cache.exclude.subfolder>folder_outside_src/subfolder/excluded_subfolder</maven.build.cache.exclude.subfolder>
+        <maven.build.cache.exclude.subfolder>**/excluded_subfolder/**</maven.build.cache.exclude.subfolder>
         <!-- Exclude by filepath + filename -->
         <maven.build.cache.exclude.filepath>folder_outside_src/this_one_should_NOT_be_scanned.txt</maven.build.cache.exclude.filepath>
     </properties>

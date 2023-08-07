@@ -816,41 +816,20 @@ under the License.
         </class>
         <class>
             <name>Exclude</name>
-            <description><![CDATA[A path or a file to exclude from checksum computation. <b>Paths are relative to each module basedir.</b><br/>
-            Absolute path are allowed but should be use for debug purposes only. Please note that a path starting with <code>/</code> is considered as absolute.<br/>
-            Remember that "exclude" elements can also be added per project with the use of maven properties.
+            <description><![CDATA[A glob path pattern to exclude from checksum computation. <b>Paths are relative to each module basedir.</b><br/>
+            Remember that "exclude" elements can also be added per project with the use of maven properties.<br/>
+            More information about glob pattern syntax <a href="https://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob">here</a>.
             ]]></description>
             <fields>
                 <field xml.content="true">
                     <name>value</name>
                     <type>String</type>
-                    <description><![CDATA[Complete or uncomplete path or filename<br/><br/>
-                    Example : A module has some files located in the default resource directory (<code>src/main/resources</code>). By default, all these files are included in the checksum computation.
-
-                     <ul>
-                      <li>readme.md</li>
-                      <li>my-folder-1</li>
-                      <li>
-                          <ul>
-                             <li>my-file-001.txt</li>
-                             <li>my-file-002.txt</li>
-                          </ul>
-                      </li>
-                      <li>my-folder-2</li>
-                      <li>
-                        <ul>
-                             <li>my-file-001.txt</li>
-                             <li>my-file-002.txt</li>
-                         </ul>
-                    </ul>
-
-                    Here are some possible "exclude" values with their respective effects :
+                    <description><![CDATA[Glob path pattern to exclude<br/><br/>
+                    Examples :
                     <ul>
-                      <li><code>src/main/resources/my-folder-1</code> : excludes all the files located under this path</li>
-                      <li><code>src/main/resources/my-folder</code> : excludes all the files located under <code>my-folder-1</code> and <code>my-folder-2</code></li>
-                      <li><code>src/main/resources/my-folder-1/my-file-001.txt</code> : exclude this precise file</li>
-                      <li><code>my-file-001.txt</code> : excludes the files with this name under <code>my-folder-1</code> and <code>my-folder-2</code></li>
-                      <li><code>my-file</code> : excludes all the files under <code>my-folder-1</code> and <code>my-folder-2</code>. Side effect : if a folder named "my-file" exists at the module base directory, it would be excluded too.</li>
+                      <li><code>src/main/resources/some-folder/**</code> : excludes all the files located under this path</li>
+                      <li><code>**node_modules/**</code> : excludes all files under a folder named <code>node_modules</code> placed anywhere in the project</li>
+                      <li><code>**.{md,txt}</code> : excludes all markdown and text files</li>
                     </ul>
 
                     ]]></description>

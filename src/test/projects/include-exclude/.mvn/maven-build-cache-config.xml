@@ -22,18 +22,23 @@ under the License.
 		<global>
 			<includes>
 				<include>folder_outside_src</include>
+				<include>third_folder_outside_src</include>
 			</includes>
 			<excludes>
 				<!-- Exclude directory in the default included src folder -->
-				<exclude>src/main/java/org/apache/maven/buildcache/not</exclude>
+				<exclude>src/main/java/org/apache/maven/buildcache/not/**</exclude>
 				<!-- Exclude by full filename -->
-				<exclude>excluded_by_full_filename.txt</exclude>
+				<exclude>**/excluded_by_full_filename.txt</exclude>
 				<!-- Exclude by prefixed filename -->
-				<exclude>excluded_by_prefix</exclude>
+				<exclude>**/excluded_by_prefix*</exclude>
 				<!-- Exclude by path + prefixed filename -->
-				<exclude>folder_outside_src/prefixed_should_NOT</exclude>
-				<!-- Exclude by prefixed path -->
-				<exclude>folder_outside_src/another_prefixed</exclude>
+				<exclude>folder_outside_src/prefixed_should_NOT*</exclude>
+				<!-- Exclude by prefixed path (and test first "/" occurrence removal -->
+				<exclude>/folder_outside_src/another_prefixed**</exclude>
+				<!-- Exclude direct files in a directory, but not sub-directories -->
+				<exclude>**third_folder_outside_src/*</exclude>
+				<!-- All xml and ts files -->
+				<exclude>**/*.{xml,?s}</exclude>
 			</excludes>
 		</global>
 	</input>
