@@ -20,7 +20,6 @@ package org.apache.maven.buildcache;
 
 import java.io.File;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.maven.plugin.Mojo;
@@ -42,7 +41,7 @@ public class TestMojo implements Mojo {
 
     public TestMojo() {}
 
-    public TestMojo(boolean bool, int primitive, File file, Path path, ArrayList<String> list, String[] array) {
+    public TestMojo(boolean bool, int primitive, File file, Path path, List<String> list, String[] array) {
 
         this.bool = bool;
         this.primitive = primitive;
@@ -53,7 +52,7 @@ public class TestMojo implements Mojo {
     }
 
     public static TestMojo create(
-            boolean bool, int primitive, File file, Path path, ArrayList<String> list, String[] array) {
+            boolean bool, int primitive, File file, Path path, List<String> list, String[] array) {
         return new TestMojo(bool, primitive, file, path, list, array);
     }
 

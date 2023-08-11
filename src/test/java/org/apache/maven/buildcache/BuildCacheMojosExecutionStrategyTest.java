@@ -20,10 +20,10 @@ package org.apache.maven.buildcache;
 
 import java.io.File;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import com.google.common.collect.Lists;
 import org.apache.commons.lang3.SystemUtils;
 import org.apache.maven.buildcache.xml.CacheConfig;
 import org.apache.maven.buildcache.xml.build.CompletedExecution;
@@ -76,7 +76,7 @@ class BuildCacheMojosExecutionStrategyTest {
 
             boolean windows = SystemUtils.IS_OS_WINDOWS;
 
-            List<Pair<TrackedProperty, PropertyValue>> cacheProperties = Lists.newArrayList(
+            List<Pair<TrackedProperty, PropertyValue>> cacheProperties = Arrays.asList(
                     setupProperty("bool", "true"),
                     setupProperty("primitive", "1"),
                     setupProperty("file", "c"),
@@ -103,7 +103,7 @@ class BuildCacheMojosExecutionStrategyTest {
                             ? Paths.get("c:\\a\\b\\c").toFile()
                             : Paths.get("/a/b/c").toFile(),
                     Paths.get(windows ? "..\\d\\e" : "../d/e"),
-                    Lists.newArrayList("a", "b", "c"),
+                    Arrays.<String>asList("a", "b", "c"),
                     new String[] {"c", "d", "e"});
 
             assertTrue(strategy.isParamsMatched(projectMock, executionMock, testMojo, cacheRecordMock));
@@ -123,8 +123,8 @@ class BuildCacheMojosExecutionStrategyTest {
             cache.setName(propertyName);
             cache.setValue("false");
 
-            when(cacheConfigMock.getTrackedProperties(executionMock)).thenReturn(Lists.newArrayList(config));
-            when(cacheRecordMock.getProperties()).thenReturn(Lists.newArrayList(cache));
+            when(cacheConfigMock.getTrackedProperties(executionMock)).thenReturn(Arrays.asList(config));
+            when(cacheRecordMock.getProperties()).thenReturn(Arrays.asList(cache));
 
             when(projectMock.getBasedir()).thenReturn(new File("."));
 
@@ -152,8 +152,8 @@ class BuildCacheMojosExecutionStrategyTest {
             cache.setName(propertyName);
             cache.setValue(null);
 
-            when(cacheConfigMock.getTrackedProperties(executionMock)).thenReturn(Lists.newArrayList(config));
-            when(cacheRecordMock.getProperties()).thenReturn(Lists.newArrayList(cache));
+            when(cacheConfigMock.getTrackedProperties(executionMock)).thenReturn(Arrays.asList(config));
+            when(cacheRecordMock.getProperties()).thenReturn(Arrays.asList(cache));
 
             when(projectMock.getBasedir()).thenReturn(new File("."));
 
@@ -179,8 +179,8 @@ class BuildCacheMojosExecutionStrategyTest {
             cache.setName(propertyName);
             cache.setValue("1");
 
-            when(cacheConfigMock.getTrackedProperties(executionMock)).thenReturn(Lists.newArrayList(config));
-            when(cacheRecordMock.getProperties()).thenReturn(Lists.newArrayList(cache));
+            when(cacheConfigMock.getTrackedProperties(executionMock)).thenReturn(Arrays.asList(config));
+            when(cacheRecordMock.getProperties()).thenReturn(Arrays.asList(cache));
 
             when(projectMock.getBasedir()).thenReturn(new File("."));
 
