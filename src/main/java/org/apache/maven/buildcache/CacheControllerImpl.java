@@ -166,38 +166,35 @@ public class CacheControllerImpl implements CacheController {
 
         String projectName = getVersionlessProjectKey(project);
 
-        ProjectsInputInfo inputInfo = projectInputCalculator.calculateInput(project);
-
-        final CacheContext context = new CacheContext(project, inputInfo, session);
-
-        CacheResult result = empty(context);
-        if (!skipCache) {
-
-            LOGGER.info("Attempting to restore project {} from build cache", projectName);
-
-            // remote build first
-            if (cacheConfig.isRemoteCacheEnabled()) {
-                result = findCachedBuild(mojoExecutions, context);
-                if (!result.isSuccess() && result.getContext() != null) {
-                    LOGGER.info("Remote cache is incomplete or missing, trying local build for {}", projectName);
-                }
-            }
-
-            if (!result.isSuccess() && result.getContext() != null) {
-                CacheResult localBuild = findLocalBuild(mojoExecutions, context);
-                if (localBuild.isSuccess() || (localBuild.isPartialSuccess() && !result.isPartialSuccess())) {
-                    result = localBuild;
-                } else {
-                    LOGGER.info(
-                            "Local build was not found by checksum {} for {}", inputInfo.getChecksum(), projectName);
-                }
-            }
-        } else {
+        if (skipCache) {
             LOGGER.info(
                     "Project {} is marked as requiring force rebuild, will skip lookup in build cache", projectName);
+            return empty(new CacheContext(project, null, session));
+        }
+
+        ProjectsInputInfo inputInfo = projectInputCalculator.calculateInput(project);
+        final CacheContext context = new CacheContext(project, inputInfo, session);
+        CacheResult result = empty(context);
+
+        LOGGER.info("Attempting to restore project {} from build cache", projectName);
+
+        // remote build first
+        if (cacheConfig.isRemoteCacheEnabled()) {
+            result = findCachedBuild(mojoExecutions, context);
+            if (!result.isSuccess() && result.getContext() != null) {
+                LOGGER.info("Remote cache is incomplete or missing, trying local build for {}", projectName);
+            }
+        }
+
+        if (!result.isSuccess() && result.getContext() != null) {
+            CacheResult localBuild = findLocalBuild(mojoExecutions, context);
+            if (localBuild.isSuccess() || (localBuild.isPartialSuccess() && !result.isPartialSuccess())) {
+                result = localBuild;
+            } else {
+                LOGGER.info("Local build was not found by checksum {} for {}", inputInfo.getChecksum(), projectName);
+            }
         }
         cacheResults.put(getVersionlessProjectKey(project), result);
-
         return result;
     }
 

@@ -35,7 +35,7 @@ public class CacheContext {
 
     public CacheContext(MavenProject project, ProjectsInputInfo inputInfo, MavenSession session) {
         this.project = requireNonNull(project);
-        this.inputInfo = requireNonNull(inputInfo);
+        this.inputInfo = inputInfo;
         this.session = requireNonNull(session);
     }
 

@@ -139,7 +139,7 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                 }
             }
 
-            if (cacheState == INITIALIZED && (!restorable || !restored)) {
+            if (cacheState == INITIALIZED && (!restorable || !restored) && !skipCache) {
                 final Map<String, MojoExecutionEvent> executionEvents = mojoListener.getProjectExecutions(project);
                 cacheController.save(result, mojoExecutions, executionEvents);
             }
