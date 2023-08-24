@@ -72,7 +72,7 @@ public class DefaultProjectInputCalculator implements ProjectInputCalculator {
 
     @Override
     public ProjectsInputInfo calculateInput(MavenProject project) {
-        LOGGER.info("Going to calculate checksum for project [groupId=" + project.getGroupId() + ", artifactId="
+        LOGGER.debug("Going to calculate checksum for project [groupId=" + project.getGroupId() + ", artifactId="
                 + project.getArtifactId() + "]");
 
         String key = BuilderCommon.getKey(project);
