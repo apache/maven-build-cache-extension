@@ -19,9 +19,9 @@
 package org.apache.maven.buildcache;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
-import com.google.common.collect.Lists;
 import org.apache.maven.buildcache.xml.Build;
 import org.apache.maven.execution.ExecutionEvent;
 import org.apache.maven.execution.MavenSession;
@@ -77,7 +77,7 @@ class LifecyclePhasesHelperTest {
     void resolveHighestLifecyclePhaseNormal() {
         String phase = lifecyclePhasesHelper.resolveHighestLifecyclePhase(
                 projectMock,
-                Lists.newArrayList(
+                Arrays.asList(
                         mockedMojoExecution("clean"), mockedMojoExecution("compile"), mockedMojoExecution("install")));
         assertEquals("install", phase);
     }
@@ -92,7 +92,7 @@ class LifecyclePhasesHelperTest {
         publishForkedProjectEvent(origin);
 
         String phase = lifecyclePhasesHelper.resolveHighestLifecyclePhase(
-                projectMock, Lists.newArrayList(mockedMojoExecution(null)));
+                projectMock, Arrays.asList(mockedMojoExecution(null)));
 
         assertEquals("install", phase);
     }
@@ -175,7 +175,7 @@ class LifecyclePhasesHelperTest {
     void getCleanSegment() {
         MojoExecution clean = mockedMojoExecution("clean");
         List<MojoExecution> cleanSegment = lifecyclePhasesHelper.getCleanSegment(
-                projectMock, Lists.newArrayList(clean, mockedMojoExecution("compile"), mockedMojoExecution("install")));
+                projectMock, Arrays.asList(clean, mockedMojoExecution("compile"), mockedMojoExecution("install")));
         assertEquals(singletonList(clean), cleanSegment);
     }
 
@@ -185,7 +185,7 @@ class LifecyclePhasesHelperTest {
     @Test
     void getEmptyCleanSegment() {
         List<MojoExecution> cleanSegment = lifecyclePhasesHelper.getCleanSegment(
-                projectMock, Lists.newArrayList(mockedMojoExecution("compile"), mockedMojoExecution("install")));
+                projectMock, Arrays.asList(mockedMojoExecution("compile"), mockedMojoExecution("install")));
         assertEquals(emptyList(), cleanSegment);
     }
 
@@ -200,7 +200,7 @@ class LifecyclePhasesHelperTest {
 
         List<MojoExecution> cleanSegment = lifecyclePhasesHelper.getCleanSegment(
                 projectMock,
-                Lists.newArrayList(
+                Arrays.asList(
                         // null lifecycle phase is possible in forked executions
                         mockedMojoExecution(null), mockedMojoExecution(null)));
 
@@ -217,7 +217,7 @@ class LifecyclePhasesHelperTest {
 
         List<MojoExecution> cleanSegment = lifecyclePhasesHelper.getCleanSegment(
                 projectMock,
-                Lists.newArrayList(
+                Arrays.asList(
                         // clean is overridden to "install" phase assuming forked execution
                         mockedMojoExecution("clean")));
 
@@ -228,7 +228,7 @@ class LifecyclePhasesHelperTest {
     void testCachedSegment() {
         MojoExecution compile = mockedMojoExecution("compile");
         MojoExecution test = mockedMojoExecution("test");
-        List<MojoExecution> mojoExecutions = Lists.newArrayList(compile, test, mockedMojoExecution("install"));
+        List<MojoExecution> mojoExecutions = Arrays.asList(compile, test, mockedMojoExecution("install"));
 
         Build build = mock(Build.class);
         when(build.getHighestCompletedGoal()).thenReturn("test");
@@ -243,7 +243,7 @@ class LifecyclePhasesHelperTest {
         MojoExecution compile = mockedMojoExecution("compile");
         MojoExecution test = mockedMojoExecution("test");
         MojoExecution install = mockedMojoExecution("install");
-        List<MojoExecution> mojoExecutions = Lists.newArrayList(compile, test, install);
+        List<MojoExecution> mojoExecutions = Arrays.asList(compile, test, install);
 
         Build build = mock(Build.class);
         when(build.getHighestCompletedGoal()).thenReturn("clean");
@@ -258,7 +258,7 @@ class LifecyclePhasesHelperTest {
         MojoExecution me1 = mockedMojoExecution(null);
         MojoExecution me2 = mockedMojoExecution(null);
 
-        List<MojoExecution> mojoExecutions = Lists.newArrayList(me1, me2);
+        List<MojoExecution> mojoExecutions = Arrays.asList(me1, me2);
 
         MojoExecution origin = mockedMojoExecution("install");
         publishForkedProjectEvent(origin);
@@ -277,7 +277,7 @@ class LifecyclePhasesHelperTest {
         MojoExecution compile = mockedMojoExecution("compile");
         MojoExecution test = mockedMojoExecution("test");
         MojoExecution install = mockedMojoExecution("install");
-        List<MojoExecution> mojoExecutions = Lists.newArrayList(compile, test, install);
+        List<MojoExecution> mojoExecutions = Arrays.asList(compile, test, install);
 
         Build build = mock(Build.class);
         when(build.getHighestCompletedGoal()).thenReturn("site");
@@ -292,7 +292,7 @@ class LifecyclePhasesHelperTest {
         MojoExecution compile = mockedMojoExecution("compile");
         MojoExecution test = mockedMojoExecution("test");
         MojoExecution install = mockedMojoExecution("install");
-        List<MojoExecution> mojoExecutions = Lists.newArrayList(compile, test, install);
+        List<MojoExecution> mojoExecutions = Arrays.asList(compile, test, install);
 
         Build build = mock(Build.class);
         when(build.getHighestCompletedGoal()).thenReturn("compile");
@@ -308,7 +308,7 @@ class LifecyclePhasesHelperTest {
         MojoExecution compile = mockedMojoExecution("compile");
         MojoExecution test = mockedMojoExecution("test");
         MojoExecution install = mockedMojoExecution("install");
-        List<MojoExecution> mojoExecutions = Lists.newArrayList(compile, test, install);
+        List<MojoExecution> mojoExecutions = Arrays.asList(compile, test, install);
 
         Build build = mock(Build.class);
         when(build.getHighestCompletedGoal()).thenReturn("clean");
@@ -324,7 +324,7 @@ class LifecyclePhasesHelperTest {
         MojoExecution me1 = mockedMojoExecution(null);
         MojoExecution me2 = mockedMojoExecution(null);
 
-        List<MojoExecution> mojoExecutions = Lists.newArrayList(me1, me2);
+        List<MojoExecution> mojoExecutions = Arrays.asList(me1, me2);
 
         MojoExecution origin = mockedMojoExecution("install");
         publishForkedProjectEvent(origin);
@@ -344,7 +344,7 @@ class LifecyclePhasesHelperTest {
         MojoExecution compile = mockedMojoExecution("compile");
         MojoExecution test = mockedMojoExecution("test");
         MojoExecution install = mockedMojoExecution("install");
-        List<MojoExecution> mojoExecutions = Lists.newArrayList(compile, test, install);
+        List<MojoExecution> mojoExecutions = Arrays.asList(compile, test, install);
 
         Build cachedBuild = mock(Build.class);
         when(cachedBuild.getHighestCompletedGoal()).thenReturn("install");

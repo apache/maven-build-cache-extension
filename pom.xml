@@ -29,7 +29,7 @@ under the License.
 
   <groupId>org.apache.maven.extensions</groupId>
   <artifactId>maven-build-cache-extension</artifactId>
-  <version>1.0.2-SNAPSHOT</version>
+  <version>1.1.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>Apache Maven Build Cache Extension</name>
@@ -72,7 +72,7 @@ under the License.
 
     <commonsCliVersion>1.4</commonsCliVersion>
     <commonsLangVersion>3.12.0</commonsLangVersion>
-    <junit.version>5.9.3</junit.version>
+    <junit.version>5.10.0</junit.version>
     <mockitoVersion>4.11.0</mockitoVersion>
     <plexusUtilsVersion>3.5.1</plexusUtilsVersion>
     <wagonVersion>3.4.3</wagonVersion>
@@ -93,7 +93,7 @@ under the License.
       <dependency>
         <groupId>org.testcontainers</groupId>
         <artifactId>testcontainers-bom</artifactId>
-        <version>1.18.3</version>
+        <version>1.19.0</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -248,13 +248,13 @@ under the License.
     <dependency>
       <groupId>org.openjdk.jmh</groupId>
       <artifactId>jmh-core</artifactId>
-      <version>1.36</version>
+      <version>1.37</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.openjdk.jmh</groupId>
       <artifactId>jmh-generator-annprocess</artifactId>
-      <version>1.36</version>
+      <version>1.37</version>
       <scope>test</scope>
     </dependency>
   </dependencies>

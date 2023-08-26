@@ -39,11 +39,13 @@ import org.apache.maven.buildcache.xml.build.CompletedExecution;
 import org.apache.maven.buildcache.xml.config.TrackedProperty;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.execution.MojoExecutionEvent;
+import org.apache.maven.execution.scope.internal.MojoExecutionScope;
 import org.apache.maven.lifecycle.LifecycleExecutionException;
 import org.apache.maven.plugin.MavenPluginManager;
 import org.apache.maven.plugin.Mojo;
 import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.MojoExecution.Source;
+import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoExecutionRunner;
 import org.apache.maven.plugin.MojosExecutionStrategy;
 import org.apache.maven.plugin.PluginConfigurationException;
@@ -74,6 +76,7 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
     private final MojoParametersListener mojoListener;
     private final LifecyclePhasesHelper lifecyclePhasesHelper;
     private final MavenPluginManager mavenPluginManager;
+    private MojoExecutionScope mojoExecutionScope;
 
     @Inject
     public BuildCacheMojosExecutionStrategy(
@@ -81,66 +84,74 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
             CacheConfig cacheConfig,
             MojoParametersListener mojoListener,
             LifecyclePhasesHelper lifecyclePhasesHelper,
-            MavenPluginManager mavenPluginManager) {
+            MavenPluginManager mavenPluginManager,
+            MojoExecutionScope mojoExecutionScope) {
         this.cacheController = cacheController;
         this.cacheConfig = cacheConfig;
         this.mojoListener = mojoListener;
         this.lifecyclePhasesHelper = lifecyclePhasesHelper;
         this.mavenPluginManager = mavenPluginManager;
+        this.mojoExecutionScope = mojoExecutionScope;
     }
 
     public void execute(
             List<MojoExecution> mojoExecutions, MavenSession session, MojoExecutionRunner mojoExecutionRunner)
             throws LifecycleExecutionException {
-        final MavenProject project = session.getCurrentProject();
-        final Source source = getSource(mojoExecutions);
+        try {
+            final MavenProject project = session.getCurrentProject();
+            final Source source = getSource(mojoExecutions);
 
-        // execute clean bound goals before restoring to not interfere/slowdown clean
-        CacheState cacheState = DISABLED;
-        CacheResult result = CacheResult.empty();
-        boolean skipCache = cacheConfig.isSkipCache() || MavenProjectInput.isSkipCache(project);
-        boolean cacheIsDisabled = MavenProjectInput.isCacheDisabled(project);
-        // Forked execution should be thought as a part of originating mojo internal implementation
-        // If forkedExecution is detected, it means that originating mojo is not cached so forks should rerun too
-        boolean forkedExecution = lifecyclePhasesHelper.isForkedProject(project);
-        if (source == Source.LIFECYCLE && !forkedExecution) {
-            List<MojoExecution> cleanPhase = lifecyclePhasesHelper.getCleanSegment(project, mojoExecutions);
-            for (MojoExecution mojoExecution : cleanPhase) {
-                mojoExecutionRunner.run(mojoExecution);
-            }
-            if (!cacheIsDisabled) {
-                cacheState = cacheConfig.initialize();
-            } else {
-                LOGGER.info("Cache is explicitly disabled on project level for {}", getVersionlessProjectKey(project));
-            }
-            if (cacheState == INITIALIZED || skipCache) {
-                result = cacheController.findCachedBuild(session, project, mojoExecutions, skipCache);
-            }
-        }
-
-        boolean restorable = result.isSuccess() || result.isPartialSuccess();
-        boolean restored = result.isSuccess(); // if partially restored need to save increment
-        if (restorable) {
-            restored &= restoreProject(result, mojoExecutions, mojoExecutionRunner, cacheConfig);
-        } else {
-            for (MojoExecution mojoExecution : mojoExecutions) {
-                if (source == Source.CLI
-                        || mojoExecution.getLifecyclePhase() == null
-                        || lifecyclePhasesHelper.isLaterPhaseThanClean(mojoExecution.getLifecyclePhase())) {
+            // execute clean bound goals before restoring to not interfere/slowdown clean
+            CacheState cacheState = DISABLED;
+            CacheResult result = CacheResult.empty();
+            boolean skipCache = cacheConfig.isSkipCache() || MavenProjectInput.isSkipCache(project);
+            boolean cacheIsDisabled = MavenProjectInput.isCacheDisabled(project);
+            // Forked execution should be thought as a part of originating mojo internal implementation
+            // If forkedExecution is detected, it means that originating mojo is not cached so forks should rerun too
+            boolean forkedExecution = lifecyclePhasesHelper.isForkedProject(project);
+            if (source == Source.LIFECYCLE && !forkedExecution) {
+                List<MojoExecution> cleanPhase = lifecyclePhasesHelper.getCleanSegment(project, mojoExecutions);
+                for (MojoExecution mojoExecution : cleanPhase) {
                     mojoExecutionRunner.run(mojoExecution);
                 }
+                if (!cacheIsDisabled) {
+                    cacheState = cacheConfig.initialize();
+                } else {
+                    LOGGER.info(
+                            "Cache is explicitly disabled on project level for {}", getVersionlessProjectKey(project));
+                }
+                if (cacheState == INITIALIZED || skipCache) {
+                    result = cacheController.findCachedBuild(session, project, mojoExecutions, skipCache);
+                }
             }
-        }
 
-        if (cacheState == INITIALIZED && (!restorable || !restored)) {
-            final Map<String, MojoExecutionEvent> executionEvents = mojoListener.getProjectExecutions(project);
-            cacheController.save(result, mojoExecutions, executionEvents);
-        }
+            boolean restorable = result.isSuccess() || result.isPartialSuccess();
+            boolean restored = result.isSuccess(); // if partially restored need to save increment
+            if (restorable) {
+                restored &= restoreProject(result, mojoExecutions, mojoExecutionRunner, cacheConfig);
+            } else {
+                for (MojoExecution mojoExecution : mojoExecutions) {
+                    if (source == Source.CLI
+                            || mojoExecution.getLifecyclePhase() == null
+                            || lifecyclePhasesHelper.isLaterPhaseThanClean(mojoExecution.getLifecyclePhase())) {
+                        mojoExecutionRunner.run(mojoExecution);
+                    }
+                }
+            }
 
-        if (cacheConfig.isFailFast() && !result.isSuccess() && !skipCache && !forkedExecution) {
-            throw new LifecycleExecutionException(
-                    "Failed to restore project[" + getVersionlessProjectKey(project) + "] from cache, failing build.",
-                    project);
+            if (cacheState == INITIALIZED && (!restorable || !restored)) {
+                final Map<String, MojoExecutionEvent> executionEvents = mojoListener.getProjectExecutions(project);
+                cacheController.save(result, mojoExecutions, executionEvents);
+            }
+
+            if (cacheConfig.isFailFast() && !result.isSuccess() && !skipCache && !forkedExecution) {
+                throw new LifecycleExecutionException(
+                        "Failed to restore project[" + getVersionlessProjectKey(project)
+                                + "] from cache, failing build.",
+                        project);
+            }
+        } catch (MojoExecutionException e) {
+            throw new LifecycleExecutionException(e.getMessage(), e);
         }
     }
 
@@ -161,51 +172,68 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
             List<MojoExecution> mojoExecutions,
             MojoExecutionRunner mojoExecutionRunner,
             CacheConfig cacheConfig)
-            throws LifecycleExecutionException {
-        final Build build = cacheResult.getBuildInfo();
-        final MavenProject project = cacheResult.getContext().getProject();
-        final MavenSession session = cacheResult.getContext().getSession();
-        final List<MojoExecution> cachedSegment =
-                lifecyclePhasesHelper.getCachedSegment(project, mojoExecutions, build);
+            throws LifecycleExecutionException, MojoExecutionException {
+        mojoExecutionScope.enter();
+        try {
+            final Build build = cacheResult.getBuildInfo();
+            final MavenProject project = cacheResult.getContext().getProject();
+            final MavenSession session = cacheResult.getContext().getSession();
+            mojoExecutionScope.seed(MavenProject.class, project);
+            mojoExecutionScope.seed(MavenSession.class, session);
+            final List<MojoExecution> cachedSegment =
+                    lifecyclePhasesHelper.getCachedSegment(project, mojoExecutions, build);
 
-        boolean restored = cacheController.restoreProjectArtifacts(cacheResult);
-        if (!restored) {
-            LOGGER.info("Cannot restore project artifacts, continuing with non cached build");
-            return false;
-        }
+            boolean restored = cacheController.restoreProjectArtifacts(cacheResult);
+            if (!restored) {
+                LOGGER.info("Cannot restore project artifacts, continuing with non cached build");
+                return false;
+            }
 
-        for (MojoExecution cacheCandidate : cachedSegment) {
-            if (cacheController.isForcedExecution(project, cacheCandidate)) {
-                LOGGER.info(
-                        "Mojo execution is forced by project property: {}",
-                        cacheCandidate.getMojoDescriptor().getFullGoalName());
-                mojoExecutionRunner.run(cacheCandidate);
-            } else {
-                restored = verifyCacheConsistency(
-                        cacheCandidate, build, project, session, mojoExecutionRunner, cacheConfig);
-                if (!restored) {
-                    break;
+            for (MojoExecution cacheCandidate : cachedSegment) {
+                if (cacheController.isForcedExecution(project, cacheCandidate)) {
+                    LOGGER.info(
+                            "Mojo execution is forced by project property: {}",
+                            cacheCandidate.getMojoDescriptor().getFullGoalName());
+                    mojoExecutionScope.seed(MojoExecution.class, cacheCandidate);
+                    // need maven 4 as minumum
+                    // mojoExecutionScope.seed(
+                    //        org.apache.maven.api.plugin.Log.class,
+                    //        new DefaultLog(LoggerFactory.getLogger(
+                    //                cacheCandidate.getMojoDescriptor().getFullGoalName())));
+                    // mojoExecutionScope.seed(Project.class, ((DefaultSession)
+                    // session.getSession()).getProject(project));
+                    // mojoExecutionScope.seed(
+                    //        org.apache.maven.api.MojoExecution.class, new DefaultMojoExecution(cacheCandidate));
+                    mojoExecutionRunner.run(cacheCandidate);
+                } else {
+                    restored = verifyCacheConsistency(
+                            cacheCandidate, build, project, session, mojoExecutionRunner, cacheConfig);
+                    if (!restored) {
+                        break;
+                    }
                 }
             }
-        }
 
-        if (!restored) {
-            // cleanup partial state
-            project.getArtifact().setFile(null);
-            project.getArtifact().setResolved(false);
-            mojoListener.remove(project);
-            // build as usual
-            for (MojoExecution mojoExecution : cachedSegment) {
+            if (!restored) {
+                // cleanup partial state
+                project.getArtifact().setFile(null);
+                project.getArtifact().setResolved(false);
+                mojoListener.remove(project);
+                // build as usual
+                for (MojoExecution mojoExecution : cachedSegment) {
+                    mojoExecutionRunner.run(mojoExecution);
+                }
+            }
+
+            List<MojoExecution> postCachedSegment =
+                    lifecyclePhasesHelper.getPostCachedSegment(project, mojoExecutions, build);
+            for (MojoExecution mojoExecution : postCachedSegment) {
                 mojoExecutionRunner.run(mojoExecution);
             }
+            return restored;
+        } finally {
+            mojoExecutionScope.exit();
         }
-
-        List<MojoExecution> postCachedSegment =
-                lifecyclePhasesHelper.getPostCachedSegment(project, mojoExecutions, build);
-        for (MojoExecution mojoExecution : postCachedSegment) {
-            mojoExecutionRunner.run(mojoExecution);
-        }
-        return restored;
     }
 
     private boolean verifyCacheConsistency(
