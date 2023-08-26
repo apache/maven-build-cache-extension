@@ -55,8 +55,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -71,7 +69,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Testcontainers(disabledWithoutDocker = true)
 public class RemoteCacheDavTest {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(RemoteCacheDavTest.class);
     public static final String DAV_DOCKER_IMAGE =
             "xama/nginx-webdav@sha256:84171a7e67d7e98eeaa67de58e3ce141ec1d0ee9c37004e7096698c8379fd9cf";
     private static final String DAV_USERNAME = "admin";
@@ -125,21 +122,8 @@ public class RemoteCacheDavTest {
 
     @AfterEach
     public void cleanup() throws Exception {
-
-        org.testcontainers.containers.Container.ExecResult result = dav.execInContainer("ls", "-lrt", "/var/webdav");
-
-        LOGGER.info("before clean in container result: {}", result);
-
-        result = dav.execInContainer("rm", "-rf", "/var/webdav");
-
-        LOGGER.info("clean in container result: {}", result);
-
-        result = dav.execInContainer("ls", "-lrt", "/var/webdav");
-
-        LOGGER.info("after clean in container result: {}", result);
-
+        dav.execInContainer("rm", "-rf", "/var/webdav");
         cleanDirs(localCache);
-
         dav.close();
     }
 
