@@ -154,7 +154,7 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
             return Optional.of(task.getDataBytes());
         } catch (ResourceDoesNotExistException e) {
             if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Cache item not found: {}", fullUrl, e);
+                LOGGER.info("Cache item not found: {}", fullUrl, e);
             } else {
                 LOGGER.info("Cache item not found: {}", fullUrl);
             }

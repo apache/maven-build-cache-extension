@@ -66,7 +66,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @IntegrationTest("src/test/projects/remote-cache-dav")
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true)
 public class RemoteCacheDavTest {
 
     public static final String DAV_DOCKER_IMAGE =
