@@ -55,6 +55,7 @@ import org.apache.maven.SessionScoped;
 import org.apache.maven.artifact.InvalidArtifactRTException;
 import org.apache.maven.artifact.handler.ArtifactHandler;
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
+import org.apache.maven.buildcache.artifact.ArtifactRestorationReport;
 import org.apache.maven.buildcache.artifact.RestoredArtifact;
 import org.apache.maven.buildcache.checksum.MavenProjectInput;
 import org.apache.maven.buildcache.hash.HashAlgorithm;
@@ -293,10 +294,13 @@ public class CacheControllerImpl implements CacheController {
     }
 
     @Override
-    public boolean restoreProjectArtifacts(CacheResult cacheResult) {
+    public ArtifactRestorationReport restoreProjectArtifacts(CacheResult cacheResult) {
+
+        LOGGER.debug("Restore project artifacts");
         final Build build = cacheResult.getBuildInfo();
         final CacheContext context = cacheResult.getContext();
         final MavenProject project = context.getProject();
+        ArtifactRestorationReport restorationReport = new ArtifactRestorationReport();
 
         try {
             RestoredArtifact restoredProjectArtifact = null;
@@ -323,6 +327,8 @@ public class CacheControllerImpl implements CacheController {
                         // it may also be disabled on a per-project level (defaults to true - enable)
                         if (cacheConfig.isRestoreGeneratedSources()
                                 && MavenProjectInput.isRestoreGeneratedSources(project)) {
+                            // Set this value before trying the restoration, to keep a trace of the attempt if it fails
+                            restorationReport.setRestoredFilesInProjectDirectory(true);
                             // generated sources artifact
                             final Path attachedArtifactFile =
                                     localCache.getArtifactFile(context, cacheResult.getSource(), attachedArtifactInfo);
@@ -346,11 +352,11 @@ public class CacheControllerImpl implements CacheController {
                 project.setArtifact(restoredProjectArtifact);
             }
             restoredAttachedArtifacts.forEach(project::addAttachedArtifact);
-            return true;
+            restorationReport.setSuccess(true);
         } catch (Exception e) {
             LOGGER.debug("Cannot restore cache, continuing with normal build.", e);
-            return false;
         }
+        return restorationReport;
     }
 
     /**

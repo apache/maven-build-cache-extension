@@ -21,6 +21,7 @@ package org.apache.maven.buildcache;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.maven.buildcache.artifact.ArtifactRestorationReport;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.execution.MojoExecutionEvent;
 import org.apache.maven.plugin.MojoExecution;
@@ -34,7 +35,7 @@ public interface CacheController {
     CacheResult findCachedBuild(
             MavenSession session, MavenProject project, List<MojoExecution> mojoExecutions, boolean skipCache);
 
-    boolean restoreProjectArtifacts(CacheResult cacheResult);
+    ArtifactRestorationReport restoreProjectArtifacts(CacheResult cacheResult);
 
     void save(
             CacheResult cacheResult,

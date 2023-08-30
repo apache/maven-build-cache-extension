@@ -24,12 +24,15 @@ import javax.inject.Named;
 
 import java.io.File;
 import java.nio.file.Path;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.SessionScoped;
+import org.apache.maven.buildcache.artifact.ArtifactRestorationReport;
 import org.apache.maven.buildcache.checksum.MavenProjectInput;
 import org.apache.maven.buildcache.xml.Build;
 import org.apache.maven.buildcache.xml.CacheConfig;
@@ -109,8 +112,9 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
             // Forked execution should be thought as a part of originating mojo internal implementation
             // If forkedExecution is detected, it means that originating mojo is not cached so forks should rerun too
             boolean forkedExecution = lifecyclePhasesHelper.isForkedProject(project);
+            List<MojoExecution> cleanPhase = null;
             if (source == Source.LIFECYCLE && !forkedExecution) {
-                List<MojoExecution> cleanPhase = lifecyclePhasesHelper.getCleanSegment(project, mojoExecutions);
+                cleanPhase = lifecyclePhasesHelper.getCleanSegment(project, mojoExecutions);
                 for (MojoExecution mojoExecution : cleanPhase) {
                     mojoExecutionRunner.run(mojoExecution);
                 }
@@ -128,7 +132,10 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
             boolean restorable = result.isSuccess() || result.isPartialSuccess();
             boolean restored = result.isSuccess(); // if partially restored need to save increment
             if (restorable) {
-                restored &= restoreProject(result, mojoExecutions, mojoExecutionRunner, cacheConfig);
+                CacheRestorationStatus cacheRestorationStatus =
+                        restoreProject(result, mojoExecutions, mojoExecutionRunner, cacheConfig);
+                restored &= CacheRestorationStatus.SUCCESS == cacheRestorationStatus;
+                executeExtraCleanPhaseIfNeeded(cacheRestorationStatus, cleanPhase, mojoExecutionRunner);
             }
             if (!restored) {
                 for (MojoExecution mojoExecution : mojoExecutions) {
@@ -156,6 +163,31 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
         }
     }
 
+    /**
+     * Cache configuration could demand to restore some files in the project directory (generated sources or even arbitrary content)
+     * If an error occurs during or after this kind of restoration AND a clean phase was required in the build :
+     * we execute an extra clean phase to remove any potential partially restored files
+     *
+     * @param cacheRestorationStatus the restoration status
+     * @param cleanPhase clean phase mojos
+     * @param mojoExecutionRunner mojo runner
+     * @throws LifecycleExecutionException
+     */
+    private void executeExtraCleanPhaseIfNeeded(
+            final CacheRestorationStatus cacheRestorationStatus,
+            List<MojoExecution> cleanPhase,
+            MojoExecutionRunner mojoExecutionRunner)
+            throws LifecycleExecutionException {
+        if (CacheRestorationStatus.FAILURE_NEEDS_CLEAN == cacheRestorationStatus
+                && cleanPhase != null
+                && !cleanPhase.isEmpty()) {
+            LOGGER.info("Extra clean phase is executed as cache could be partially restored.");
+            for (MojoExecution mojoExecution : cleanPhase) {
+                mojoExecutionRunner.run(mojoExecution);
+            }
+        }
+    }
+
     private Source getSource(List<MojoExecution> mojoExecutions) {
         if (mojoExecutions == null || mojoExecutions.isEmpty()) {
             return null;
@@ -168,7 +200,7 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
         return Source.LIFECYCLE;
     }
 
-    private boolean restoreProject(
+    private CacheRestorationStatus restoreProject(
             CacheResult cacheResult,
             List<MojoExecution> mojoExecutions,
             MojoExecutionRunner mojoExecutionRunner,
@@ -184,14 +216,34 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
             final List<MojoExecution> cachedSegment =
                     lifecyclePhasesHelper.getCachedSegment(project, mojoExecutions, build);
 
-            boolean restored = cacheController.restoreProjectArtifacts(cacheResult);
-            if (!restored) {
-                LOGGER.info("Cannot restore project artifacts, continuing with non cached build");
-                return false;
-            }
-
+            // Verify cache consistency for cached mojos
+            LOGGER.debug("Verify consistency on cached mojos");
+            Set<MojoExecution> forcedExecutionMojos = new HashSet<>();
             for (MojoExecution cacheCandidate : cachedSegment) {
                 if (cacheController.isForcedExecution(project, cacheCandidate)) {
+                    forcedExecutionMojos.add(cacheCandidate);
+                } else {
+                    if (!verifyCacheConsistency(
+                            cacheCandidate, build, project, session, mojoExecutionRunner, cacheConfig)) {
+                        LOGGER.info("A cached mojo is not consistent, continuing with non cached build");
+                        return CacheRestorationStatus.FAILURE;
+                    }
+                }
+            }
+
+            // Restore project artifacts
+            ArtifactRestorationReport restorationReport = cacheController.restoreProjectArtifacts(cacheResult);
+            if (!restorationReport.isSuccess()) {
+                LOGGER.info("Cannot restore project artifacts, continuing with non cached build");
+                return restorationReport.isRestoredFilesInProjectDirectory()
+                        ? CacheRestorationStatus.FAILURE_NEEDS_CLEAN
+                        : CacheRestorationStatus.FAILURE;
+            }
+
+            // Execute mandatory mojos (forced by configuration)
+            LOGGER.debug("Execute mandatory mojos in the cache segment");
+            for (MojoExecution cacheCandidate : cachedSegment) {
+                if (forcedExecutionMojos.contains(cacheCandidate)) {
                     LOGGER.info(
                             "Mojo execution is forced by project property: {}",
                             cacheCandidate.getMojoDescriptor().getFullGoalName());
@@ -207,31 +259,20 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                     //        org.apache.maven.api.MojoExecution.class, new DefaultMojoExecution(cacheCandidate));
                     mojoExecutionRunner.run(cacheCandidate);
                 } else {
-                    restored = verifyCacheConsistency(
-                            cacheCandidate, build, project, session, mojoExecutionRunner, cacheConfig);
-                    if (!restored) {
-                        break;
-                    }
+                    LOGGER.info(
+                            "Skipping plugin execution (cached): {}",
+                            cacheCandidate.getMojoDescriptor().getFullGoalName());
                 }
             }
 
-            if (!restored) {
-                // cleanup partial state
-                project.getArtifact().setFile(null);
-                project.getArtifact().setResolved(false);
-                mojoListener.remove(project);
-                // build as usual
-                for (MojoExecution mojoExecution : cachedSegment) {
-                    mojoExecutionRunner.run(mojoExecution);
-                }
-            }
-
+            // Execute mojos after the cache segment
+            LOGGER.debug("Execute mojos post cache segment");
             List<MojoExecution> postCachedSegment =
                     lifecyclePhasesHelper.getPostCachedSegment(project, mojoExecutions, build);
             for (MojoExecution mojoExecution : postCachedSegment) {
                 mojoExecutionRunner.run(mojoExecution);
             }
-            return restored;
+            return CacheRestorationStatus.SUCCESS;
         } finally {
             mojoExecutionScope.exit();
         }
@@ -264,13 +305,14 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
 
                 if (consistent) {
                     long elapsed = System.currentTimeMillis() - createdTimestamp;
-                    LOGGER.info("Skipping plugin execution (reconciled in {} millis): {}", elapsed, fullGoalName);
+
+                    LOGGER.debug(
+                            "Plugin execution will be skipped ({} : reconciled in {} millis)", elapsed, fullGoalName);
                 }
 
-                if (LOGGER.isDebugEnabled()) {
-                    LOGGER.debug(
-                            "Checked {}, resolved mojo: {}, cached params: {}", fullGoalName, mojo, completedExecution);
-                }
+                LOGGER.debug(
+                        "Checked {}, resolved mojo: {}, cached params: {}", fullGoalName, mojo, completedExecution);
+
             } catch (PluginContainerException | PluginConfigurationException e) {
                 throw new LifecycleExecutionException("Cannot get configured mojo", e);
             } finally {
@@ -279,8 +321,8 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                 }
             }
         } else {
-            LOGGER.info(
-                    "Skipping plugin execution (cached): {}",
+            LOGGER.debug(
+                    "Plugin execution will be skipped ({} : cached)",
                     cacheCandidate.getMojoDescriptor().getFullGoalName());
         }
 
@@ -364,5 +406,11 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
             LOGGER.debug("normalizedPath '{}' - {} return {}", path, baseDirPath, normalizedPath);
         }
         return normalizedPath;
+    }
+
+    private enum CacheRestorationStatus {
+        SUCCESS,
+        FAILURE,
+        FAILURE_NEEDS_CLEAN;
     }
 }

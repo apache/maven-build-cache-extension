@@ -16,12 +16,33 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.maven.buildcache.xml;
+package org.apache.maven.buildcache.artifact;
 
-/**
- * CacheState
- */
-public enum CacheState {
-    DISABLED,
-    INITIALIZED
+public class ArtifactRestorationReport {
+
+    /**
+     * Success restoration indicator
+     */
+    private boolean success;
+
+    /**
+     * True if some files have been restored (or attempted in case of error) in the project directory
+     */
+    private boolean restoredFilesInProjectDirectory;
+
+    public boolean isSuccess() {
+        return success;
+    }
+
+    public void setSuccess(boolean success) {
+        this.success = success;
+    }
+
+    public boolean isRestoredFilesInProjectDirectory() {
+        return restoredFilesInProjectDirectory;
+    }
+
+    public void setRestoredFilesInProjectDirectory(boolean restoredFilesInProjectDirectory) {
+        this.restoredFilesInProjectDirectory = restoredFilesInProjectDirectory;
+    }
 }
