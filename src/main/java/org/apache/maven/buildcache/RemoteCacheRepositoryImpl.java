@@ -25,6 +25,7 @@ import javax.inject.Named;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -32,6 +33,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.http.HttpStatus;
+import org.apache.http.client.HttpResponseException;
 import org.apache.maven.SessionScoped;
 import org.apache.maven.buildcache.checksum.MavenProjectInput;
 import org.apache.maven.buildcache.xml.Build;
@@ -153,13 +156,17 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
             transporter.get(task);
             return Optional.of(task.getDataBytes());
         } catch (ResourceDoesNotExistException e) {
-            if (LOGGER.isDebugEnabled()) {
-                LOGGER.info("Cache item not found: {}", fullUrl, e);
-            } else {
-                LOGGER.info("Cache item not found: {}", fullUrl);
-            }
+            logNotFound(fullUrl, e);
             return Optional.empty();
         } catch (Exception e) {
+            // this can be wagon used so the exception may be different
+            // we want wagon users not flooded with logs when not found
+            if ((e instanceof HttpResponseException
+                            || e.getClass().getName().equals(HttpResponseException.class.getName()))
+                    && getStatusCode(e) == HttpStatus.SC_NOT_FOUND) {
+                logNotFound(fullUrl, e);
+                return Optional.empty();
+            }
             if (cacheConfig.isFailFast()) {
                 LOGGER.error("Error downloading cache item: {}", fullUrl, e);
                 throw new RuntimeException("Error downloading cache item: " + fullUrl, e);
@@ -167,6 +174,30 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
                 LOGGER.error("Error downloading cache item: {}", fullUrl);
                 return Optional.empty();
             }
+        }
+    }
+
+    private int getStatusCode(Exception ex) {
+        // just to avoid this when using wagon provide
+        // java.lang.ClassCastException: class org.apache.http.client.HttpResponseException cannot be cast to class
+        // org.apache.http.client.HttpResponseException
+        // (org.apache.http.client.HttpResponseException is in unnamed module of loader
+        // org.codehaus.plexus.classworlds.realm.ClassRealm @23cd4ff2;
+        //
+        try {
+            Method method = ex.getClass().getMethod("getStatusCode");
+            return (int) method.invoke(ex);
+        } catch (Throwable t) {
+            LOGGER.debug(t.getMessage(), t);
+            return 0;
+        }
+    }
+
+    private void logNotFound(String fullUrl, Exception e) {
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.info("Cache item not found: {}", fullUrl, e);
+        } else {
+            LOGGER.info("Cache item not found: {}", fullUrl);
         }
     }
 
