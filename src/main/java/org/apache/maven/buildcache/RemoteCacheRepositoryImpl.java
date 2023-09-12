@@ -25,6 +25,7 @@ import javax.inject.Named;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -32,6 +33,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.http.HttpStatus;
+import org.apache.http.client.HttpResponseException;
 import org.apache.maven.SessionScoped;
 import org.apache.maven.buildcache.checksum.MavenProjectInput;
 import org.apache.maven.buildcache.xml.Build;
@@ -43,6 +46,7 @@ import org.apache.maven.buildcache.xml.report.CacheReport;
 import org.apache.maven.buildcache.xml.report.ProjectReport;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.project.MavenProject;
+import org.apache.maven.wagon.ResourceDoesNotExistException;
 import org.eclipse.aether.RepositorySystemSession;
 import org.eclipse.aether.repository.Authentication;
 import org.eclipse.aether.repository.Proxy;
@@ -110,7 +114,7 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
     }
 
     @Override
-    public boolean getArtifactContent(CacheContext context, Artifact artifact, Path target) throws IOException {
+    public boolean getArtifactContent(CacheContext context, Artifact artifact, Path target) {
         return getResourceContent(getResourceUrl(context, artifact.getFileName()), target);
     }
 
@@ -144,19 +148,60 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
      * @return null or content
      */
     @Nonnull
-    public Optional<byte[]> getResourceContent(String url) throws IOException {
+    public Optional<byte[]> getResourceContent(String url) {
+        String fullUrl = getFullUrl(url);
         try {
-            LOGGER.info("Downloading {}", getFullUrl(url));
+            LOGGER.info("Downloading {}", fullUrl);
             GetTask task = new GetTask(new URI(url));
             transporter.get(task);
             return Optional.of(task.getDataBytes());
-        } catch (Exception e) {
-            LOGGER.info("Cannot download {}", getFullUrl(url), e);
+        } catch (ResourceDoesNotExistException e) {
+            logNotFound(fullUrl, e);
             return Optional.empty();
+        } catch (Exception e) {
+            // this can be wagon used so the exception may be different
+            // we want wagon users not flooded with logs when not found
+            if ((e instanceof HttpResponseException
+                            || e.getClass().getName().equals(HttpResponseException.class.getName()))
+                    && getStatusCode(e) == HttpStatus.SC_NOT_FOUND) {
+                logNotFound(fullUrl, e);
+                return Optional.empty();
+            }
+            if (cacheConfig.isFailFast()) {
+                LOGGER.error("Error downloading cache item: {}", fullUrl, e);
+                throw new RuntimeException("Error downloading cache item: " + fullUrl, e);
+            } else {
+                LOGGER.error("Error downloading cache item: {}", fullUrl);
+                return Optional.empty();
+            }
         }
     }
 
-    public boolean getResourceContent(String url, Path target) throws IOException {
+    private int getStatusCode(Exception ex) {
+        // just to avoid this when using wagon provide
+        // java.lang.ClassCastException: class org.apache.http.client.HttpResponseException cannot be cast to class
+        // org.apache.http.client.HttpResponseException
+        // (org.apache.http.client.HttpResponseException is in unnamed module of loader
+        // org.codehaus.plexus.classworlds.realm.ClassRealm @23cd4ff2;
+        //
+        try {
+            Method method = ex.getClass().getMethod("getStatusCode");
+            return (int) method.invoke(ex);
+        } catch (Throwable t) {
+            LOGGER.debug(t.getMessage(), t);
+            return 0;
+        }
+    }
+
+    private void logNotFound(String fullUrl, Exception e) {
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.info("Cache item not found: {}", fullUrl, e);
+        } else {
+            LOGGER.info("Cache item not found: {}", fullUrl);
+        }
+    }
+
+    public boolean getResourceContent(String url, Path target) {
         try {
             LOGGER.info("Downloading {}", getFullUrl(url));
             GetTask task = new GetTask(new URI(url)).setDataFile(target.toFile());
