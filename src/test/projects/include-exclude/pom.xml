@@ -33,9 +33,14 @@
         <maven.build.cache.input.extraFile>extraFile.txt</maven.build.cache.input.extraFile>
         <maven.build.cache.input.extraFolder>second_folder_outside_src</maven.build.cache.input.extraFolder>
         <!-- Exclude directory in an extra included folder  -->
-        <maven.build.cache.exclude.subfolder>**/excluded_subfolder/**</maven.build.cache.exclude.subfolder>
+        <maven.build.cache.exclude.glob.subfolder>excluded_subfolder</maven.build.cache.exclude.glob.subfolder>
+        <maven.build.cache.exclude.entryType.subfolder>DIRECTORY</maven.build.cache.exclude.entryType.subfolder>
         <!-- Exclude by filepath + filename -->
-        <maven.build.cache.exclude.filepath>folder_outside_src/this_one_should_NOT_be_scanned.txt</maven.build.cache.exclude.filepath>
+        <maven.build.cache.exclude.value.filepath>folder_outside_src</maven.build.cache.exclude.value.filepath>
+        <maven.build.cache.exclude.glob.filepath>this_one_should_NOT_be_scanned.txt</maven.build.cache.exclude.glob.filepath>
+        <!-- Exclude by filepath + filename windows style -->
+        <maven.build.cache.exclude.value.filepath-windows>folder_outside_src\subfolder2</maven.build.cache.exclude.value.filepath-windows>
+        <maven.build.cache.exclude.glob.filepath-windows>another_not_scanned_file.js</maven.build.cache.exclude.glob.filepath-windows>
     </properties>
 
     <build>

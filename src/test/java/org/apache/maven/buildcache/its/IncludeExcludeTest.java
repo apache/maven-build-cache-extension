@@ -63,7 +63,7 @@ public class IncludeExcludeTest {
 
         verifier.verifyErrorFreeLog();
 
-        // Verify that there is a line like "Found 7 input files." in the logs
+        // Verify that there is a line like "Found x input files." in the logs
         String foundXFiles = LogFileUtils.findFirstLineContainingTextsInLogs(verifier, "Found ", " input files.");
 
         Matcher m = NB_SRC_PATTERN.matcher(foundXFiles);

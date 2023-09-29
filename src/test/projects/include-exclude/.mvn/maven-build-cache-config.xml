@@ -25,20 +25,20 @@ under the License.
 				<include>third_folder_outside_src</include>
 			</includes>
 			<excludes>
-				<!-- Exclude directory in the default included src folder -->
-				<exclude>src/main/java/org/apache/maven/buildcache/not/**</exclude>
+				<!-- Exclude directory in the default included src folder-->
+				<exclude>src/main/java/org/apache/maven/buildcache/not</exclude>
 				<!-- Exclude by full filename -->
-				<exclude>**/excluded_by_full_filename.txt</exclude>
-				<!-- Exclude by prefixed filename -->
-				<exclude>**/excluded_by_prefix*</exclude>
+				<exclude glob="excluded_by_full_filename.txt"></exclude>
+				<!-- Exclude by prefixed filename  -->
+				<exclude glob="excluded_by_prefix*"></exclude>
 				<!-- Exclude by path + prefixed filename -->
-				<exclude>folder_outside_src/prefixed_should_NOT*</exclude>
-				<!-- Exclude by prefixed path (and test first "/" occurrence removal -->
-				<exclude>/folder_outside_src/another_prefixed**</exclude>
+				<exclude glob="prefixed_should_NOT*">folder_outside_src</exclude>
+				<!-- Exclude by path + prefixed filename (windows syntax) -->
+				<exclude glob="folder_outside_src\\another_prefixed**" matcherType="PATH"></exclude>
 				<!-- Exclude direct files in a directory, but not sub-directories -->
-				<exclude>**third_folder_outside_src/*</exclude>
+				<exclude glob="third_folder_outside_src/*" matcherType="PATH" entryType="FILE"></exclude>
 				<!-- All xml and ts files -->
-				<exclude>**/*.{xml,?s}</exclude>
+				<exclude glob="*.{xml,?s}"></exclude>
 			</excludes>
 		</global>
 	</input>
