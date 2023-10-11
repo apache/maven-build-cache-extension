@@ -150,6 +150,11 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
             if (cacheState == INITIALIZED && (!result.isSuccess() || !restored)) {
                 if (cacheConfig.isSkipSave()) {
                     LOGGER.info("Cache saving is disabled.");
+                } else if (cacheConfig.isMandatoryClean()
+                        && lifecyclePhasesHelper
+                                .getCleanSegment(project, mojoExecutions)
+                                .isEmpty()) {
+                    LOGGER.info("Cache storing is skipped since there was no \"clean\" phase.");
                 } else {
                     final Map<String, MojoExecutionEvent> executionEvents = mojoListener.getProjectExecutions(project);
                     cacheController.save(result, mojoExecutions, executionEvents);

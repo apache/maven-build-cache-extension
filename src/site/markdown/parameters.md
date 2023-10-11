@@ -37,6 +37,7 @@ This document contains various configuration parameters supported by the cache e
 | `-Dmaven.build.cache.alwaysRunPlugins=<list of plugins>`   | Comma separated list of plugins to always run regardless of cache state. An example: `maven-deploy-plugin:*,maven-install-plugin:install` | Remote cache setup/tuning/troubleshooting                                          |
 | `-Dmaven.build.cache.skipCache=(true/false)`               | Skip looking up artifacts in caches. Does not affect writing artifacts to caches, disables only reading when set to `true`               | May be used to trigger a forced rebuild when matching artifacts do exist in caches |
 | `-Dmaven.build.cache.skipSave=(true/false)`            | Skip writing build result in caches. Does not affect reading from the cache.               | Configuring MR builds to benefits from the cache, but restricting writes to the `master` branch |
+| `-Dmaven.build.cache.mandatoryClean=(true/false)`          | Enable or disable the necessity to execute the `clean` phase in order to store the build result in cache                                  | Reducing the risk to save "wrong" files in cache in a local dev environnement      |
 
 ### Project-level properties
 

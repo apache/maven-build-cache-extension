@@ -92,6 +92,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     public static final String LAZY_RESTORE_PROPERTY_NAME = "maven.build.cache.lazyRestore";
     public static final String RESTORE_GENERATED_SOURCES_PROPERTY_NAME = "maven.build.cache.restoreGeneratedSources";
     public static final String ALWAYS_RUN_PLUGINS = "maven.build.cache.alwaysRunPlugins";
+    public static final String MANDATORY_CLEAN = "maven.build.cache.mandatoryClean";
 
     /**
      * Flag to control if we should skip lookup for cached artifacts globally or for a particular project even if
@@ -511,6 +512,11 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     @Override
     public boolean isSkipSave() {
         return getProperty(SKIP_SAVE, false);
+    }
+
+    @Override
+    public boolean isMandatoryClean() {
+        return getProperty(MANDATORY_CLEAN, getConfiguration().isMandatoryClean());
     }
 
     @Override
