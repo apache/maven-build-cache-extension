@@ -18,6 +18,7 @@
  */
 package org.apache.maven.buildcache.util;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -59,5 +60,33 @@ public final class LogFileUtils {
         }
 
         return null;
+    }
+
+    /**
+     * Find lines matching all the strings given as parameter in the log file attached to a verifier
+     * @param verifier the maven verifier instance
+     * @param texts all the matching strings to find
+     * @return a list of matching strings
+     * @throws VerificationException
+     */
+    public static List<String> findLinesContainingTextsInLogs(final Verifier verifier, final String... texts)
+            throws VerificationException {
+        List<String> lines = verifier.loadFile(verifier.getBasedir(), verifier.getLogFileName(), false);
+        List<String> result = new ArrayList<>();
+        Iterator it = lines.iterator();
+
+        while (it.hasNext()) {
+            String line = verifier.stripAnsi((String) it.next());
+            boolean matches = true;
+            Iterator<String> toMatchIterator = Arrays.stream(texts).iterator();
+            while (matches && toMatchIterator.hasNext()) {
+                matches = line.contains(toMatchIterator.next());
+            }
+            if (matches) {
+                result.add(line);
+            }
+        }
+
+        return result;
     }
 }

@@ -504,6 +504,11 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     }
 
     @Override
+    public boolean isMandatoryClean() {
+        return getConfiguration().isMandatoryClean();
+    }
+
+    @Override
     public String getId() {
         checkInitializedState();
         return getProperty(REMOTE_SERVER_ID_PROPERTY_NAME, getRemote().getId());

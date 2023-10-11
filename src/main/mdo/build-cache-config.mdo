@@ -195,6 +195,12 @@ under the License.
                     </description>
                 </field>
                 <field>
+                    <name>mandatoryClean</name>
+                    <type>boolean</type>
+                    <defaultValue>false</defaultValue>
+                    <description>Enable the cache storing ability only if a build went through the clean lifecycle.</description>
+                </field>
+                <field>
                     <name>multiModule</name>
                     <association>
                         <type>MultiModule</type>
