@@ -46,6 +46,7 @@ import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.regex.Pattern;
@@ -55,8 +56,10 @@ import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.maven.SessionScoped;
+import org.apache.maven.artifact.InvalidArtifactRTException;
 import org.apache.maven.artifact.handler.ArtifactHandler;
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
+import org.apache.maven.buildcache.artifact.ArtifactRestorationReport;
 import org.apache.maven.buildcache.artifact.RestoredArtifact;
 import org.apache.maven.buildcache.checksum.MavenProjectInput;
 import org.apache.maven.buildcache.hash.HashAlgorithm;
@@ -295,10 +298,13 @@ public class CacheControllerImpl implements CacheController {
     }
 
     @Override
-    public boolean restoreProjectArtifacts(CacheResult cacheResult) {
+    public ArtifactRestorationReport restoreProjectArtifacts(CacheResult cacheResult) {
+
+        LOGGER.debug("Restore project artifacts");
         final Build build = cacheResult.getBuildInfo();
         final CacheContext context = cacheResult.getContext();
         final MavenProject project = context.getProject();
+        ArtifactRestorationReport restorationReport = new ArtifactRestorationReport();
 
         try {
             RestoredArtifact restoredProjectArtifact = null;
@@ -325,6 +331,8 @@ public class CacheControllerImpl implements CacheController {
                         // it may also be disabled on a per-project level (defaults to true - enable)
                         if (cacheConfig.isRestoreGeneratedSources()
                                 && MavenProjectInput.isRestoreGeneratedSources(project)) {
+                            // Set this value before trying the restoration, to keep a trace of the attempt if it fails
+                            restorationReport.setRestoredFilesInProjectDirectory(true);
                             // generated sources artifact
                             final Path attachedArtifactFile =
                                     localCache.getArtifactFile(context, cacheResult.getSource(), attachedArtifactInfo);
@@ -348,11 +356,11 @@ public class CacheControllerImpl implements CacheController {
                 project.setArtifact(restoredProjectArtifact);
             }
             restoredAttachedArtifacts.forEach(project::addAttachedArtifact);
-            return true;
+            restorationReport.setSuccess(true);
         } catch (Exception e) {
             LOGGER.debug("Cannot restore cache, continuing with normal build.", e);
-            return false;
         }
+        return restorationReport;
     }
 
     /**
@@ -401,6 +409,26 @@ public class CacheControllerImpl implements CacheController {
         });
         if (!cacheConfig.isLazyRestore()) {
             downloadTask.run();
+            try {
+                downloadTask.get();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new InvalidArtifactRTException(
+                        artifact.getGroupId(),
+                        artifact.getArtifactId(),
+                        artifact.getVersion(),
+                        artifact.getType(),
+                        RestoredArtifact.MSG_INTERRUPTED_WHILE_RETRIEVING_ARTIFACT_FILE,
+                        e);
+            } catch (ExecutionException e) {
+                throw new InvalidArtifactRTException(
+                        artifact.getGroupId(),
+                        artifact.getArtifactId(),
+                        artifact.getVersion(),
+                        artifact.getType(),
+                        RestoredArtifact.MSG_ERROR_RETRIEVING_ARTIFACT_FILE,
+                        e.getCause());
+            }
         }
         return downloadTask;
     }

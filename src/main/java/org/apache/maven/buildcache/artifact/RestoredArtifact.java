@@ -40,6 +40,9 @@ import static java.util.Objects.requireNonNull;
 public class RestoredArtifact extends DefaultArtifact {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RestoredArtifact.class);
+    public static final String MSG_INTERRUPTED_WHILE_RETRIEVING_ARTIFACT_FILE =
+            "Interrupted while retrieving artifact file";
+    public static final String MSG_ERROR_RETRIEVING_ARTIFACT_FILE = "Error retrieving artifact file";
 
     private volatile Future<File> fileFuture;
 
@@ -75,7 +78,7 @@ public class RestoredArtifact extends DefaultArtifact {
                             getArtifactId(),
                             getVersion(),
                             getType(),
-                            "Error retrieving artifact file",
+                            MSG_ERROR_RETRIEVING_ARTIFACT_FILE,
                             e);
                 }
             } else {
@@ -94,7 +97,7 @@ public class RestoredArtifact extends DefaultArtifact {
                     getArtifactId(),
                     getVersion(),
                     getType(),
-                    "Interrupted while retrieving artifact file",
+                    MSG_INTERRUPTED_WHILE_RETRIEVING_ARTIFACT_FILE,
                     e);
         } catch (ExecutionException e) {
             throw new InvalidArtifactRTException(
@@ -102,7 +105,7 @@ public class RestoredArtifact extends DefaultArtifact {
                     getArtifactId(),
                     getVersion(),
                     getType(),
-                    "Error retrieving artifact file",
+                    MSG_ERROR_RETRIEVING_ARTIFACT_FILE,
                     e.getCause());
         }
     }

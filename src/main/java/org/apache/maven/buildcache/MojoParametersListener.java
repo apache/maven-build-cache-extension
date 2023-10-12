@@ -77,8 +77,4 @@ public class MojoParametersListener implements MojoExecutionListener {
     public Map<String, MojoExecutionEvent> getProjectExecutions(MavenProject project) {
         return projectExecutions.get(project);
     }
-
-    public void remove(MavenProject project) {
-        projectExecutions.remove(project);
-    }
 }
