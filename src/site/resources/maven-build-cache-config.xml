@@ -37,14 +37,22 @@
 
     <input>
         <global>
+            <!-- If not defined, default glob is "*" -->
             <glob>
                 {*.java,*.groovy,*.yaml,*.svcd,*.proto,*assembly.xml,assembly*.xml,*logback.xml,*.vm,*.ini,*.jks,*.properties,*.sh,*.bat}
             </glob>
             <includes>
+                <!-- By default, project sources and resources directories are included (src/main/java and src/main/resources) -->
+                <!-- In this example, the goal is to include a widder range of src directories (like src/main/assembly or src/main/groovy) -->
                 <include>src/</include>
             </includes>
             <excludes>
+                <!-- We don't want a static "hash" pom resolution (it would conflict the will to adjust the version in the manifest), -->
+                <!-- we exclude this specific file (as it is already by default since it is not in an include folder -->
+                <!-- The need to rebuild a project based on the pom is already computed with some intelligence by the extension. -->
                 <exclude>pom.xml</exclude>
+                <!-- Also excluding everything located in this project specific folder -->
+                <exclude>src/main/javagen/**</exclude>
             </excludes>
         </global>
         <plugins>

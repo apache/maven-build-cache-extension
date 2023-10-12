@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+<cache xmlns="http://maven.apache.org/CACHE-CONFIG/1.0.0">
+	<input>
+		<global>
+			<includes>
+				<include>folder_outside_src</include>
+				<include>third_folder_outside_src</include>
+			</includes>
+			<excludes>
+				<!-- Exclude directory in the default included src folder-->
+				<exclude>src/main/java/org/apache/maven/buildcache/not</exclude>
+				<!-- Exclude by full filename -->
+				<exclude glob="excluded_by_full_filename.txt"></exclude>
+				<!-- Exclude by prefixed filename  -->
+				<exclude glob="excluded_by_prefix*"></exclude>
+				<!-- Exclude by path + prefixed filename -->
+				<exclude glob="prefixed_should_NOT*">folder_outside_src</exclude>
+				<!-- Exclude by path + prefixed filename (windows syntax) -->
+				<exclude glob="folder_outside_src\\another_prefixed**" matcherType="PATH"></exclude>
+				<!-- Exclude direct files in a directory, but not sub-directories -->
+				<exclude glob="third_folder_outside_src/*" matcherType="PATH" entryType="FILE"></exclude>
+				<!-- All xml and ts files -->
+				<exclude glob="*.{xml,?s}"></exclude>
+			</excludes>
+		</global>
+	</input>
+</cache>

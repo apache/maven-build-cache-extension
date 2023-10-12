@@ -1,0 +1,1 @@
+a_typescript_file content

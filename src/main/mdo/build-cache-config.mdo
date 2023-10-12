@@ -425,6 +425,7 @@ under the License.
           -->
         <class>
             <name>Input</name>
+            <description>Configuration for source code input files participating in checksum calculation</description>
             <fields>
                 <field>
                     <name>global</name>
@@ -786,14 +787,18 @@ under the License.
           -->
         <class>
             <name>PathSet</name>
+            <description>Global input calculation rules applicable to all projects and plugins in the build</description>
             <fields>
                 <field>
                     <name>glob</name>
                     <type>String</type>
+                    <description><![CDATA[Type of files to globally scan. All types are scanned by default. Example to scan only java and xml files : <code>{*.java,*.xml}</code>
+                      ]]></description>
                     <defaultValue>*</defaultValue>
                 </field>
                 <field>
                     <name>includes</name>
+                    <description>Extra paths to scan in order to compute the checksum (Project and test - sources/resources are already in the scan list)</description>
                     <association>
                         <type>Include</type>
                         <multiplicity>*</multiplicity>
@@ -801,6 +806,7 @@ under the License.
                 </field>
                 <field>
                     <name>excludes</name>
+                    <description>Paths and files to exclude from checksum computation</description>
                     <association>
                         <type>Exclude</type>
                         <multiplicity>*</multiplicity>
@@ -810,28 +816,74 @@ under the License.
         </class>
         <class>
             <name>Exclude</name>
+            <description><![CDATA[A file or a directory path to exclude from the checksum computation. Relative path are relative to each module basedir.<br/>
+            When referring to a directory, additional properties help adjust the scope of the exclusion:
+            <ul>
+                <li>glob - only entries matching this <a href="https://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob">glob pattern</a> are excluded</li>
+                <li>entryType - type of entries excluded from the scan</li>
+                <li>matcherType - entry property on which the glob matching is applied</li>
+            </ul>
+            By default, targeting a directory excludes everything underneath it.<br/>
+            <br/>
+            Examples :
+            <ul>
+              <li><code>&lt;exclude&gt;src/main/doc&lt;/exclude&gt;</code> : excludes everything under : ${project.basedir}/src/main/doc</li>
+              <li><code>&lt;exclude&gt;src/main/java/package-info.java&lt;/exclude&gt;</code> : excludes this file : ${project.basedir}/src/main/java/package-info.java</li>
+              <li><code>&lt;exclude glob="package-info.java"&gt;&lt;/exclude&gt;</code> : excludes all the files named package-info.java</li>
+              <li><code>&lt;exclude glob="src/main/resources&#x2F;**.txt" entryType="FILE" matcherType="PATH" &gt;&lt;/exclude&gt;</code> : excludes all the text files located under the "resources" folder</li>
+            </ul>
+            <br/>
+            Exclude elements can also be added per project with the use of <a href="parameters.html#project-level-properties">maven properties.</a><br/>
+            <br/><br/>
+
+            ]]></description>
             <fields>
                 <field xml.content="true">
                     <name>value</name>
                     <type>String</type>
+                    <description>An absolute or relative path to a filename or a directory. In the later case, the exclusion is applied starting from this directory (can be beneficial in term of performances). If empty, the glob is applied on every file listed as a potential part of the checksum.</description>
+                </field>
+                <field xml.attribute="true">
+                    <name>glob</name>
+                    <type>String</type>
+                    <defaultValue>**</defaultValue>
+                    <description>Entries are filtered by matching this glob (see matcherType property).</description>
+                </field>
+                <field xml.attribute="true">
+                    <name>entryType</name>
+                    <type>String</type>
+                    <defaultValue>ALL</defaultValue>
+                    <description>Type of entries filtered. One of FILE, DIRECTORY, ALL. Excluding a directory excludes its subfiles and subdirectories.</description>
+                </field>
+                <field xml.attribute="true">
+                    <name>matcherType</name>
+                    <type>String</type>
+                    <defaultValue>FILENAME</defaultValue>
+                    <description>The entry property matched for exclusion. One of FILENAME, PATH. For a path, if the exclusion value is empty or a relative path, matching is done relatively to the project folder.</description>
                 </field>
             </fields>
         </class>
         <class>
             <name>Include</name>
+           <description><![CDATA[A file or a directory path to add to checksum computation. Relative path are relative to each module basedir.<br/><br/>
+           Include elements can also be added per project with the use of <a href="parameters.html#project-level-properties">maven properties.</a><br/><br/>
+           ]]></description>
             <fields>
                 <field xml.content="true">
                     <name>value</name>
                     <type>String</type>
+                    <description>Path to add to the checksum computation</description>
                 </field>
                 <field xml.attribute="true">
                     <name>recursive</name>
                     <type>boolean</type>
+                    <description>Will search in sub-folders if set to true</description>
                     <defaultValue>true</defaultValue>
                 </field>
                 <field xml.attribute="true">
                     <name>glob</name>
                     <type>String</type>
+                    <description>Files in a directory are filtered by matching their names against this glob.</description>
                 </field>
             </fields>
         </class>

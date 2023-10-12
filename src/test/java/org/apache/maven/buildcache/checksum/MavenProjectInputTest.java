@@ -47,52 +47,23 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class MavenProjectInputTest {
 
-    private static final String GLOB = "{*-pom.xml}";
+    private static final String DEFAULT_GLOB = "*";
 
     @Test
-    public void testAddInputsRelativePath() {
-        //        MavenProjectInput inputs = new MavenProjectInput(config, new ArrayList<Path>(),
-        // Paths.get("src\\test\\resources\\org"), GLOB);
-        //        ArrayList<Path> files = new ArrayList<>();
-        //        inputs.listDirOrFile("../../resources", inputs.dirGlob, files, new HashSet<Path>());
-        //        assertEquals(4, files.size());
-    }
-
-    @Test
-    public void testAddInputsAbsolutePath() {
-        //        Path baseDirPath = Paths.get("src\\test\\resources\\org");
-        //        MavenProjectInput inputs = new MavenProjectInput(config, new ArrayList<Path>(), baseDirPath, GLOB);
-        //        ArrayList<Path> files = new ArrayList<>();
-        //        Path candidatePath = baseDirPath.resolve("../../resources").normalize().toAbsolutePath();
-        //        inputs.listDirOrFile(candidatePath.toString(), inputs.dirGlob, files, new HashSet<Path>());
-        //        assertEquals(4, files.size()); // pom is filtered out by hardcoded if
-    }
-
-    @Test
-    public void testGlobInput() {
-        //        Path baseDirPath = Paths.get("src\\test\\resources");
-        //        MavenProjectInput inputs = new MavenProjectInput(config, new ArrayList<Path>(), baseDirPath, GLOB);
-        //        ArrayList<Path> files = new ArrayList<>();
-        //        inputs.tryAddInputs("*.java", files, new HashSet<Path>());
-        //        assertEquals(0, files.size()); // pom is filtered out by hardcoded if
-    }
-
-    @Test
-    public void testGetDirectoryFiles() {
-        List<Path> directoryFiles = new ArrayList<>();
+    public void testCollectFilteredFiles() {
+        List<Path> collectedFiles = new ArrayList<>();
         MavenProjectInput.walkDirectoryFiles(
-                Paths.get("src/test/resources/test-folder"),
-                directoryFiles,
-                MavenProjectInput.DEFAULT_GLOB,
-                it -> false);
-        assertEquals(0, directoryFiles.size()); // pom is filtered out by hardcoded if
+                Paths.get("src/test/resources/test-folder"), collectedFiles, DEFAULT_GLOB, it -> it.getFileName()
+                        .toString()
+                        .endsWith("pom.xml"));
+        assertEquals(0, collectedFiles.size()); // pom is filtered out by the "mustBeSkipped" predicate
     }
 
     @Test
-    public void testGetDirectoryFiles2() {
-        List<Path> directoryFiles = new ArrayList<>();
+    public void testCollectNonFilteredFiles() {
+        List<Path> collectedFiles = new ArrayList<>();
         MavenProjectInput.walkDirectoryFiles(
-                Paths.get("src/test/resources/test-folder"), directoryFiles, GLOB, it -> false);
-        assertEquals(1, directoryFiles.size()); // pom is filtered out by hardcoded if
+                Paths.get("src/test/resources/test-folder"), collectedFiles, DEFAULT_GLOB, it -> false);
+        assertEquals(1, collectedFiles.size()); // pom is not filtered out by the "mustBeSkipped" predicate
     }
 }
