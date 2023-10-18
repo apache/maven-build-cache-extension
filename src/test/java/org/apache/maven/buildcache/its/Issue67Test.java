@@ -57,7 +57,7 @@ public class Issue67Test {
         String[] array = savedPathLogLine.split(SAVED_BUILD_TO_LOCAL_FILE);
         String jarCachePath = array[array.length - 1].replace("buildinfo.xml", "mbuildcache-67.jar");
 
-        // We remove from the local cache repository the jar artefact. In order to launch a restoration error.
+        // We remove from the local cache repository the jar artifact. In order to launch a restoration error.
         Assertions.assertTrue(
                 Files.deleteIfExists(Paths.get(jarCachePath)), "mbuildcache-67.jar was expected in the local cache");
 

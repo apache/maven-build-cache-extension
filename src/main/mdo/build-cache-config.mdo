@@ -374,14 +374,42 @@ under the License.
           -->
         <class>
             <name>AttachedOutputs</name>
+            <description>Section relative to outputs which are not artifacts but need to be saved/restored.</description>
             <fields>
                 <field>
                     <name>dirNames</name>
                     <association>
-                        <type>String</type>
+                        <type>DirName</type>
                         <multiplicity>*</multiplicity>
                     </association>
-                    <description>Directory name in build output directory to attach to cached artifacts</description>
+                    <description>Path to a directory containing files which needs to be saved/restored (relative to the build directory).</description>
+                </field>
+            </fields>
+        </class>
+        <class>
+            <name>DirName</name>
+            <description><![CDATA[Path to a directory containing files which needs to be saved/restored (relative to the build directory).
+            <br/>
+            Examples :
+            <ul>
+              <li><code>&lt;dirName&gt;classes&lt;/dirName&gt;</code> : files in ${project.basedir}/target/classes</li>
+              <li><code>&lt;dirName glob="jacoco.xml"&gt;&lt;/dirName&gt;</code> : jacoco report files in ${project.basedir}/target</li>
+              <li><code>&lt;dirName&gt;../src/main/javagen&lt;/dirName&gt;</code> : files in ${project.basedir}/src/main/javagen (in this exemple, javagen is a folder saved in git but erased on clean) </li>
+            </ul>
+            <br/><br/>
+
+            ]]></description>
+            <fields>
+                <field xml.content="true">
+                    <name>value</name>
+                    <type>String</type>
+                    <description>Directory name in build output directory to attach to cached artifacts.</description>
+                </field>
+                <field xml.attribute="true">
+                    <name>glob</name>
+                    <type>String</type>
+                    <defaultValue>*</defaultValue>
+                    <description>Entries are filtered by matching this glob.</description>
                 </field>
             </fields>
         </class>

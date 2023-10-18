@@ -34,9 +34,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -46,9 +48,10 @@ import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
 import org.apache.commons.io.FileUtils;
@@ -56,10 +59,10 @@ import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.maven.SessionScoped;
-import org.apache.maven.artifact.InvalidArtifactRTException;
 import org.apache.maven.artifact.handler.ArtifactHandler;
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.buildcache.artifact.ArtifactRestorationReport;
+import org.apache.maven.buildcache.artifact.OutputType;
 import org.apache.maven.buildcache.artifact.RestoredArtifact;
 import org.apache.maven.buildcache.checksum.MavenProjectInput;
 import org.apache.maven.buildcache.hash.HashAlgorithm;
@@ -74,6 +77,7 @@ import org.apache.maven.buildcache.xml.build.CompletedExecution;
 import org.apache.maven.buildcache.xml.build.DigestItem;
 import org.apache.maven.buildcache.xml.build.ProjectsInputInfo;
 import org.apache.maven.buildcache.xml.build.Scm;
+import org.apache.maven.buildcache.xml.config.DirName;
 import org.apache.maven.buildcache.xml.config.PropertyName;
 import org.apache.maven.buildcache.xml.config.TrackedProperty;
 import org.apache.maven.buildcache.xml.diff.Diff;
@@ -93,7 +97,6 @@ import org.slf4j.LoggerFactory;
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
-import static org.apache.commons.lang3.StringUtils.replace;
 import static org.apache.commons.lang3.StringUtils.split;
 import static org.apache.maven.buildcache.CacheResult.empty;
 import static org.apache.maven.buildcache.CacheResult.failure;
@@ -112,13 +115,10 @@ import static org.apache.maven.buildcache.checksum.MavenProjectInput.CACHE_IMPLE
 @SuppressWarnings("unused")
 public class CacheControllerImpl implements CacheController {
 
-    public static final String FILE_SEPARATOR_SUBST = "_";
-    /**
-     * Prefix for generated sources stored as a separate artifact in cache
-     */
-    private static final String BUILD_PREFIX = "build" + FILE_SEPARATOR_SUBST;
-
     private static final Logger LOGGER = LoggerFactory.getLogger(CacheControllerImpl.class);
+    private static final String DEFAULT_FILE_GLOB = "*";
+    public static final String ERROR_MSG_RESTORATION_OUTSIDE_PROJECT =
+            "Blocked an attempt to restore files outside of a project directory: ";
 
     private final MavenProjectHelper projectHelper;
     private final ArtifactHandlerManager artifactHandlerManager;
@@ -132,6 +132,15 @@ public class CacheControllerImpl implements CacheController {
     private final ProjectInputCalculator projectInputCalculator;
     private final RestoredArtifactHandler restoreArtifactHandler;
     private volatile Scm scm;
+
+    /**
+     * A map dedicated to store the base path of resources stored to the cache which are not original artifacts
+     * (ex : generated source basedir).
+     * Used to link the resource to its path on disk
+     */
+    private Map<String, Path> attachedResourcesPathsById = new HashMap<>();
+
+    private int attachedResourceCounter = 0;
 
     @Inject
     public CacheControllerImpl(
@@ -297,6 +306,43 @@ public class CacheControllerImpl implements CacheController {
         return true;
     }
 
+    private Consumer<File> createRestorationToDiskConsumer(final MavenProject project, final Artifact artifact) {
+        if (cacheConfig.isRestoreOnDiskArtifacts() && MavenProjectInput.isRestoreOnDiskArtifacts(project)) {
+
+            final AtomicBoolean restored = new AtomicBoolean(false);
+            return file -> {
+                // Set to restored even if it fails later, we don't want multiple try
+                if (restored.compareAndSet(false, true)) {
+                    Path restorationPath = project.getBasedir().toPath().resolve(artifact.getFilePath());
+                    verifyRestorationInsideProject(project, restorationPath);
+                    try {
+                        Files.createDirectories(restorationPath.getParent());
+                        Files.copy(file.toPath(), restorationPath, StandardCopyOption.REPLACE_EXISTING);
+                    } catch (IOException e) {
+                        LOGGER.error("Cannot restore file " + artifact.getFileName(), e);
+                        throw new RuntimeException(e);
+                    }
+                    LOGGER.debug("Restored file on disk ({} to {})", artifact.getFileName(), restorationPath);
+                }
+            };
+        }
+        // Return a consumer doing nothing
+        return file -> {};
+    }
+
+    private boolean isPathInsideProject(final MavenProject project, Path path) {
+        Path restorationPath = path.toAbsolutePath().normalize();
+        return restorationPath.startsWith(project.getBasedir().toPath());
+    }
+
+    private void verifyRestorationInsideProject(final MavenProject project, Path path) {
+        if (!isPathInsideProject(project, path)) {
+            Path normalized = path.toAbsolutePath().normalize();
+            LOGGER.error(ERROR_MSG_RESTORATION_OUTSIDE_PROJECT + normalized);
+            throw new RuntimeException(ERROR_MSG_RESTORATION_OUTSIDE_PROJECT + normalized);
+        }
+    }
+
     @Override
     public ArtifactRestorationReport restoreProjectArtifacts(CacheResult cacheResult) {
 
@@ -318,15 +364,23 @@ public class CacheControllerImpl implements CacheController {
                 final Future<File> downloadTask =
                         createDownloadTask(cacheResult, context, project, artifactInfo, originalVersion);
                 restoredProjectArtifact = restoredArtifact(
-                        project.getArtifact(), artifactInfo.getType(), artifactInfo.getClassifier(), downloadTask);
+                        project.getArtifact(),
+                        artifactInfo.getType(),
+                        artifactInfo.getClassifier(),
+                        downloadTask,
+                        createRestorationToDiskConsumer(project, artifactInfo));
+                if (!cacheConfig.isLazyRestore()) {
+                    restoredProjectArtifact.getFile();
+                }
             }
 
             for (Artifact attachedArtifactInfo : build.getAttachedArtifacts()) {
                 String originalVersion = attachedArtifactInfo.getVersion();
                 attachedArtifactInfo.setVersion(project.getVersion());
                 if (isNotBlank(attachedArtifactInfo.getFileName())) {
-                    if (StringUtils.startsWith(attachedArtifactInfo.getClassifier(), BUILD_PREFIX)) {
-                        // restoring generated sources might be unnecessary in CI, could be disabled for
+                    OutputType outputType = OutputType.fromClassifier(attachedArtifactInfo.getClassifier());
+                    if (OutputType.ARTIFACT != outputType) {
+                        // restoring generated sources / extra output might be unnecessary in CI, could be disabled for
                         // performance reasons
                         // it may also be disabled on a per-project level (defaults to true - enable)
                         if (cacheConfig.isRestoreGeneratedSources()
@@ -345,7 +399,11 @@ public class CacheControllerImpl implements CacheController {
                                 restoredProjectArtifact == null ? project.getArtifact() : restoredProjectArtifact,
                                 attachedArtifactInfo.getType(),
                                 attachedArtifactInfo.getClassifier(),
-                                downloadTask);
+                                downloadTask,
+                                createRestorationToDiskConsumer(project, attachedArtifactInfo));
+                        if (!cacheConfig.isLazyRestore()) {
+                            restoredAttachedArtifact.getFile();
+                        }
                         restoredAttachedArtifacts.add(restoredAttachedArtifact);
                     }
                 }
@@ -375,7 +433,8 @@ public class CacheControllerImpl implements CacheController {
             org.apache.maven.artifact.Artifact parent,
             String artifactType,
             String artifactClassifier,
-            Future<File> artifactFile) {
+            Future<File> artifactFile,
+            Consumer<File> restoreToDiskConsumer) {
         ArtifactHandler handler = null;
 
         if (artifactType != null) {
@@ -387,8 +446,8 @@ public class CacheControllerImpl implements CacheController {
         }
 
         // todo: probably need update download url to cache
-        RestoredArtifact artifact =
-                new RestoredArtifact(parent, artifactFile, artifactType, artifactClassifier, handler);
+        RestoredArtifact artifact = new RestoredArtifact(
+                parent, artifactFile, artifactType, artifactClassifier, handler, restoreToDiskConsumer);
         artifact.setResolved(true);
 
         return artifact;
@@ -424,26 +483,6 @@ public class CacheControllerImpl implements CacheController {
         });
         if (!cacheConfig.isLazyRestore()) {
             downloadTask.run();
-            try {
-                downloadTask.get();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new InvalidArtifactRTException(
-                        artifact.getGroupId(),
-                        artifact.getArtifactId(),
-                        artifact.getVersion(),
-                        artifact.getType(),
-                        RestoredArtifact.MSG_INTERRUPTED_WHILE_RETRIEVING_ARTIFACT_FILE,
-                        e);
-            } catch (ExecutionException e) {
-                throw new InvalidArtifactRTException(
-                        artifact.getGroupId(),
-                        artifact.getArtifactId(),
-                        artifact.getVersion(),
-                        artifact.getType(),
-                        RestoredArtifact.MSG_ERROR_RETRIEVING_ARTIFACT_FILE,
-                        e.getCause());
-            }
         }
         return downloadTask;
     }
@@ -475,8 +514,8 @@ public class CacheControllerImpl implements CacheController {
                 attachedArtifacts = project.getAttachedArtifacts() != null
                         ? project.getAttachedArtifacts()
                         : Collections.emptyList();
-                attachedArtifactDtos = artifactDtos(attachedArtifacts, algorithm);
-                projectArtifactDto = artifactDto(project.getArtifact(), algorithm);
+                attachedArtifactDtos = artifactDtos(attachedArtifacts, algorithm, project);
+                projectArtifactDto = artifactDto(project.getArtifact(), algorithm, project);
             } else {
                 attachedArtifacts = Collections.emptyList();
                 attachedArtifactDtos = new ArrayList<>();
@@ -589,24 +628,35 @@ public class CacheControllerImpl implements CacheController {
     }
 
     private List<Artifact> artifactDtos(
-            List<org.apache.maven.artifact.Artifact> attachedArtifacts, HashAlgorithm digest) throws IOException {
+            List<org.apache.maven.artifact.Artifact> attachedArtifacts, HashAlgorithm digest, MavenProject project)
+            throws IOException {
         List<Artifact> result = new ArrayList<>();
         for (org.apache.maven.artifact.Artifact attachedArtifact : attachedArtifacts) {
             if (attachedArtifact.getFile() != null
                     && isOutputArtifact(attachedArtifact.getFile().getName())) {
-                result.add(artifactDto(attachedArtifact, digest));
+                result.add(artifactDto(attachedArtifact, digest, project));
             }
         }
         return result;
     }
 
-    private Artifact artifactDto(org.apache.maven.artifact.Artifact projectArtifact, HashAlgorithm algorithm)
+    private Artifact artifactDto(
+            org.apache.maven.artifact.Artifact projectArtifact, HashAlgorithm algorithm, MavenProject project)
             throws IOException {
         final Artifact dto = DtoUtils.createDto(projectArtifact);
         if (projectArtifact.getFile() != null && projectArtifact.getFile().isFile()) {
             final Path file = projectArtifact.getFile().toPath();
             dto.setFileHash(algorithm.hash(file));
             dto.setFileSize(Files.size(file));
+
+            // Get the relative path of any extra zip directory added to the cache
+            Path relativePath = attachedResourcesPathsById.get(projectArtifact.getClassifier());
+            if (relativePath == null) {
+                // If the path was not a member of this map, we are in presence of an original artifact.
+                // we get its location on the disk
+                relativePath = project.getBasedir().toPath().relativize(file.toAbsolutePath());
+            }
+            dto.setFilePath(FilenameUtils.separatorsToUnix(relativePath.toString()));
         }
         return dto;
     }
@@ -831,36 +881,23 @@ public class CacheControllerImpl implements CacheController {
         build.getDto().setScm(scm);
     }
 
-    private void zipAndAttachArtifact(MavenProject project, Path dir, String classifier) throws IOException {
-        Path temp = Files.createTempFile("maven-incremental", project.getArtifactId());
+    private boolean zipAndAttachArtifact(MavenProject project, Path dir, String classifier, final String glob)
+            throws IOException {
+        Path temp = Files.createTempFile("maven-incremental-", project.getArtifactId());
         temp.toFile().deleteOnExit();
-        CacheUtils.zip(dir, temp);
-        projectHelper.attachArtifact(project, "zip", classifier, temp.toFile());
-    }
-
-    private String pathToClassifier(Path relative) {
-        final int nameCount = relative.getNameCount();
-        List<String> segments = new ArrayList<>(nameCount + 1);
-        for (int i = 0; i < nameCount; i++) {
-            segments.add(relative.getName(i).toFile().getName());
+        boolean hasFile = CacheUtils.zip(dir, temp, glob);
+        if (hasFile) {
+            projectHelper.attachArtifact(project, "zip", classifier, temp.toFile());
         }
-        // todo handle _ in file names
-        return BUILD_PREFIX + StringUtils.join(segments.iterator(), FILE_SEPARATOR_SUBST);
-    }
-
-    private Path classifierToPath(Path outputDir, String classifier) {
-        classifier = StringUtils.removeStart(classifier, BUILD_PREFIX);
-        final String relPath = replace(classifier, FILE_SEPARATOR_SUBST, File.separator);
-        return outputDir.resolve(relPath);
+        return hasFile;
     }
 
     private void restoreGeneratedSources(Artifact artifact, Path artifactFilePath, MavenProject project)
             throws IOException {
-        final Path targetDir = Paths.get(project.getBuild().getDirectory());
-        final Path outputDir = classifierToPath(targetDir, artifact.getClassifier());
-        if (Files.exists(outputDir)) {
-            FileUtils.cleanDirectory(outputDir.toFile());
-        } else {
+        final Path baseDir = project.getBasedir().toPath();
+        final Path outputDir = baseDir.resolve(FilenameUtils.separatorsToSystem(artifact.getFilePath()));
+        verifyRestorationInsideProject(project, outputDir);
+        if (!Files.exists(outputDir)) {
             Files.createDirectories(outputDir);
         }
         CacheUtils.unzip(artifactFilePath, outputDir);
@@ -871,10 +908,11 @@ public class CacheControllerImpl implements CacheController {
         final Path targetDir = Paths.get(project.getBuild().getDirectory());
 
         final Path generatedSourcesDir = targetDir.resolve("generated-sources");
-        attachDirIfNotEmpty(generatedSourcesDir, targetDir, project);
+        attachDirIfNotEmpty(generatedSourcesDir, targetDir, project, OutputType.GENERATED_SOURCE, DEFAULT_FILE_GLOB);
 
         final Path generatedTestSourcesDir = targetDir.resolve("generated-test-sources");
-        attachDirIfNotEmpty(generatedTestSourcesDir, targetDir, project);
+        attachDirIfNotEmpty(
+                generatedTestSourcesDir, targetDir, project, OutputType.GENERATED_SOURCE, DEFAULT_FILE_GLOB);
 
         Set<String> sourceRoots = new TreeSet<>();
         if (project.getCompileSourceRoots() != null) {
@@ -890,26 +928,40 @@ public class CacheControllerImpl implements CacheController {
                     && sourceRootPath.startsWith(targetDir)
                     && !(sourceRootPath.startsWith(generatedSourcesDir)
                             || sourceRootPath.startsWith(generatedTestSourcesDir))) { // dir within target
-                attachDirIfNotEmpty(sourceRootPath, targetDir, project);
+                attachDirIfNotEmpty(sourceRootPath, targetDir, project, OutputType.GENERATED_SOURCE, DEFAULT_FILE_GLOB);
             }
         }
     }
 
     private void attachOutputs(MavenProject project) throws IOException {
-        final List<String> attachedDirs = cacheConfig.getAttachedOutputs();
-        for (String dir : attachedDirs) {
+        final List<DirName> attachedDirs = cacheConfig.getAttachedOutputs();
+        for (DirName dir : attachedDirs) {
             final Path targetDir = Paths.get(project.getBuild().getDirectory());
-            final Path outputDir = targetDir.resolve(dir);
-            attachDirIfNotEmpty(outputDir, targetDir, project);
+            final Path outputDir = targetDir.resolve(dir.getValue());
+            if (isPathInsideProject(project, outputDir)) {
+                attachDirIfNotEmpty(outputDir, targetDir, project, OutputType.EXTRA_OUTPUT, dir.getGlob());
+            } else {
+                LOGGER.warn("Outside project output candidate directory discarded ({})", outputDir.normalize());
+            }
         }
     }
 
-    private void attachDirIfNotEmpty(Path candidateSubDir, Path parentDir, MavenProject project) throws IOException {
+    private void attachDirIfNotEmpty(
+            Path candidateSubDir,
+            Path parentDir,
+            MavenProject project,
+            final OutputType attachedOutputType,
+            final String glob)
+            throws IOException {
         if (Files.isDirectory(candidateSubDir) && hasFiles(candidateSubDir)) {
-            final Path relativePath = parentDir.relativize(candidateSubDir);
-            final String classifier = pathToClassifier(relativePath);
-            zipAndAttachArtifact(project, candidateSubDir, classifier);
-            LOGGER.debug("Attached directory: {}", candidateSubDir);
+            final Path relativePath = project.getBasedir().toPath().relativize(candidateSubDir);
+            attachedResourceCounter++;
+            final String classifier = attachedOutputType.getClassifierPrefix() + attachedResourceCounter;
+            boolean success = zipAndAttachArtifact(project, candidateSubDir, classifier, glob);
+            if (success) {
+                attachedResourcesPathsById.put(classifier, relativePath);
+                LOGGER.debug("Attached directory: {}", candidateSubDir);
+            }
         }
     }
 
