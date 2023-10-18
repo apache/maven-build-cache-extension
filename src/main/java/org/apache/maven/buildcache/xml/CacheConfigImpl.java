@@ -42,6 +42,7 @@ import org.apache.maven.buildcache.xml.config.AttachedOutputs;
 import org.apache.maven.buildcache.xml.config.CacheConfig;
 import org.apache.maven.buildcache.xml.config.Configuration;
 import org.apache.maven.buildcache.xml.config.CoordinatesBase;
+import org.apache.maven.buildcache.xml.config.DirName;
 import org.apache.maven.buildcache.xml.config.Exclude;
 import org.apache.maven.buildcache.xml.config.Executables;
 import org.apache.maven.buildcache.xml.config.ExecutionConfigurationScan;
@@ -90,6 +91,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     public static final String FAIL_FAST_PROPERTY_NAME = "maven.build.cache.failFast";
     public static final String BASELINE_BUILD_URL_PROPERTY_NAME = "maven.build.cache.baselineUrl";
     public static final String LAZY_RESTORE_PROPERTY_NAME = "maven.build.cache.lazyRestore";
+    public static final String RESTORE_ON_DISK_ARTEFACTS_PROPERTY_NAME = "maven.build.cache.restoreOnDiskArtefacts";
     public static final String RESTORE_GENERATED_SOURCES_PROPERTY_NAME = "maven.build.cache.restoreGeneratedSources";
     public static final String ALWAYS_RUN_PLUGINS = "maven.build.cache.alwaysRunPlugins";
 
@@ -499,6 +501,11 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     }
 
     @Override
+    public boolean isRestoreOnDiskArtefacts() {
+        return getProperty(RESTORE_ON_DISK_ARTEFACTS_PROPERTY_NAME, true);
+    }
+
+    @Override
     public String getAlwaysRunPlugins() {
         return getProperty(ALWAYS_RUN_PLUGINS, null);
     }
@@ -534,7 +541,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     }
 
     @Override
-    public List<String> getAttachedOutputs() {
+    public List<DirName> getAttachedOutputs() {
         checkInitializedState();
         final AttachedOutputs attachedOutputs = getConfiguration().getAttachedOutputs();
         return attachedOutputs == null ? Collections.emptyList() : attachedOutputs.getDirNames();
