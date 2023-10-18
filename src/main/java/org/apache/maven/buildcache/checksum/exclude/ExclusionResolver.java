@@ -138,17 +138,22 @@ public class ExclusionResolver {
         // target/test-classes by default
         Path testOutputDirectoryPath = absoluteNormalizedPath(build.getTestOutputDirectory());
 
-        directoryExclusions.add(
+        addFileAndDirectoryExclusion(
                 new Exclusion(buildDirectoryPath, Exclusion.MatcherType.FILENAME, Exclusion.EntryType.ALL));
 
         if (!outputDirectoryPath.startsWith(buildDirectoryPath)) {
-            directoryExclusions.add(
+            addFileAndDirectoryExclusion(
                     new Exclusion(outputDirectoryPath, Exclusion.MatcherType.FILENAME, Exclusion.EntryType.ALL));
         }
         if (!testOutputDirectoryPath.startsWith(buildDirectoryPath)) {
-            directoryExclusions.add(
+            addFileAndDirectoryExclusion(
                     new Exclusion(testOutputDirectoryPath, Exclusion.MatcherType.FILENAME, Exclusion.EntryType.ALL));
         }
+    }
+
+    private void addFileAndDirectoryExclusion(final Exclusion exclusion) {
+        directoryExclusions.add(exclusion);
+        filesExclusions.add(exclusion);
     }
 
     private Path absoluteNormalizedPath(String directory) {
