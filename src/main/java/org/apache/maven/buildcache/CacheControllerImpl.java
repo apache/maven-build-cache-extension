@@ -481,9 +481,10 @@ public class CacheControllerImpl implements CacheController {
             build.getDto().set_final(cacheConfig.isSaveToRemoteFinal());
             cacheResults.put(getVersionlessProjectKey(project), rebuilded(cacheResult, build));
 
+            localCache.beforeSave(context);
+
             // if package phase presence means new artifacts were packaged
             if (project.hasLifecyclePhase("package")) {
-                localCache.beforeSave(context);
                 localCache.saveBuildInfo(cacheResult, build);
                 if (projectArtifact.getFile() != null) {
                     localCache.saveArtifactFile(cacheResult, projectArtifact);

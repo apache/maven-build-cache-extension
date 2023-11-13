@@ -342,6 +342,7 @@ under the License.
         </configuration>
         <executions>
           <execution>
+            <?m2e execute onConfiguration,onIncremental?>
             <id>modello-cache</id>
             <goals>
               <goal>java</goal>
@@ -351,6 +352,7 @@ under the License.
             <phase>generate-sources</phase>
           </execution>
           <execution>
+            <?m2e execute onConfiguration,onIncremental?>
             <id>modello-cache-xsd</id>
             <goals>
               <goal>xsd</goal>
@@ -375,6 +377,18 @@ under the License.
         <artifactId>build-helper-maven-plugin</artifactId>
         <version>3.4.0</version>
         <executions>
+          <execution>
+            <id>add-sources</id>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <phase>generate-sources</phase>
+            <configuration>
+              <sources>
+                <source>${basedir}/target/generated-sources/modello</source>
+              </sources>
+            </configuration>
+          </execution>
           <execution>
             <id>add-resources</id>
             <goals>
