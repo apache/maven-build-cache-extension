@@ -66,7 +66,7 @@ under the License.
     <classWorldsVersion>2.6.0</classWorldsVersion>
 
     <!-- default maven version, will be overridden by maven3 profile -->
-    <mavenVersion>4.0.0-alpha-5</mavenVersion>
+    <mavenVersion>4.0.0-alpha-8</mavenVersion>
     <maven.dir>maven4</maven.dir>
     <maven.basedir>${project.build.directory}/${maven.dir}</maven.basedir>
 
@@ -111,6 +111,12 @@ under the License.
     <dependency>
       <groupId>org.apache.maven</groupId>
       <artifactId>maven-core</artifactId>
+      <version>${mavenVersion}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.maven</groupId>
+      <artifactId>maven-compat</artifactId>
       <version>${mavenVersion}</version>
       <scope>provided</scope>
     </dependency>
@@ -450,7 +456,7 @@ under the License.
     <profile>
       <id>maven3</id>
       <properties>
-        <mavenVersion>3.9.1</mavenVersion>
+        <mavenVersion>3.9.5</mavenVersion>
         <maven.dir>maven3</maven.dir>
         <maven.basedir>${project.build.directory}/${maven.dir}</maven.basedir>
       </properties>
