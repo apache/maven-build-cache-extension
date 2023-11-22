@@ -23,7 +23,7 @@ under the License.
   <parent>
     <groupId>org.apache.maven.extensions</groupId>
     <artifactId>maven-extensions</artifactId>
-    <version>39</version>
+    <version>41</version>
     <relativePath />
   </parent>
 
