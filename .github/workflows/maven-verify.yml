@@ -32,3 +32,5 @@ jobs:
         [ 
           {"jdk": "8"}
         ]
+      ff-goal: '-P run-its verify javadoc:jar'
+      verify-goal: '-P run-its verify javadoc:jar'
