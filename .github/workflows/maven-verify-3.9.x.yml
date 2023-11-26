@@ -28,7 +28,5 @@ jobs:
     with:
       maven-args: '-D"maven.test.redirectTestOutputToFile=false -Pmaven3"'
       maven-matrix: '[ "3.9.5", "4.0.0-alpha-8" ]'
-      matrix-exclude: >
-        [ 
-          {"jdk": "8"}
-        ]
+      jdk-matrix: '[ "11", "17" ]'
+
