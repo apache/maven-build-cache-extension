@@ -29,3 +29,5 @@ jobs:
       maven-args: '-D"maven.test.redirectTestOutputToFile=false"'
       maven-matrix: '[ "3.9.5", "4.0.0-alpha-8" ]'
       jdk-matrix: '[ "11", "17" ]'
+      ff-goal: '-P run-its verify javadoc:jar'
+      verify-goal: '-P run-its verify javadoc:jar'
