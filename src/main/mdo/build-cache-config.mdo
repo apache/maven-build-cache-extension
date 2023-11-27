@@ -816,15 +816,14 @@ under the License.
         </class>
         <class>
             <name>Exclude</name>
-            <description><![CDATA[A file or a directory path to exclude from the checksum computation. Relative path are relative to each module basedir.<br/>
+            <description><![CDATA[<p>A file or a directory path to exclude from the checksum computation. Relative path are relative to each module basedir.</p>
             When referring to a directory, additional properties help adjust the scope of the exclusion:
             <ul>
                 <li>glob - only entries matching this <a href="https://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob">glob pattern</a> are excluded</li>
                 <li>entryType - type of entries excluded from the scan</li>
                 <li>matcherType - entry property on which the glob matching is applied</li>
             </ul>
-            By default, targeting a directory excludes everything underneath it.<br/>
-            <br/>
+            <p>By default, targeting a directory excludes everything underneath it.</p>
             Examples :
             <ul>
               <li><code>&lt;exclude&gt;src/main/doc&lt;/exclude&gt;</code> : excludes everything under : ${project.basedir}/src/main/doc</li>
@@ -832,10 +831,9 @@ under the License.
               <li><code>&lt;exclude glob="package-info.java"&gt;&lt;/exclude&gt;</code> : excludes all the files named package-info.java</li>
               <li><code>&lt;exclude glob="src/main/resources&#x2F;**.txt" entryType="FILE" matcherType="PATH" &gt;&lt;/exclude&gt;</code> : excludes all the text files located under the "resources" folder</li>
             </ul>
-            <br/>
-            Exclude elements can also be added per project with the use of <a href="parameters.html#project-level-properties">maven properties.</a><br/>
-            <br/><br/>
-
+            <p>
+            Exclude elements can also be added per project with the use of <a href="parameters.html#project-level-properties">maven properties.</a>
+            </p>
             ]]></description>
             <fields>
                 <field xml.content="true">
@@ -865,8 +863,8 @@ under the License.
         </class>
         <class>
             <name>Include</name>
-           <description><![CDATA[A file or a directory path to add to checksum computation. Relative path are relative to each module basedir.<br/><br/>
-           Include elements can also be added per project with the use of <a href="parameters.html#project-level-properties">maven properties.</a><br/><br/>
+           <description><![CDATA[A <p>file or a directory path to add to checksum computation. Relative path are relative to each module basedir.</p>
+           <p>Include elements can also be added per project with the use of <a href="parameters.html#project-level-properties">maven properties.</a></p>
            ]]></description>
             <fields>
                 <field xml.content="true">
