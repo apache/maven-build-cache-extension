@@ -61,7 +61,7 @@ under the License.
   <properties>
     <project.build.outputTimestamp>2023-06-05T23:12:49Z</project.build.outputTimestamp>
     <javaVersion>8</javaVersion>
-    <minimalMavenBuildVersion>3.5.0</minimalMavenBuildVersion>
+    <minimalMavenBuildVersion>3.9.0</minimalMavenBuildVersion>
     <minimalJavaBuildVersion>11</minimalJavaBuildVersion>
     <classWorldsVersion>2.6.0</classWorldsVersion>
 
