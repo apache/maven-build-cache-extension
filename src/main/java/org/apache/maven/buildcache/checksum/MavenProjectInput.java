@@ -24,6 +24,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -178,8 +179,8 @@ public class MavenProjectInput {
 
         final long t1 = System.currentTimeMillis();
 
-        // hash items: effective pom + input files + dependencies
-        final int count = 1 + inputFiles.size() + dependenciesChecksum.size();
+        // hash items: effective pom + version + input files + dependencies
+        final int count = 2 + inputFiles.size() + dependenciesChecksum.size();
         final List<DigestItem> items = new ArrayList<>(count);
         final HashChecksum checksum = config.getHashFactory().createChecksum(count);
 
@@ -188,6 +189,14 @@ public class MavenProjectInput {
             baselineHolder =
                     remoteCache.findBaselineBuild(project).map(b -> b.getDto().getProjectsInputInfo());
         }
+
+        DigestItem projectVersion = new DigestItem();
+        projectVersion.setType("version");
+        projectVersion.setIsText("yes");
+        projectVersion.setValue(project.getVersion());
+        items.add(projectVersion);
+
+        checksum.update(project.getVersion().getBytes(StandardCharsets.UTF_8));
 
         DigestItem effectivePomChecksum = DigestUtils.pom(checksum, effectivePom);
         items.add(effectivePomChecksum);
@@ -227,9 +236,12 @@ public class MavenProjectInput {
 
         final long t2 = System.currentTimeMillis();
 
-        for (DigestItem item : projectsInputInfoType.getItems()) {
-            LOGGER.debug("Hash calculated, item: {}, hash: {}", item.getType(), item.getHash());
+        if (LOGGER.isDebugEnabled()) {
+            for (DigestItem item : projectsInputInfoType.getItems()) {
+                LOGGER.debug("Hash calculated, item: {}, hash: {}", item.getType(), item.getHash());
+            }
         }
+
         LOGGER.info(
                 "Project inputs calculated in {} ms. {} checksum [{}] calculated in {} ms.",
                 t1 - t0,

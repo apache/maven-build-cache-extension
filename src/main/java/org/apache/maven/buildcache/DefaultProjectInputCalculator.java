@@ -72,8 +72,11 @@ public class DefaultProjectInputCalculator implements ProjectInputCalculator {
 
     @Override
     public ProjectsInputInfo calculateInput(MavenProject project) {
-        LOGGER.info("Going to calculate checksum for project [groupId=" + project.getGroupId() + ", artifactId="
-                + project.getArtifactId() + "]");
+        LOGGER.info(
+                "Going to calculate checksum for project [groupId={}, artifactId={}, version={}]",
+                project.getGroupId(),
+                project.getArtifactId(),
+                project.getVersion());
 
         String key = BuilderCommon.getKey(project);
         // NOTE: Do not use ConcurrentHashMap.computeIfAbsent() here because of recursive calls
