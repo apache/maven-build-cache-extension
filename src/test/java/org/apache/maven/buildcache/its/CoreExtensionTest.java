@@ -41,4 +41,37 @@ public class CoreExtensionTest {
         verifier.verifyErrorFreeLog();
         verifier.verifyTextInLog("Found cached build, restoring " + PROJECT_NAME + " from cache");
     }
+
+    @Test
+    void simple_build_change_version_build_install_again(Verifier verifier) throws VerificationException {
+        verifier.setAutoclean(false);
+
+        verifier.setLogFileName("../log-1.txt");
+        verifier.executeGoal("install");
+        verifier.verifyErrorFreeLog();
+        verifier.verifyArtifactPresent("org.apache.maven.caching.test.simple", "simple", "0.0.1-SNAPSHOT", "jar");
+
+        verifier.setLogFileName("../log-2.txt");
+        verifier.executeGoal("install");
+        verifier.verifyErrorFreeLog();
+        verifier.verifyTextInLog("Found cached build, restoring " + PROJECT_NAME + " from cache");
+
+        verifier.setLogFileName("../log-3.txt");
+        verifier.getCliOptions().clear();
+        verifier.addCliOption("-DoldVersion=0.0.1-SNAPSHOT");
+        verifier.addCliOption("-DnewVersion=0.0.2-SNAPSHOT");
+        verifier.executeGoal("versions:set");
+        verifier.verifyErrorFreeLog();
+
+        verifier.getCliOptions().clear();
+        verifier.setLogFileName("../log-4.txt");
+        verifier.executeGoal("install");
+        verifier.verifyErrorFreeLog();
+        verifier.verifyArtifactPresent("org.apache.maven.caching.test.simple", "simple", "0.0.2-SNAPSHOT", "jar");
+
+        verifier.setLogFileName("../log-5.txt");
+        verifier.executeGoal("install");
+        verifier.verifyErrorFreeLog();
+        verifier.verifyTextInLog("Found cached build, restoring " + PROJECT_NAME + " from cache");
+    }
 }
