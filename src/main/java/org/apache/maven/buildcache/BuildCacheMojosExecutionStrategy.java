@@ -134,7 +134,7 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
             if (restorable) {
                 CacheRestorationStatus cacheRestorationStatus =
                         restoreProject(result, mojoExecutions, mojoExecutionRunner, cacheConfig);
-                restored &= CacheRestorationStatus.SUCCESS == cacheRestorationStatus;
+                restored = CacheRestorationStatus.SUCCESS == cacheRestorationStatus;
                 executeExtraCleanPhaseIfNeeded(cacheRestorationStatus, cleanPhase, mojoExecutionRunner);
             }
             if (!restored) {
@@ -147,7 +147,7 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                 }
             }
 
-            if (cacheState == INITIALIZED && (!restorable || !restored)) {
+            if (cacheState == INITIALIZED && (!result.isSuccess() || !restored)) {
                 final Map<String, MojoExecutionEvent> executionEvents = mojoListener.getProjectExecutions(project);
                 cacheController.save(result, mojoExecutions, executionEvents);
             }
@@ -262,6 +262,20 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                     LOGGER.info(
                             "Skipping plugin execution (cached): {}",
                             cacheCandidate.getMojoDescriptor().getFullGoalName());
+                    // Need to populate cached candidate executions for the build cache save result
+                    Mojo mojo = null;
+                    try {
+                        mojo = mavenPluginManager.getConfiguredMojo(Mojo.class, session, cacheCandidate);
+                        MojoExecutionEvent mojoExecutionEvent =
+                                new MojoExecutionEvent(session, project, cacheCandidate, mojo);
+                        mojoListener.beforeMojoExecution(mojoExecutionEvent);
+                    } catch (PluginConfigurationException | PluginContainerException e) {
+                        throw new RuntimeException(e);
+                    } finally {
+                        if (mojo != null) {
+                            mavenPluginManager.releaseMojo(mojo, cacheCandidate);
+                        }
+                    }
                 }
             }
 
