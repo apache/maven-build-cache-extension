@@ -551,6 +551,17 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
         }
     }
 
+    @Override
+    public boolean calculateProjectVersionChecksum() {
+        if (isEnabled()) {
+            return Optional.ofNullable(getConfiguration().getProjectVersioning())
+                    .map(ProjectVersioning::isCalculateProjectVersionChecksum)
+                    .orElse(false);
+        } else {
+            return false;
+        }
+    }
+
     @Nonnull
     @Override
     public List<Pattern> getExcludePatterns() {

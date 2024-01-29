@@ -23,27 +23,13 @@ import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
 import org.junit.jupiter.api.Test;
 
-@IntegrationTest("src/test/projects/core-extension")
-public class CoreExtensionTest {
+@IntegrationTest("src/test/projects/mbuildcache-76")
+public class Issue76Test {
 
     private static final String PROJECT_NAME = "org.apache.maven.caching.test.simple:simple";
 
     @Test
-    void simple(Verifier verifier) throws VerificationException {
-        verifier.setAutoclean(false);
-
-        verifier.setLogFileName("../log-1.txt");
-        verifier.executeGoal("verify");
-        verifier.verifyErrorFreeLog();
-
-        verifier.setLogFileName("../log-2.txt");
-        verifier.executeGoal("verify");
-        verifier.verifyErrorFreeLog();
-        verifier.verifyTextInLog("Found cached build, restoring " + PROJECT_NAME + " from cache");
-    }
-
-    @Test
-    void simple_build_change_version_reuse_build_cache(Verifier verifier) throws VerificationException {
+    void simple_build_change_version_build_install_again(Verifier verifier) throws VerificationException {
         verifier.setAutoclean(false);
 
         verifier.setLogFileName("../log-1.txt");
@@ -55,7 +41,6 @@ public class CoreExtensionTest {
         verifier.setLogFileName("../log-2.txt");
         verifier.executeGoal("install");
         verifier.verifyErrorFreeLog();
-        verifier.verifyArtifactPresent("org.apache.maven.caching.test.simple", "simple", "0.0.1-SNAPSHOT", "jar");
         verifier.verifyTextInLog("Found cached build, restoring " + PROJECT_NAME + " from cache");
 
         verifier.setLogFileName("../log-3.txt");
@@ -66,11 +51,15 @@ public class CoreExtensionTest {
         verifier.verifyErrorFreeLog();
 
         verifier.getCliOptions().clear();
-        verifier.addCliOption("-Dmaven.build.cache.alwaysRunPlugins=maven-install-plugin:install");
         verifier.setLogFileName("../log-4.txt");
         verifier.executeGoal("install");
         verifier.verifyErrorFreeLog();
+        verifier.verifyTextInLog("Saved Build to local file");
         verifier.verifyArtifactPresent("org.apache.maven.caching.test.simple", "simple", "0.0.2-SNAPSHOT", "jar");
+
+        verifier.setLogFileName("../log-5.txt");
+        verifier.executeGoal("install");
+        verifier.verifyErrorFreeLog();
         verifier.verifyTextInLog("Found cached build, restoring " + PROJECT_NAME + " from cache");
     }
 }

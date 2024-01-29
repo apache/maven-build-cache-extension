@@ -140,6 +140,7 @@ public class CacheConfigImplTest {
     private void assertDefaults(Map<String, Runnable> overrides) {
         Map<String, Runnable> asserts = new HashMap<>();
         asserts.put("adjustMetaInfVersion", () -> assertFalse(testObject.adjustMetaInfVersion()));
+        asserts.put("calculateProjectVersionChecksum", () -> assertFalse(testObject.calculateProjectVersionChecksum()));
         asserts.put("canIgnore", () -> assertFalse(testObject.canIgnore(mock(MojoExecution.class))));
         asserts.put("getAlwaysRunPlugins", () -> assertNull(testObject.getAlwaysRunPlugins()));
         asserts.put("getAttachedOutputs", () -> assertEquals(Collections.emptyList(), testObject.getAttachedOutputs()));
