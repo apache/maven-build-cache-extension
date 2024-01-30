@@ -130,7 +130,7 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
             }
 
             boolean restorable = result.isSuccess() || result.isPartialSuccess();
-            boolean restored = result.isSuccess(); // if partially restored need to save increment
+            boolean restored = false; // if partially restored need to save increment
             if (restorable) {
                 CacheRestorationStatus cacheRestorationStatus =
                         restoreProject(result, mojoExecutions, mojoExecutionRunner, cacheConfig);
