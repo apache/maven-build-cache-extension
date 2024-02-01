@@ -26,7 +26,7 @@ import org.junit.jupiter.api.Test;
 @IntegrationTest("src/test/projects/mbuildcache-76")
 public class Issue76Test {
 
-    private static final String PROJECT_NAME = "org.apache.maven.caching.test.simple:simple";
+    private static final String PROJECT_NAME = "org.apache.maven.caching.test:mbuildcache-76";
 
     @Test
     void simple_build_change_version_build_install_again(Verifier verifier) throws VerificationException {
@@ -36,7 +36,7 @@ public class Issue76Test {
         verifier.executeGoal("install");
         verifier.verifyErrorFreeLog();
         verifier.verifyTextInLog("Saved Build to local file");
-        verifier.verifyArtifactPresent("org.apache.maven.caching.test.simple", "simple", "0.0.1-SNAPSHOT", "jar");
+        verifier.verifyArtifactPresent("org.apache.maven.caching.test", "mbuildcache-76", "0.0.1-SNAPSHOT", "jar");
 
         verifier.setLogFileName("../log-2.txt");
         verifier.executeGoal("install");
@@ -55,7 +55,7 @@ public class Issue76Test {
         verifier.executeGoal("install");
         verifier.verifyErrorFreeLog();
         verifier.verifyTextInLog("Saved Build to local file");
-        verifier.verifyArtifactPresent("org.apache.maven.caching.test.simple", "simple", "0.0.2-SNAPSHOT", "jar");
+        verifier.verifyArtifactPresent("org.apache.maven.caching.test", "mbuildcache-76", "0.0.2-SNAPSHOT", "jar");
 
         verifier.setLogFileName("../log-5.txt");
         verifier.executeGoal("install");
