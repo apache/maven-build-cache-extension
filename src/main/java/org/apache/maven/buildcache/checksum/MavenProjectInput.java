@@ -180,7 +180,11 @@ public class MavenProjectInput {
         final long t1 = System.currentTimeMillis();
 
         // hash items: effective pom + version + input files + dependencies
-        final int count = 2 + inputFiles.size() + dependenciesChecksum.size();
+        final int count = 1
+                + (config.calculateProjectVersionChecksum() ? 1 : 0)
+                + inputFiles.size()
+                + dependenciesChecksum.size();
+
         final List<DigestItem> items = new ArrayList<>(count);
         final HashChecksum checksum = config.getHashFactory().createChecksum(count);
 
@@ -190,13 +194,15 @@ public class MavenProjectInput {
                     remoteCache.findBaselineBuild(project).map(b -> b.getDto().getProjectsInputInfo());
         }
 
-        DigestItem projectVersion = new DigestItem();
-        projectVersion.setType("version");
-        projectVersion.setIsText("yes");
-        projectVersion.setValue(project.getVersion());
-        items.add(projectVersion);
+        if (config.calculateProjectVersionChecksum()) {
+            DigestItem projectVersion = new DigestItem();
+            projectVersion.setType("version");
+            projectVersion.setIsText("yes");
+            projectVersion.setValue(project.getVersion());
+            items.add(projectVersion);
 
-        checksum.update(project.getVersion().getBytes(StandardCharsets.UTF_8));
+            checksum.update(project.getVersion().getBytes(StandardCharsets.UTF_8));
+        }
 
         DigestItem effectivePomChecksum = DigestUtils.pom(checksum, effectivePom);
         items.add(effectivePomChecksum);

@@ -107,6 +107,8 @@ public interface CacheConfig {
 
     boolean adjustMetaInfVersion();
 
+    boolean calculateProjectVersionChecksum();
+
     boolean canIgnore(MojoExecution mojoExecution);
 
     @Nonnull

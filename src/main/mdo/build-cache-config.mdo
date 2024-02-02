@@ -325,6 +325,11 @@ under the License.
                     <type>boolean</type>
                     <description>Determines whether version in metadata must be changed according to building project version.</description>
                 </field>
+                <field xml.attribute="true">
+                    <name>calculateProjectVersionChecksum</name>
+                    <type>boolean</type>
+                    <description>Determines whether project version should be included to calculate checksum input.</description>
+                </field>
             </fields>
         </class>
 
@@ -337,6 +342,12 @@ under the License.
               <xs:annotation>
                 <xs:documentation source="version">0.0.0+</xs:documentation>
                 <xs:documentation source="description">Determines whether version in metadata must be changed according to building project version.</xs:documentation>
+              </xs:annotation>
+            </xs:attribute>
+            <xs:attribute name="calculateProjectVersionChecksum" type="xs:boolean" default="false" use="optional">
+              <xs:annotation>
+                <xs:documentation source="version">0.0.0+</xs:documentation>
+                <xs:documentation source="description">Determines whether project version should be included to calculate checksum input.</xs:documentation>
               </xs:annotation>
             </xs:attribute>
           </xs:complexType>
