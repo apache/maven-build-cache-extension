@@ -354,6 +354,10 @@ public class CacheControllerImpl implements CacheController {
             // in which case, the project is unmodified and we continue with normal build.
             if (restoredProjectArtifact != null) {
                 project.setArtifact(restoredProjectArtifact);
+                // need to include package lifecycle to save build info for incremental builds
+                if (!project.hasLifecyclePhase("package")) {
+                    project.addLifecyclePhase("package");
+                }
             }
             restoredAttachedArtifacts.forEach(project::addAttachedArtifact);
             restorationReport.setSuccess(true);
@@ -399,13 +403,24 @@ public class CacheControllerImpl implements CacheController {
         final FutureTask<File> downloadTask = new FutureTask<>(() -> {
             LOGGER.debug("Downloading artifact {}", artifact.getArtifactId());
             final Path artifactFile = localCache.getArtifactFile(context, cacheResult.getSource(), artifact);
+            final Path targetDir = Paths.get(project.getBuild().getDirectory());
+            final Path targetArtifact = targetDir.resolve(project.getBuild().getFinalName()
+                    + (artifact.getClassifier() != null ? "-".concat(artifact.getClassifier()) : "")
+                    + ".".concat(FilenameUtils.getExtension(artifact.getFileName())));
+
             if (!Files.exists(artifactFile)) {
                 throw new FileNotFoundException("Missing file for cached build, cannot restore. File: " + artifactFile);
             }
             LOGGER.debug("Downloaded artifact " + artifact.getArtifactId() + " to: " + artifactFile);
-            return restoreArtifactHandler
+
+            File downloadFile = restoreArtifactHandler
                     .adjustArchiveArtifactVersion(project, originalVersion, artifactFile)
                     .toFile();
+            // Need to restore artifact to project build directory, so it can be saved into cached incremental build
+            FileUtils.copyFile(downloadFile, targetArtifact.toFile());
+            LOGGER.debug("Restored artifact " + artifact.getArtifactId() + " to: " + targetArtifact);
+
+            return targetArtifact.toFile();
         });
         if (!cacheConfig.isLazyRestore()) {
             downloadTask.run();
