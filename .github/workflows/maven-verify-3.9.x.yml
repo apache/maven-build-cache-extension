@@ -24,7 +24,7 @@ on:
 jobs:
   build:
     name: Verify
-    uses: apache/maven-gh-actions-shared/.github/workflows/maven-verify.yml@v3
+    uses: apache/maven-gh-actions-shared/.github/workflows/maven-verify.yml@v4
     with:
       maven-args: '-D"maven.test.redirectTestOutputToFile=false -Pmaven3"'
       maven-matrix: '[ "3.9.5", "4.0.0-alpha-8" ]'
