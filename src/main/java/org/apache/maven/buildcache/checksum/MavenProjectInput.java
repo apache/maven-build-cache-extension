@@ -91,6 +91,7 @@ import static org.apache.commons.lang3.StringUtils.stripToEmpty;
 import static org.apache.maven.buildcache.CacheUtils.isPom;
 import static org.apache.maven.buildcache.CacheUtils.isSnapshot;
 import static org.apache.maven.buildcache.xml.CacheConfigImpl.CACHE_ENABLED_PROPERTY_NAME;
+import static org.apache.maven.buildcache.xml.CacheConfigImpl.CACHE_FORCE_RENEW_PROPERTY_NAME;
 import static org.apache.maven.buildcache.xml.CacheConfigImpl.CACHE_SKIP;
 import static org.apache.maven.buildcache.xml.CacheConfigImpl.RESTORE_GENERATED_SOURCES_PROPERTY_NAME;
 
@@ -419,11 +420,9 @@ public class MavenProjectInput {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-        } else {
-            if (!exclusionResolver.excludesPath(normalized)) {
-                LOGGER.debug("Adding: {}", normalized);
-                collectedFiles.add(normalized);
-            }
+        } else if (!exclusionResolver.excludesPath(normalized)) {
+            LOGGER.debug("Adding: {}", normalized);
+            collectedFiles.add(normalized);
         }
     }
 
@@ -556,7 +555,7 @@ public class MavenProjectInput {
             // do not even bother logging about blank/null values
         } else if (equalsAnyIgnoreCase(text, "true", "false", "utf-8", "null", "\\") // common values
                 || contains(text, "*") // tag value is a glob or regex - unclear how to process
-                || (contains(text, ":") && !contains(text, ":\\")) // artifactId
+                || contains(text, ":") && !contains(text, ":\\") // artifactId
                 || startsWithAny(text, "com.", "org.", "io.", "java.", "javax.") // java packages
                 || startsWithAny(text, "${env.") // env variables in maven notation
                 || startsWithAny(
@@ -720,7 +719,7 @@ public class MavenProjectInput {
      * Allow skipping generated sources restoration on a per-project level via a property (which defaults to true)
      * e.g. {@code <maven.build.cache.restoreGeneratedSources>false<maven.build.cache.restoreGeneratedSources/>}.
      *
-     * @param  project
+     * @param project
      * @return
      */
     public static boolean isRestoreGeneratedSources(MavenProject project) {
@@ -737,5 +736,9 @@ public class MavenProjectInput {
      */
     public static boolean isCacheDisabled(MavenProject project) {
         return !Boolean.parseBoolean(project.getProperties().getProperty(CACHE_ENABLED_PROPERTY_NAME, "true"));
+    }
+
+    public static boolean isForceRenew(MavenProject project) {
+        return !Boolean.parseBoolean(project.getProperties().getProperty(CACHE_FORCE_RENEW_PROPERTY_NAME, "false"));
     }
 }

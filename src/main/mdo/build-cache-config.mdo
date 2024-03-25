@@ -235,6 +235,12 @@ under the License.
                     <description>FileHash (causes file hash is saved in build metadata) or
                         EffectivePom (causes effective pom info is saved in build metadata)</description>
                 </field>
+                <field>
+                    <name>forceRenew</name>
+                    <type>boolean</type>
+                    <defaultValue>false</defaultValue>
+                    <description>Force the reconstruction of the Cache</description>
+                </field>
             </fields>
         </class>
 

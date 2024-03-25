@@ -76,7 +76,6 @@ import static org.apache.maven.buildcache.CacheUtils.getMultimoduleRoot;
  */
 @SessionScoped
 @Named
-@SuppressWarnings("unused")
 public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheConfig {
 
     public static final String CONFIG_PATH_PROPERTY_NAME = "maven.build.cache.configPath";
@@ -92,6 +91,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     public static final String LAZY_RESTORE_PROPERTY_NAME = "maven.build.cache.lazyRestore";
     public static final String RESTORE_GENERATED_SOURCES_PROPERTY_NAME = "maven.build.cache.restoreGeneratedSources";
     public static final String ALWAYS_RUN_PLUGINS = "maven.build.cache.alwaysRunPlugins";
+    public static final String CACHE_FORCE_RENEW_PROPERTY_NAME = "maven.build.cache.forceRenew";
 
     /**
      * Flag to control if we should skip lookup for cached artifacts globally or for a particular project even if
@@ -219,9 +219,8 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
         final GoalReconciliation reconciliationConfig = findReconciliationConfig(mojoExecution);
         if (reconciliationConfig != null) {
             return reconciliationConfig.getReconciles();
-        } else {
-            return Collections.emptyList();
         }
+        return Collections.emptyList();
     }
 
     @Override
@@ -267,9 +266,8 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
         final GoalReconciliation reconciliationConfig = findReconciliationConfig(mojoExecution);
         if (reconciliationConfig != null) {
             return reconciliationConfig.getLogs();
-        } else {
-            return Collections.emptyList();
         }
+        return Collections.emptyList();
     }
 
     @Nonnull
@@ -279,9 +277,8 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
         final GoalReconciliation reconciliationConfig = findReconciliationConfig(mojoExecution);
         if (reconciliationConfig != null) {
             return reconciliationConfig.getNologs();
-        } else {
-            return Collections.emptyList();
         }
+        return Collections.emptyList();
     }
 
     @Nonnull
@@ -546,9 +543,8 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
             return Optional.ofNullable(getConfiguration().getProjectVersioning())
                     .map(ProjectVersioning::isAdjustMetaInf)
                     .orElse(false);
-        } else {
-            return false;
         }
+        return false;
     }
 
     @Override
@@ -557,9 +553,8 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
             return Optional.ofNullable(getConfiguration().getProjectVersioning())
                     .map(ProjectVersioning::isCalculateProjectVersionChecksum)
                     .orElse(false);
-        } else {
-            return false;
         }
+        return false;
     }
 
     @Nonnull

@@ -69,7 +69,6 @@ import static org.apache.maven.buildcache.xml.CacheState.INITIALIZED;
 @SessionScoped
 @Named
 @Priority(10)
-@SuppressWarnings("unused")
 public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BuildCacheMojosExecutionStrategy.class);
@@ -79,7 +78,7 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
     private final MojoParametersListener mojoListener;
     private final LifecyclePhasesHelper lifecyclePhasesHelper;
     private final MavenPluginManager mavenPluginManager;
-    private MojoExecutionScope mojoExecutionScope;
+    private final MojoExecutionScope mojoExecutionScope;
 
     @Inject
     public BuildCacheMojosExecutionStrategy(
@@ -97,6 +96,7 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
         this.mojoExecutionScope = mojoExecutionScope;
     }
 
+    @Override
     public void execute(
             List<MojoExecution> mojoExecutions, MavenSession session, MojoExecutionRunner mojoExecutionRunner)
             throws LifecycleExecutionException {
@@ -137,7 +137,8 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                 restored = CacheRestorationStatus.SUCCESS == cacheRestorationStatus;
                 executeExtraCleanPhaseIfNeeded(cacheRestorationStatus, cleanPhase, mojoExecutionRunner);
             }
-            if (!restored) {
+
+            if (!restored || MavenProjectInput.isForceRenew(project)) {
                 for (MojoExecution mojoExecution : mojoExecutions) {
                     if (source == Source.CLI
                             || mojoExecution.getLifecyclePhase() == null
@@ -222,12 +223,10 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
             for (MojoExecution cacheCandidate : cachedSegment) {
                 if (cacheController.isForcedExecution(project, cacheCandidate)) {
                     forcedExecutionMojos.add(cacheCandidate);
-                } else {
-                    if (!verifyCacheConsistency(
-                            cacheCandidate, build, project, session, mojoExecutionRunner, cacheConfig)) {
-                        LOGGER.info("A cached mojo is not consistent, continuing with non cached build");
-                        return CacheRestorationStatus.FAILURE;
-                    }
+                } else if (!verifyCacheConsistency(
+                        cacheCandidate, build, project, session, mojoExecutionRunner, cacheConfig)) {
+                    LOGGER.info("A cached mojo is not consistent, continuing with non cached build");
+                    return CacheRestorationStatus.FAILURE;
                 }
             }
 
@@ -250,13 +249,13 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                     mojoExecutionScope.seed(MojoExecution.class, cacheCandidate);
                     // need maven 4 as minumum
                     // mojoExecutionScope.seed(
-                    //        org.apache.maven.api.plugin.Log.class,
-                    //        new DefaultLog(LoggerFactory.getLogger(
-                    //                cacheCandidate.getMojoDescriptor().getFullGoalName())));
+                    // org.apache.maven.api.plugin.Log.class,
+                    // new DefaultLog(LoggerFactory.getLogger(
+                    // cacheCandidate.getMojoDescriptor().getFullGoalName())));
                     // mojoExecutionScope.seed(Project.class, ((DefaultSession)
                     // session.getSession()).getProject(project));
                     // mojoExecutionScope.seed(
-                    //        org.apache.maven.api.MojoExecution.class, new DefaultMojoExecution(cacheCandidate));
+                    // org.apache.maven.api.MojoExecution.class, new DefaultMojoExecution(cacheCandidate));
                     mojoExecutionRunner.run(cacheCandidate);
                 } else {
                     LOGGER.info(
@@ -365,7 +364,7 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                     currentValue = normalizedPath(path, baseDirPath);
                 } else if (value instanceof Path) {
                     Path baseDirPath = project.getBasedir().toPath();
-                    currentValue = normalizedPath(((Path) value), baseDirPath);
+                    currentValue = normalizedPath((Path) value, baseDirPath);
                 } else if (value != null && value.getClass().isArray()) {
                     currentValue = ArrayUtils.toString(value);
                 } else {
@@ -384,13 +383,12 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                             expectedValue,
                             currentValue);
                     return false;
-                } else {
-                    LOGGER.warn(
-                            "Cache contains plugin execution with skip flag and might be incomplete. "
-                                    + "Property: {}, execution {}",
-                            propertyName,
-                            mojoExecutionKey(mojoExecution));
                 }
+                LOGGER.warn(
+                        "Cache contains plugin execution with skip flag and might be incomplete. "
+                                + "Property: {}, execution {}",
+                        propertyName,
+                        mojoExecutionKey(mojoExecution));
             }
         }
         return true;
