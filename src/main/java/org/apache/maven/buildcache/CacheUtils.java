@@ -21,10 +21,13 @@ package org.apache.maven.buildcache;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.PathMatcher;
 import java.nio.file.SimpleFileVisitor;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.util.Arrays;
@@ -37,6 +40,7 @@ import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.handler.ArtifactHandler;
 import org.apache.maven.buildcache.xml.build.Scm;
@@ -160,21 +164,39 @@ public class CacheUtils {
         return StringUtils.endsWithAny(fileName, ".jar", ".zip", ".war", ".ear");
     }
 
-    public static void zip(Path dir, Path zip) throws IOException {
+    /**
+     * Put every matching files of a directory in a zip.
+     * @param dir directory to zip
+     * @param zip zip to populate
+     * @param glob glob to apply to filenames
+     * @return true if at least one file has been included in the zip.
+     * @throws IOException
+     */
+    public static boolean zip(final Path dir, final Path zip, final String glob) throws IOException {
+        final MutableBoolean hasFiles = new MutableBoolean();
         try (ZipOutputStream zipOutputStream = new ZipOutputStream(Files.newOutputStream(zip))) {
+
+            PathMatcher matcher =
+                    "*".equals(glob) ? null : FileSystems.getDefault().getPathMatcher("glob:" + glob);
             Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
 
                 @Override
                 public FileVisitResult visitFile(Path path, BasicFileAttributes basicFileAttributes)
                         throws IOException {
-                    final ZipEntry zipEntry = new ZipEntry(dir.relativize(path).toString());
-                    zipOutputStream.putNextEntry(zipEntry);
-                    Files.copy(path, zipOutputStream);
-                    zipOutputStream.closeEntry();
+
+                    if (matcher == null || matcher.matches(path.getFileName())) {
+                        final ZipEntry zipEntry =
+                                new ZipEntry(dir.relativize(path).toString());
+                        zipOutputStream.putNextEntry(zipEntry);
+                        Files.copy(path, zipOutputStream);
+                        hasFiles.setTrue();
+                        zipOutputStream.closeEntry();
+                    }
                     return FileVisitResult.CONTINUE;
                 }
             });
         }
+        return hasFiles.booleanValue();
     }
 
     public static void unzip(Path zip, Path out) throws IOException {
@@ -190,7 +212,7 @@ public class CacheUtils {
                 } else {
                     Path parent = file.getParent();
                     Files.createDirectories(parent);
-                    Files.copy(zis, file);
+                    Files.copy(zis, file, StandardCopyOption.REPLACE_EXISTING);
                 }
                 Files.setLastModifiedTime(file, FileTime.fromMillis(entry.getTime()));
                 entry = zis.getNextEntry();
