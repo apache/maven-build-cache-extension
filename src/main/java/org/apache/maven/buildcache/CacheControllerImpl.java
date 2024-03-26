@@ -500,7 +500,6 @@ public class CacheControllerImpl implements CacheController {
 
             // if package phase presence means new artifacts were packaged
             if (project.hasLifecyclePhase("package")) {
-                localCache.saveBuildInfo(cacheResult, build);
                 if (projectArtifact.getFile() != null) {
                     localCache.saveArtifactFile(cacheResult, projectArtifact);
                 }
@@ -518,9 +517,9 @@ public class CacheControllerImpl implements CacheController {
                         }
                     }
                 }
-            } else {
-                localCache.saveBuildInfo(cacheResult, build);
             }
+
+            localCache.saveBuildInfo(cacheResult, build);
 
             if (cacheConfig.isBaselineDiffEnabled()) {
                 produceDiffReport(cacheResult, build);
