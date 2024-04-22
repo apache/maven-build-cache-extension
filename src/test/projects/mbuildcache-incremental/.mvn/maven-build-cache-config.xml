@@ -21,4 +21,13 @@ under the License.
 
 <cache xmlns="http://maven.apache.org/CACHE-CONFIG/1.0.0">
 
+    <configuration>
+        <attachedOutputs>
+            <dirNames>
+                <dirName glob="extra-*">extra-resources</dirName>
+                <dirName glob="other-*">other-resources</dirName>
+            </dirNames>
+        </attachedOutputs>
+    </configuration>
+
 </cache>

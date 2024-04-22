@@ -51,10 +51,9 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.mutable.MutableBoolean;
@@ -306,14 +305,15 @@ public class CacheControllerImpl implements CacheController {
         return true;
     }
 
-    private Consumer<File> createRestorationToDiskConsumer(final MavenProject project, final Artifact artifact) {
+    private Function<File, File> createRestorationToDiskConsumer(final MavenProject project, final Artifact artifact) {
+
         if (cacheConfig.isRestoreOnDiskArtifacts() && MavenProjectInput.isRestoreOnDiskArtifacts(project)) {
 
+            Path restorationPath = project.getBasedir().toPath().resolve(artifact.getFilePath());
             final AtomicBoolean restored = new AtomicBoolean(false);
             return file -> {
                 // Set to restored even if it fails later, we don't want multiple try
                 if (restored.compareAndSet(false, true)) {
-                    Path restorationPath = project.getBasedir().toPath().resolve(artifact.getFilePath());
                     verifyRestorationInsideProject(project, restorationPath);
                     try {
                         Files.createDirectories(restorationPath.getParent());
@@ -324,10 +324,11 @@ public class CacheControllerImpl implements CacheController {
                     }
                     LOGGER.debug("Restored file on disk ({} to {})", artifact.getFileName(), restorationPath);
                 }
+                return restorationPath.toFile();
             };
         }
         // Return a consumer doing nothing
-        return file -> {};
+        return file -> file;
     }
 
     private boolean isPathInsideProject(final MavenProject project, Path path) {
@@ -434,7 +435,7 @@ public class CacheControllerImpl implements CacheController {
             String artifactType,
             String artifactClassifier,
             Future<File> artifactFile,
-            Consumer<File> restoreToDiskConsumer) {
+            Function<File, File> restoreToDiskConsumer) {
         ArtifactHandler handler = null;
 
         if (artifactType != null) {
@@ -462,24 +463,14 @@ public class CacheControllerImpl implements CacheController {
         final FutureTask<File> downloadTask = new FutureTask<>(() -> {
             LOGGER.debug("Downloading artifact {}", artifact.getArtifactId());
             final Path artifactFile = localCache.getArtifactFile(context, cacheResult.getSource(), artifact);
-            final Path targetDir = Paths.get(project.getBuild().getDirectory());
-            final Path targetArtifact = targetDir.resolve(project.getBuild().getFinalName()
-                    + (artifact.getClassifier() != null ? "-".concat(artifact.getClassifier()) : "")
-                    + ".".concat(FilenameUtils.getExtension(artifact.getFileName())));
 
             if (!Files.exists(artifactFile)) {
                 throw new FileNotFoundException("Missing file for cached build, cannot restore. File: " + artifactFile);
             }
             LOGGER.debug("Downloaded artifact " + artifact.getArtifactId() + " to: " + artifactFile);
-
-            File downloadFile = restoreArtifactHandler
+            return restoreArtifactHandler
                     .adjustArchiveArtifactVersion(project, originalVersion, artifactFile)
                     .toFile();
-            // Need to restore artifact to project build directory, so it can be saved into cached incremental build
-            FileUtils.copyFile(downloadFile, targetArtifact.toFile());
-            LOGGER.debug("Restored artifact " + artifact.getArtifactId() + " to: " + targetArtifact);
-
-            return targetArtifact.toFile();
         });
         if (!cacheConfig.isLazyRestore()) {
             downloadTask.run();

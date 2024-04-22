@@ -23,8 +23,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.RunnableFuture;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Consumer;
+import java.util.function.Function;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DefaultArtifact;
@@ -48,9 +47,7 @@ public class RestoredArtifact extends DefaultArtifact {
 
     private volatile Future<File> fileFuture;
 
-    private AtomicBoolean restoredToDisk = new AtomicBoolean(false);
-
-    private Consumer<File> restoreToDiskConsumer;
+    private Function<File, File> restoreToDiskConsumer;
 
     public RestoredArtifact(
             Artifact parent,
@@ -58,7 +55,7 @@ public class RestoredArtifact extends DefaultArtifact {
             String type,
             String classifier,
             ArtifactHandler handler,
-            Consumer<File> restoreToDiskConsumer) {
+            Function<File, File> restoreToDiskConsumer) {
         super(
                 parent.getGroupId(),
                 parent.getArtifactId(),
@@ -102,8 +99,7 @@ public class RestoredArtifact extends DefaultArtifact {
 
         try {
             File file = fileFuture.get();
-            restoreToDiskConsumer.accept(file);
-            return file;
+            return restoreToDiskConsumer.apply(file);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new InvalidArtifactRTException(

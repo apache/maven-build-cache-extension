@@ -389,14 +389,14 @@ under the License.
         <class>
             <name>DirName</name>
             <description><![CDATA[Path to a directory containing files which needs to be saved/restored (relative to the build directory).
-            <br/>
+            <br>
             Examples :
             <ul>
               <li><code>&lt;dirName&gt;classes&lt;/dirName&gt;</code> : files in ${project.basedir}/target/classes</li>
               <li><code>&lt;dirName glob="jacoco.xml"&gt;&lt;/dirName&gt;</code> : jacoco report files in ${project.basedir}/target</li>
               <li><code>&lt;dirName&gt;../src/main/javagen&lt;/dirName&gt;</code> : files in ${project.basedir}/src/main/javagen (in this exemple, javagen is a folder saved in git but erased on clean) </li>
             </ul>
-            <br/><br/>
+            <br><br>
 
             ]]></description>
             <fields>
