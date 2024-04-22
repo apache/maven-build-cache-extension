@@ -33,9 +33,11 @@ import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -46,6 +48,8 @@ import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.artifact.Artifact;
@@ -618,7 +622,13 @@ public class MavenProjectInput {
     private SortedMap<String, String> getMutableDependencies() throws IOException {
         SortedMap<String, String> result = new TreeMap<>();
 
-        for (Dependency dependency : project.getDependencies()) {
+        Set<Dependency> dependencies = Stream.concat(
+                        project.getDependencies().stream(),
+                        project.getBuildPlugins().stream()
+                                .map(Plugin::getDependencies)
+                                .flatMap(Collection::stream))
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        for (Dependency dependency : dependencies) {
 
             if (CacheUtils.isPom(dependency)) {
                 // POM dependency will be resolved by maven system to actual dependencies
