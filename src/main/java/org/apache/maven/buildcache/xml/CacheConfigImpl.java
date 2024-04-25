@@ -103,6 +103,11 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
      */
     public static final String CACHE_SKIP = "maven.build.cache.skipCache";
 
+    /**
+     * Flag to disable cache saving
+     */
+    public static final String SKIP_SAVE = "maven.build.cache.skipSave";
+
     private static final Logger LOGGER = LoggerFactory.getLogger(CacheConfigImpl.class);
 
     private final XmlService xmlService;
@@ -501,6 +506,11 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     @Override
     public String getAlwaysRunPlugins() {
         return getProperty(ALWAYS_RUN_PLUGINS, null);
+    }
+
+    @Override
+    public boolean isSkipSave() {
+        return getProperty(SKIP_SAVE, false);
     }
 
     @Override

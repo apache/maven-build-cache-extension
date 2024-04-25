@@ -134,4 +134,9 @@ public interface CacheConfig {
     boolean isRestoreGeneratedSources();
 
     String getAlwaysRunPlugins();
+
+    /**
+     * Flag to disable cache saving
+     */
+    boolean isSkipSave();
 }

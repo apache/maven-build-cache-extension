@@ -18,10 +18,19 @@
  */
 package org.apache.maven.buildcache.its;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 import org.apache.maven.buildcache.its.junit.IntegrationTest;
 import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import static org.apache.maven.buildcache.util.LogFileUtils.findFirstLineContainingTextsInLogs;
+import static org.apache.maven.buildcache.xml.CacheConfigImpl.CACHE_LOCATION_PROPERTY_NAME;
+import static org.apache.maven.buildcache.xml.CacheConfigImpl.SKIP_SAVE;
 
 @IntegrationTest("src/test/projects/build-extension")
 public class BuildExtensionTest {
@@ -40,5 +49,29 @@ public class BuildExtensionTest {
         verifier.executeGoal("verify");
         verifier.verifyErrorFreeLog();
         verifier.verifyTextInLog("Found cached build, restoring " + PROJECT_NAME + " from cache");
+    }
+
+    @Test
+    void skipSaving(Verifier verifier) throws VerificationException, IOException {
+        verifier.setAutoclean(false);
+        Path tempDirectory = Files.createTempDirectory("skip-saving-test");
+        verifier.getCliOptions().clear();
+        verifier.addCliOption("-D" + CACHE_LOCATION_PROPERTY_NAME + "=" + tempDirectory.toAbsolutePath());
+        verifier.addCliOption("-D" + SKIP_SAVE + "=true");
+
+        verifier.setLogFileName("../log-1.txt");
+        verifier.executeGoal("verify");
+        verifier.verifyTextInLog("Cache saving is disabled.");
+        verifier.verifyErrorFreeLog();
+
+        verifier.setLogFileName("../log-2.txt");
+        verifier.executeGoal("verify");
+        verifier.verifyErrorFreeLog();
+        verifier.verifyTextInLog("Cache saving is disabled.");
+        verifyNoTextInLog(verifier, "Found cached build, restoring");
+    }
+
+    private static void verifyNoTextInLog(Verifier verifier, String text) throws VerificationException {
+        Assertions.assertNull(findFirstLineContainingTextsInLogs(verifier, text));
     }
 }

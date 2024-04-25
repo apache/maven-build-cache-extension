@@ -148,8 +148,12 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
             }
 
             if (cacheState == INITIALIZED && (!result.isSuccess() || !restored)) {
-                final Map<String, MojoExecutionEvent> executionEvents = mojoListener.getProjectExecutions(project);
-                cacheController.save(result, mojoExecutions, executionEvents);
+                if (cacheConfig.isSkipSave()) {
+                    LOGGER.info("Cache saving is disabled.");
+                } else {
+                    final Map<String, MojoExecutionEvent> executionEvents = mojoListener.getProjectExecutions(project);
+                    cacheController.save(result, mojoExecutions, executionEvents);
+                }
             }
 
             if (cacheConfig.isFailFast() && !result.isSuccess() && !skipCache && !forkedExecution) {
