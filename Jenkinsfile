@@ -17,4 +17,4 @@
  * under the License.
  */
 
-asfMavenTlpStdBuild( 'jdks' : [ "11", "17" ] )
+asfMavenTlpStdBuild( 'jdks' : [ "11", "17", "21" ] )

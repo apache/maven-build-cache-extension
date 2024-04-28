@@ -20,6 +20,8 @@ package org.apache.maven.buildcache.xml;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.nio.file.AccessMode;
 import java.nio.file.FileSystem;
 import java.nio.file.Path;
@@ -28,6 +30,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.stream.Collectors;
 
@@ -47,6 +50,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
@@ -122,10 +126,29 @@ public class CacheConfigImplTest {
         when(mockPath.getFileSystem()).thenReturn(mockFileSystem);
         FileSystemProvider mockProvider = mock(FileSystemProvider.class);
         when(mockFileSystem.provider()).thenReturn(mockProvider);
+
+        // Mock for java < 20.
         if (!exists) {
             doThrow(new IOException("mock IOException"))
                     .when(mockProvider)
                     .checkAccess(ArgumentMatchers.eq(mockPath), ArgumentMatchers.any(AccessMode.class));
+        }
+
+        // Mock for java >= 20. Since the FileSystemProvider.exists method does not exist before v20, we use reflection
+        // to create the mock
+        Optional<Method> methodToMock = Arrays.stream(FileSystemProvider.class.getDeclaredMethods())
+                .filter(method -> "exists".equals(method.getName()))
+                .findAny();
+        if (methodToMock.isPresent()) {
+            Class<?>[] paramTypes = methodToMock.get().getParameterTypes();
+            Object[] params = Arrays.stream(paramTypes)
+                    .map(paramType -> Mockito.any(paramType))
+                    .toArray();
+            try {
+                Mockito.when(methodToMock.get().invoke(mockProvider, params)).thenReturn(exists);
+            } catch (IllegalAccessException | InvocationTargetException e) {
+                throw new RuntimeException("Error while mocking the 'exists' method from FileSystemProvider", e);
+            }
         }
     }
 
