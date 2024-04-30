@@ -139,4 +139,9 @@ public interface CacheConfig {
      * Flag to disable cache saving
      */
     boolean isSkipSave();
+
+    /**
+     * Flag to save in cache only if a build went through the clean lifecycle
+     */
+    boolean isMandatoryClean();
 }
