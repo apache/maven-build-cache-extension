@@ -26,6 +26,7 @@ import java.util.regex.Pattern;
 
 import org.apache.maven.buildcache.PluginScanConfig;
 import org.apache.maven.buildcache.hash.HashFactory;
+import org.apache.maven.buildcache.xml.config.DirName;
 import org.apache.maven.buildcache.xml.config.Exclude;
 import org.apache.maven.buildcache.xml.config.Include;
 import org.apache.maven.buildcache.xml.config.MultiModule;
@@ -103,7 +104,7 @@ public interface CacheConfig {
 
     String getLocalRepositoryLocation();
 
-    List<String> getAttachedOutputs();
+    List<DirName> getAttachedOutputs();
 
     boolean adjustMetaInfVersion();
 
@@ -132,6 +133,11 @@ public interface CacheConfig {
      * scenarios
      */
     boolean isRestoreGeneratedSources();
+
+    /**
+     * Flag to restore (default) or not generated artifacts
+     */
+    boolean isRestoreOnDiskArtifacts();
 
     String getAlwaysRunPlugins();
 

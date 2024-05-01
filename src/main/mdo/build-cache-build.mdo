@@ -240,6 +240,10 @@ under the License.
           <name>fileSize</name>
           <type>long</type>
         </field>
+        <field>
+          <name>filePath</name>
+          <type>String</type>
+        </field>
       <!--/xs:sequence-->
       </fields>
     <!--/xs:complexType-->

@@ -93,6 +93,7 @@ import static org.apache.maven.buildcache.CacheUtils.isSnapshot;
 import static org.apache.maven.buildcache.xml.CacheConfigImpl.CACHE_ENABLED_PROPERTY_NAME;
 import static org.apache.maven.buildcache.xml.CacheConfigImpl.CACHE_SKIP;
 import static org.apache.maven.buildcache.xml.CacheConfigImpl.RESTORE_GENERATED_SOURCES_PROPERTY_NAME;
+import static org.apache.maven.buildcache.xml.CacheConfigImpl.RESTORE_ON_DISK_ARTIFACTS_PROPERTY_NAME;
 
 /**
  * MavenProjectInput
@@ -100,9 +101,9 @@ import static org.apache.maven.buildcache.xml.CacheConfigImpl.RESTORE_GENERATED_
 public class MavenProjectInput {
 
     /**
-     * Version of hashing algorithm implementation. It is recommended to change to simplify remote cache maintenance
+     * Version of cache implementation. It is recommended to change to simplify remote cache maintenance
      */
-    public static final String CACHE_IMPLEMENTATION_VERSION = "v1";
+    public static final String CACHE_IMPLEMENTATION_VERSION = "v1.1";
 
     /**
      * property name to pass glob value. The glob to be used to list directory files in plugins scanning
@@ -726,6 +727,18 @@ public class MavenProjectInput {
     public static boolean isRestoreGeneratedSources(MavenProject project) {
         return Boolean.parseBoolean(
                 project.getProperties().getProperty(RESTORE_GENERATED_SOURCES_PROPERTY_NAME, "true"));
+    }
+
+    /**
+     * Allow skipping artifacts restoration on a per-project level via a property (which defaults to true)
+     * e.g. {@code <maven.build.cache.restoreOnDiskArtifacts>false<maven.build.cache.restoreOnDiskArtifacts/>}.
+     *
+     * @param  project
+     * @return
+     */
+    public static boolean isRestoreOnDiskArtifacts(MavenProject project) {
+        return Boolean.parseBoolean(
+                project.getProperties().getProperty(RESTORE_ON_DISK_ARTIFACTS_PROPERTY_NAME, "true"));
     }
 
     /**
