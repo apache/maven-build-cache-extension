@@ -78,6 +78,7 @@ by [Maven Resolver](https://maven.apache.org/resolver/) will suffice. In the sim
 server
 supporting get/put operations. Working examples:
 
+* Sonatype Nexus Repository (raw repository)
 * Artifactory (generic repository)
 * [Nginx OSS](http://nginx.org/en/) with fs module
 
