@@ -40,6 +40,7 @@ under the License.
   <scm>
     <connection>scm:git:https://github.com/apache/maven-build-cache-extension.git</connection>
     <developerConnection>scm:git:https://github.com/apache/maven-build-cache-extension.git</developerConnection>
+    <tag>HEAD</tag>
     <url>https://github.com/apache/maven-build-cache-extension/tree/${project.scm.tag}</url>
   </scm>
   <issueManagement>
