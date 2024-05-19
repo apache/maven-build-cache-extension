@@ -19,6 +19,11 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-<cache xmlns="http://maven.apache.org/CACHE-CONFIG/1.0.0">
-
+<cache xmlns="http://maven.apache.org/BUILD-CACHE-CONFIG/1.0.0">
+  <input>
+    <plugins>
+      <plugin groupId="org.apache.maven.plugins" artifactId="maven-compiler-plugin" excludeDependencies="true">
+      </plugin>
+    </plugins>
+  </input>
 </cache>

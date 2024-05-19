@@ -19,39 +19,100 @@
 package org.apache.maven.buildcache.its;
 
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.maven.buildcache.its.junit.IntegrationTest;
+import org.apache.maven.buildcache.util.LogFileUtils;
+import org.apache.maven.buildcache.xml.XmlService;
+import org.apache.maven.buildcache.xml.build.ProjectsInputInfo;
 import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 @IntegrationTest("src/test/projects/mbuildcache-87")
 public class Issue87Test {
 
-    private static final String MODULE2_PROJECT_NAME = "org.apache.maven.caching.test.multimodule:module2";
+    private static final String MODULE1_PROJECT_ARTIFACT = "org.apache.maven.caching.test.mbuildcache-87:module1:jar";
+    private static final String MODULE2_PROJECT_NAME = "org.apache.maven.caching.test.mbuildcache-87:module2";
     private static final String FOUND_CACHED_RESTORING_MODULE2_MESSAGE =
             "Found cached build, restoring " + MODULE2_PROJECT_NAME + " from cache";
 
     @Test
     void simple(Verifier verifier) throws VerificationException, IOException {
+        verifier.setLogFileName("../log-0.txt");
+        verifier.executeGoals(Arrays.asList("-f", "external", "install"));
+        verifier.verifyErrorFreeLog();
+
         verifier.setAutoclean(false);
 
         verifier.setLogFileName("../log-1.txt");
-        verifier.executeGoal("verify");
+        verifier.executeGoals(Arrays.asList("-f", "top", "verify"));
         verifier.verifyErrorFreeLog();
 
         verifier.setLogFileName("../log-2.txt");
-        verifier.executeGoal("verify");
+        verifier.executeGoals(Arrays.asList("-f", "top", "verify"));
         verifier.verifyErrorFreeLog();
         verifier.verifyTextInLog(FOUND_CACHED_RESTORING_MODULE2_MESSAGE);
 
-        verifier.writeFile("module1/src/main/resources/org/apache/maven/buildcache/test.properties", "foo=bar");
-
+        // START: Modifying maven plugin reactor dependency makes the cache stale
+        verifier.writeFile("top/module1/src/main/resources/org/apache/maven/buildcache/test.properties", "foo=bar");
         verifier.setLogFileName("../log-3.txt");
-        verifier.executeGoal("verify");
+        verifier.executeGoals(Arrays.asList("-f", "top", "verify"));
         verifier.verifyErrorFreeLog();
         verifyTextNotInLog(verifier, FOUND_CACHED_RESTORING_MODULE2_MESSAGE);
+        // END: Modifying maven plugin reactor dependency makes the cache stale
+
+        String buildInfoXmlLog =
+                LogFileUtils.findLinesContainingTextsInLogs(verifier, "Saved Build to local file: ").stream()
+                        .filter(line -> line.contains("module2"))
+                        .findFirst()
+                        .orElseThrow(
+                                () -> new VerificationException("Could not find module2 build info file location"));
+        Path buildInfoXmlLocation = Paths.get(buildInfoXmlLog.split(":\\s")[1]);
+
+        ProjectsInputInfo projectsInputInfo =
+                new XmlService().loadBuild(buildInfoXmlLocation.toFile()).getProjectsInputInfo();
+
+        assertEquals(
+                1,
+                projectsInputInfo.getItems().stream()
+                        .filter(item -> "dependency".equals(item.getType()))
+                        .filter(item -> MODULE1_PROJECT_ARTIFACT.equals(item.getValue()))
+                        .count(),
+                "Expected artifact acting as plugin dependency and project dependency to be considered twice during checksum computation");
+        assertEquals(
+                1,
+                projectsInputInfo.getItems().stream()
+                        .filter(item -> "pluginDependency".equals(item.getType()))
+                        .filter(item -> ("org.apache.maven.plugins:maven-dependency-plugin:maven-plugin|"
+                                        + MODULE1_PROJECT_ARTIFACT)
+                                .equals(item.getValue()))
+                        .count(),
+                "Expected artifact acting as plugin dependency and project dependency to be considered twice during checksum computation");
+
+        assertEquals(
+                1,
+                projectsInputInfo.getItems().stream()
+                        .filter(item -> "pluginDependency".equals(item.getType()))
+                        .filter(item ->
+                                "org.apache.maven.plugins:maven-dependency-plugin:maven-plugin|org.apache.maven.caching.test.mbuildcache-87:external:jar"
+                                        .equals(item.getValue()))
+                        .count(),
+                "Expected external snapshot plugin dependency to be included in the checksum computation");
+
+        assertEquals(
+                0,
+                projectsInputInfo.getItems().stream()
+                        .filter(item -> "pluginDependency".equals(item.getType()))
+                        .filter(item -> item.getValue()
+                                .startsWith("org.apache.maven.plugins:maven-compiler-plugin:maven-plugin|"))
+                        .count(),
+                "Expected plugins having excludeDependencies=true to have their dependencies excluded");
     }
 
     private void verifyTextNotInLog(Verifier verifier, String text) throws VerificationException {
@@ -60,7 +121,7 @@ public class Issue87Test {
 
         boolean result = true;
         for (String line : lines) {
-            if (verifier.stripAnsi(line).contains(text)) {
+            if (Verifier.stripAnsi(line).contains(text)) {
                 result = false;
                 break;
             }

@@ -58,6 +58,8 @@ public interface CacheConfig {
     @Nonnull
     List<String> getEffectivePomExcludeProperties(Plugin plugin);
 
+    boolean isPluginDependenciesExcluded(Plugin plugin);
+
     @Nullable
     MultiModule getMultiModule();
 

@@ -19,29 +19,13 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
-    <groupId>org.apache.maven.caching.test.multimodule</groupId>
-    <artifactId>top</artifactId>
+    <groupId>org.apache.maven.caching.test.mbuildcache-87</groupId>
+    <artifactId>external</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <packaging>pom</packaging>
 
     <properties>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
     </properties>
-
-    <build>
-        <extensions>
-            <extension>
-                <groupId>org.apache.maven.extensions</groupId>
-                <artifactId>maven-build-cache-extension</artifactId>
-                <version>${projectVersion}</version>
-            </extension>
-        </extensions>
-    </build>
-
-    <modules>
-        <module>module1</module>
-        <module>module2</module>
-    </modules>
 
 </project>
