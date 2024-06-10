@@ -35,6 +35,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -635,14 +636,23 @@ public class MavenProjectInput {
     }
 
     private SortedMap<String, String> getMutablePluginDependencies() throws IOException {
+        Map<String, Integer> keyPrefixOccurrenceIndex = new HashMap<>();
         SortedMap<String, String> fullMap = new TreeMap<>();
         for (Plugin plugin : project.getBuildPlugins()) {
             if (config.isPluginDependenciesExcluded(plugin)) {
                 continue;
             }
-            fullMap.putAll(getMutableDependenciesHashes(
-                    KeyUtils.getVersionlessArtifactKey(repoSystem.createPluginArtifact(plugin)) + "|",
-                    plugin.getDependencies()));
+
+            String rawKeyPrefix = KeyUtils.getVersionlessArtifactKey(repoSystem.createPluginArtifact(plugin));
+            Integer occurrenceIndex = keyPrefixOccurrenceIndex.compute(rawKeyPrefix, (k, index) -> {
+                if (index == null) {
+                    return 0;
+                } else {
+                    return ++index;
+                }
+            });
+            fullMap.putAll(
+                    getMutableDependenciesHashes(rawKeyPrefix + "|" + occurrenceIndex + "|", plugin.getDependencies()));
         }
         return fullMap;
     }

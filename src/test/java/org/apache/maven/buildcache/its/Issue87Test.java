@@ -89,7 +89,7 @@ public class Issue87Test {
                 1,
                 projectsInputInfo.getItems().stream()
                         .filter(item -> "pluginDependency".equals(item.getType()))
-                        .filter(item -> ("org.apache.maven.plugins:maven-dependency-plugin:maven-plugin|"
+                        .filter(item -> ("org.apache.maven.plugins:maven-dependency-plugin:maven-plugin|0|"
                                         + MODULE1_PROJECT_ARTIFACT)
                                 .equals(item.getValue()))
                         .count(),
@@ -100,7 +100,7 @@ public class Issue87Test {
                 projectsInputInfo.getItems().stream()
                         .filter(item -> "pluginDependency".equals(item.getType()))
                         .filter(item ->
-                                "org.apache.maven.plugins:maven-dependency-plugin:maven-plugin|org.apache.maven.caching.test.mbuildcache-87:external:jar"
+                                "org.apache.maven.plugins:maven-dependency-plugin:maven-plugin|0|org.apache.maven.caching.test.mbuildcache-87:external:jar"
                                         .equals(item.getValue()))
                         .count(),
                 "Expected external snapshot plugin dependency to be included in the checksum computation");
