@@ -126,6 +126,10 @@ public class DigestUtils {
         return item("dependency", key, checksum.update(hash));
     }
 
+    public static DigestItem pluginDependency(HashChecksum checksum, String key, String hash) {
+        return item("pluginDependency", key, checksum.update(hash));
+    }
+
     private static String normalize(Path basedirPath, Path file) {
         return FilenameUtils.separatorsToUnix(relativize(basedirPath, file).toString());
     }

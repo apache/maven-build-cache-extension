@@ -494,6 +494,12 @@ under the License.
     <xs:complexType name="PluginConfigurationScanType">
         <xs:complexContent>
             <xs:extension base="c:CoordinatesBaseType">
+                <xs:attribute name="calculateProjectVersionChecksum" type="xs:boolean" default="false" use="optional">
+                    <xs:annotation>
+                        <xs:documentation source="version">0.0.0+</xs:documentation>
+                        <xs:documentation source="description">True to exclude plugin dependencies from the calculation rules.</xs:documentation>
+                    </xs:annotation>
+                </xs:attribute>
                 <xs:sequence>
                     <xs:element name="effectivePom" minOccurs="0">
                         <xs:annotation>
@@ -540,6 +546,11 @@ under the License.
             <name>PluginConfigurationScan</name>
             <superClass>CoordinatesBase</superClass>
             <fields>
+                <field xml.attribute="true">
+                    <name>excludeDependencies</name>
+                    <type>boolean</type>
+                    <description>True to exclude plugin dependencies from the calculation rules</description>
+                </field>
                 <field>
                     <name>effectivePom</name>
                     <association>

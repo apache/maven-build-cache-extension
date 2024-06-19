@@ -214,3 +214,16 @@ git reset --hard
 
 Solution: set `-Dmaven.build.cache.remote.save.final=true` to nodes that produce final builds. Such builds will not be overridden
 and eventually will replace all interim builds
+
+### I want to disable dependencies checksum calculation of one plugin
+
+Set attribute `excludeDependencies` to `true` in `input/plugins/plugin` section:
+
+```xml
+    <input>
+      <plugins>
+        <plugin artifactId="maven-surefire-plugin" excludeDependencies="true">
+        </plugin>
+      </plugins>
+    </input>
+```
