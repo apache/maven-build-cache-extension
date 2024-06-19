@@ -46,6 +46,7 @@ import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 
 import org.apache.commons.lang3.StringUtils;
@@ -636,7 +637,7 @@ public class MavenProjectInput {
     }
 
     private SortedMap<String, String> getMutablePluginDependencies() throws IOException {
-        Map<String, Integer> keyPrefixOccurrenceIndex = new HashMap<>();
+        Map<String, AtomicInteger> keyPrefixOccurrenceIndex = new HashMap<>();
         SortedMap<String, String> fullMap = new TreeMap<>();
         for (Plugin plugin : project.getBuildPlugins()) {
             if (config.isPluginDependenciesExcluded(plugin)) {
@@ -644,13 +645,9 @@ public class MavenProjectInput {
             }
 
             String rawKeyPrefix = KeyUtils.getVersionlessArtifactKey(repoSystem.createPluginArtifact(plugin));
-            Integer occurrenceIndex = keyPrefixOccurrenceIndex.compute(rawKeyPrefix, (k, index) -> {
-                if (index == null) {
-                    return 0;
-                } else {
-                    return ++index;
-                }
-            });
+            int occurrenceIndex = keyPrefixOccurrenceIndex
+                    .computeIfAbsent(rawKeyPrefix, k -> new AtomicInteger())
+                    .getAndIncrement();
             fullMap.putAll(
                     getMutableDependenciesHashes(rawKeyPrefix + "|" + occurrenceIndex + "|", plugin.getDependencies()));
         }
