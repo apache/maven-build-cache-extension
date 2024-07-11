@@ -183,10 +183,10 @@ public class MavenProjectInput {
 
         final long t1 = System.currentTimeMillis();
 
-        // hash items: effective pom + version + input files + dependencies
+        // hash items: effective pom + version + input files paths + input files contents + dependencies
         final int count = 1
                 + (config.calculateProjectVersionChecksum() ? 1 : 0)
-                + inputFiles.size()
+                + 2 * inputFiles.size()
                 + dependenciesChecksum.size()
                 + pluginDependenciesChecksum.size();
 
