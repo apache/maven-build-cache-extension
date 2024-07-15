@@ -56,6 +56,7 @@ public class DigestUtils {
     public static DigestItem file(HashChecksum checksum, Path basedir, Path file) throws IOException {
         byte[] content = Files.readAllBytes(file);
         String normalized = normalize(basedir, file);
+        checksum.update(normalized.getBytes(UTF_8));
         DigestItem item = item("file", normalized, checksum.update(content));
         try {
             populateContentDetails(file, content, item);
