@@ -56,7 +56,7 @@
             </excludes>
         </global>
         <plugins>
-            <plugin artifactId="codegen">
+            <plugin artifactId="codegen" excludeDependencies="false">
                 <effectivePom>
                     <excludeProperties>
                         <excludeProperty>111</excludeProperty>

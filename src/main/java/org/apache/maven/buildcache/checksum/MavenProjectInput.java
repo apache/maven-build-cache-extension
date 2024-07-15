@@ -35,6 +35,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +46,7 @@ import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 
 import org.apache.commons.lang3.StringUtils;
@@ -177,6 +179,7 @@ public class MavenProjectInput {
         final String effectivePom = getEffectivePom(normalizedModelProvider.normalizedModel(project));
         final SortedSet<Path> inputFiles = isPom(project) ? Collections.emptySortedSet() : getInputFiles();
         final SortedMap<String, String> dependenciesChecksum = getMutableDependencies();
+        final SortedMap<String, String> pluginDependenciesChecksum = getMutablePluginDependencies();
 
         final long t1 = System.currentTimeMillis();
 
@@ -184,7 +187,8 @@ public class MavenProjectInput {
         final int count = 1
                 + (config.calculateProjectVersionChecksum() ? 1 : 0)
                 + inputFiles.size()
-                + dependenciesChecksum.size();
+                + dependenciesChecksum.size()
+                + pluginDependenciesChecksum.size();
 
         final List<DigestItem> items = new ArrayList<>(count);
         final HashChecksum checksum = config.getHashFactory().createChecksum(count);
@@ -235,6 +239,19 @@ public class MavenProjectInput {
 
         if (compareWithBaseline) {
             LOGGER.info("Dependencies: {}", dependenciesMatched ? "MATCHED" : "OUT OF DATE");
+        }
+
+        boolean pluginDependenciesMatched = true;
+        for (Map.Entry<String, String> entry : pluginDependenciesChecksum.entrySet()) {
+            DigestItem dependencyDigest = DigestUtils.pluginDependency(checksum, entry.getKey(), entry.getValue());
+            items.add(dependencyDigest);
+            if (compareWithBaseline) {
+                pluginDependenciesMatched &= checkItemMatchesBaseline(baselineHolder.get(), dependencyDigest);
+            }
+        }
+
+        if (compareWithBaseline) {
+            LOGGER.info("Plugin dependencies: {}", pluginDependenciesMatched ? "MATCHED" : "OUT OF DATE");
         }
 
         final ProjectsInputInfo projectsInputInfoType = new ProjectsInputInfo();
@@ -616,9 +633,32 @@ public class MavenProjectInput {
     }
 
     private SortedMap<String, String> getMutableDependencies() throws IOException {
+        return getMutableDependenciesHashes("", project.getDependencies());
+    }
+
+    private SortedMap<String, String> getMutablePluginDependencies() throws IOException {
+        Map<String, AtomicInteger> keyPrefixOccurrenceIndex = new HashMap<>();
+        SortedMap<String, String> fullMap = new TreeMap<>();
+        for (Plugin plugin : project.getBuildPlugins()) {
+            if (config.isPluginDependenciesExcluded(plugin)) {
+                continue;
+            }
+
+            String rawKeyPrefix = KeyUtils.getVersionlessArtifactKey(repoSystem.createPluginArtifact(plugin));
+            int occurrenceIndex = keyPrefixOccurrenceIndex
+                    .computeIfAbsent(rawKeyPrefix, k -> new AtomicInteger())
+                    .getAndIncrement();
+            fullMap.putAll(
+                    getMutableDependenciesHashes(rawKeyPrefix + "|" + occurrenceIndex + "|", plugin.getDependencies()));
+        }
+        return fullMap;
+    }
+
+    private SortedMap<String, String> getMutableDependenciesHashes(String keyPrefix, List<Dependency> dependencies)
+            throws IOException {
         SortedMap<String, String> result = new TreeMap<>();
 
-        for (Dependency dependency : project.getDependencies()) {
+        for (Dependency dependency : dependencies) {
 
             if (CacheUtils.isPom(dependency)) {
                 // POM dependency will be resolved by maven system to actual dependencies
@@ -648,7 +688,8 @@ public class MavenProjectInput {
                 projectHash = resolved.getHash();
             }
             result.put(
-                    KeyUtils.getVersionlessArtifactKey(repoSystem.createDependencyArtifact(dependency)), projectHash);
+                    keyPrefix + KeyUtils.getVersionlessArtifactKey(repoSystem.createDependencyArtifact(dependency)),
+                    projectHash);
         }
         return result;
     }

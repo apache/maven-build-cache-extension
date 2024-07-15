@@ -68,6 +68,7 @@ public class CacheDiff {
         compareExecutions(current.getExecutions(), baseline.getExecutions());
         compareFiles(current.getProjectsInputInfo(), baseline.getProjectsInputInfo());
         compareDependencies(current.getProjectsInputInfo(), baseline.getProjectsInputInfo());
+        comparePluginDependencies(current.getProjectsInputInfo(), baseline.getProjectsInputInfo());
 
         final Diff buildDiffType = new Diff();
         buildDiffType.getMismatches().addAll(report);
@@ -157,20 +158,40 @@ public class CacheDiff {
     }
 
     private void compareDependencies(ProjectsInputInfo current, ProjectsInputInfo baseline) {
-        final Map<String, DigestItem> currentDependencies = current.getItems().stream()
-                .filter(item -> "dependency".equals(item.getType()))
-                .collect(Collectors.toMap(DigestItem::getValue, item -> item));
+        compareDependencies(
+                "dependencies files",
+                current.getItems().stream()
+                        .filter(item -> "dependency".equals(item.getType()))
+                        .collect(Collectors.toList()),
+                baseline.getItems().stream()
+                        .filter(item -> "dependency".equals(item.getType()))
+                        .collect(Collectors.toList()));
+    }
 
-        final Map<String, DigestItem> baselineDependencies = baseline.getItems().stream()
-                .filter(item -> "dependency".equals(item.getType()))
-                .collect(Collectors.toMap(DigestItem::getValue, item -> item));
+    private void comparePluginDependencies(ProjectsInputInfo current, ProjectsInputInfo baseline) {
+        compareDependencies(
+                "plugin dependencies files",
+                current.getItems().stream()
+                        .filter(item -> "pluginDependency".equals(item.getType()))
+                        .collect(Collectors.toList()),
+                baseline.getItems().stream()
+                        .filter(item -> "pluginDependency".equals(item.getType()))
+                        .collect(Collectors.toList()));
+    }
+
+    private void compareDependencies(String property, List<DigestItem> current, List<DigestItem> baseline) {
+        final Map<String, DigestItem> currentDependencies =
+                current.stream().collect(Collectors.toMap(DigestItem::getValue, item -> item));
+
+        final Map<String, DigestItem> baselineDependencies =
+                baseline.stream().collect(Collectors.toMap(DigestItem::getValue, item -> item));
 
         if (!Objects.equals(currentDependencies.keySet(), baselineDependencies.keySet())) {
             Set<String> currentVsBaseline = diff(currentDependencies.keySet(), baselineDependencies.keySet());
             Set<String> baselineVsCurrent = diff(baselineDependencies.keySet(), currentDependencies.keySet());
 
             addNewMismatch(
-                    "dependencies files",
+                    property,
                     "Remote and local builds contain different sets of dependencies and cannot be matched. "
                             + "Added dependencies: " + currentVsBaseline + ". Removed dependencies: "
                             + baselineVsCurrent,

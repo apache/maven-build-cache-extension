@@ -304,6 +304,17 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
         return Collections.emptyList();
     }
 
+    @Override
+    public boolean isPluginDependenciesExcluded(Plugin plugin) {
+        checkInitializedState();
+        final PluginConfigurationScan pluginConfig = findPluginScanConfig(plugin);
+
+        if (pluginConfig != null) {
+            return pluginConfig.isExcludeDependencies();
+        }
+        return false;
+    }
+
     @Nullable
     @Override
     public MultiModule getMultiModule() {
