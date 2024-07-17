@@ -47,7 +47,9 @@ EAR or ZIP archive locally is more efficient than writing to soring in cache bun
 <cache>
     <output>
         <exclude>
-            <pattern>.*\.zip</pattern>
+            <patterns>
+              <pattern>.*\.zip</pattern>
+            </patterns>
         </exclude>
     </output>
 </cache>
