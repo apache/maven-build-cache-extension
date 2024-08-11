@@ -51,8 +51,12 @@ import java.util.function.Predicate;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.resolver.ArtifactResolutionRequest;
-import org.apache.maven.artifact.resolver.ArtifactResolutionResult;
+import org.apache.maven.artifact.DefaultArtifact;
+import org.apache.maven.artifact.handler.ArtifactHandler;
+import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
+import org.apache.maven.artifact.resolver.filter.ExcludesArtifactFilter;
+import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException;
+import org.apache.maven.artifact.versioning.VersionRange;
 import org.apache.maven.buildcache.CacheUtils;
 import org.apache.maven.buildcache.MultiModuleSupport;
 import org.apache.maven.buildcache.NormalizedModelProvider;
@@ -71,15 +75,20 @@ import org.apache.maven.buildcache.xml.build.ProjectsInputInfo;
 import org.apache.maven.buildcache.xml.config.Include;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Dependency;
+import org.apache.maven.model.Exclusion;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.model.PluginExecution;
 import org.apache.maven.model.Resource;
 import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
 import org.apache.maven.project.MavenProject;
-import org.apache.maven.repository.RepositorySystem;
 import org.codehaus.plexus.util.IOUtil;
 import org.codehaus.plexus.util.WriterFactory;
+import org.eclipse.aether.RepositorySystem;
+import org.eclipse.aether.impl.ArtifactResolver;
+import org.eclipse.aether.resolution.ArtifactRequest;
+import org.eclipse.aether.resolution.ArtifactResolutionException;
+import org.eclipse.aether.resolution.ArtifactResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -133,6 +142,8 @@ public class MavenProjectInput {
     private final MultiModuleSupport multiModuleSupport;
     private final ProjectInputCalculator projectInputCalculator;
     private final Path baseDirPath;
+    private final ArtifactHandlerManager artifactHandlerManager;
+    private final ArtifactResolver artifactResolver;
     /**
      * The project glob to use every time there is no override
      */
@@ -152,7 +163,9 @@ public class MavenProjectInput {
             MavenSession session,
             CacheConfig config,
             RepositorySystem repoSystem,
-            RemoteCacheRepository remoteCache) {
+            RemoteCacheRepository remoteCache,
+            ArtifactHandlerManager artifactHandlerManager,
+            ArtifactResolver artifactResolver) {
         this.project = project;
         this.normalizedModelProvider = normalizedModelProvider;
         this.multiModuleSupport = multiModuleSupport;
@@ -171,6 +184,8 @@ public class MavenProjectInput {
         this.exclusionResolver = new ExclusionResolver(project, config);
 
         this.fileComparator = new PathIgnoringCaseComparator();
+        this.artifactHandlerManager = artifactHandlerManager;
+        this.artifactResolver = artifactResolver;
     }
 
     public ProjectsInputInfo calculateChecksum() throws IOException {
@@ -644,7 +659,7 @@ public class MavenProjectInput {
                 continue;
             }
 
-            String rawKeyPrefix = KeyUtils.getVersionlessArtifactKey(repoSystem.createPluginArtifact(plugin));
+            String rawKeyPrefix = KeyUtils.getVersionlessArtifactKey(createPluginArtifact(plugin));
             int occurrenceIndex = keyPrefixOccurrenceIndex
                     .computeIfAbsent(rawKeyPrefix, k -> new AtomicInteger())
                     .getAndIncrement();
@@ -652,6 +667,111 @@ public class MavenProjectInput {
                     getMutableDependenciesHashes(rawKeyPrefix + "|" + occurrenceIndex + "|", plugin.getDependencies()));
         }
         return fullMap;
+    }
+
+    public Artifact createPluginArtifact(Plugin plugin) {
+
+        VersionRange versionRange;
+        try {
+            versionRange = VersionRange.createFromVersionSpec(plugin.getVersion());
+        } catch (InvalidVersionSpecificationException e) {
+            LOGGER.error(
+                    String.format(
+                            "Invalid version specification '%s' creating plugin artifact '%s'.",
+                            plugin.getVersion(), plugin),
+                    e);
+            // should not happen here
+            throw new RuntimeException(e);
+        }
+
+        return createArtifact(
+                plugin.getGroupId(),
+                plugin.getArtifactId(),
+                versionRange,
+                "maven-plugin",
+                null,
+                Artifact.SCOPE_RUNTIME,
+                null,
+                false);
+    }
+
+    private Artifact createArtifact(
+            String groupId,
+            String artifactId,
+            VersionRange versionRange,
+            String type,
+            String classifier,
+            String scope,
+            String inheritedScope,
+            boolean optional) {
+        String desiredScope = Artifact.SCOPE_RUNTIME;
+
+        if (inheritedScope == null) {
+            desiredScope = scope;
+        } else if (Artifact.SCOPE_TEST.equals(scope) || Artifact.SCOPE_PROVIDED.equals(scope)) {
+            return null;
+        } else if (Artifact.SCOPE_COMPILE.equals(scope) && Artifact.SCOPE_COMPILE.equals(inheritedScope)) {
+            // added to retain compile artifactScope. Remove if you want compile inherited as runtime
+            desiredScope = Artifact.SCOPE_COMPILE;
+        }
+
+        if (Artifact.SCOPE_TEST.equals(inheritedScope)) {
+            desiredScope = Artifact.SCOPE_TEST;
+        }
+
+        if (Artifact.SCOPE_PROVIDED.equals(inheritedScope)) {
+            desiredScope = Artifact.SCOPE_PROVIDED;
+        }
+
+        if (Artifact.SCOPE_SYSTEM.equals(scope)) {
+            // system scopes come through unchanged...
+            desiredScope = Artifact.SCOPE_SYSTEM;
+        }
+
+        ArtifactHandler handler = artifactHandlerManager.getArtifactHandler(type);
+
+        return new DefaultArtifact(
+                groupId, artifactId, versionRange, desiredScope, type, classifier, handler, optional);
+    }
+
+    public Artifact createDependencyArtifact(Dependency d) {
+        VersionRange versionRange;
+        try {
+            versionRange = VersionRange.createFromVersionSpec(d.getVersion());
+        } catch (InvalidVersionSpecificationException e) {
+            LOGGER.error(
+                    String.format(
+                            "Invalid version specification '%s' creating dependency artifact '%s'.", d.getVersion(), d),
+                    e);
+            // should not happen here ?
+            throw new RuntimeException(e);
+        }
+
+        Artifact artifact = createArtifact(
+                d.getGroupId(),
+                d.getArtifactId(),
+                versionRange,
+                d.getType(),
+                d.getClassifier(),
+                d.getScope(),
+                null,
+                d.isOptional());
+
+        if (Artifact.SCOPE_SYSTEM.equals(d.getScope()) && d.getSystemPath() != null) {
+            artifact.setFile(new File(d.getSystemPath()));
+        }
+
+        if (!d.getExclusions().isEmpty()) {
+            List<String> exclusions = new ArrayList<>();
+
+            for (Exclusion exclusion : d.getExclusions()) {
+                exclusions.add(exclusion.getGroupId() + ':' + exclusion.getArtifactId());
+            }
+
+            artifact.setDependencyFilter(new ExcludesArtifactFilter(exclusions));
+        }
+
+        return artifact;
     }
 
     private SortedMap<String, String> getMutableDependenciesHashes(String keyPrefix, List<Dependency> dependencies)
@@ -684,51 +804,54 @@ public class MavenProjectInput {
                         projectInputCalculator.calculateInput(dependencyProject).getChecksum();
             } else // this is a snapshot dependency
             {
-                DigestItem resolved = resolveArtifact(repoSystem.createDependencyArtifact(dependency), false);
+                DigestItem resolved = null;
+                try {
+                    resolved = resolveArtifact(dependency);
+                } catch (ArtifactResolutionException | InvalidVersionSpecificationException e) {
+                    throw new IOException(e);
+                }
                 projectHash = resolved.getHash();
             }
             result.put(
-                    keyPrefix + KeyUtils.getVersionlessArtifactKey(repoSystem.createDependencyArtifact(dependency)),
-                    projectHash);
+                    keyPrefix + KeyUtils.getVersionlessArtifactKey(createDependencyArtifact(dependency)), projectHash);
         }
         return result;
     }
 
     @Nonnull
-    private DigestItem resolveArtifact(final Artifact dependencyArtifact, boolean isOffline) throws IOException {
-        ArtifactResolutionRequest request = new ArtifactResolutionRequest()
-                .setArtifact(dependencyArtifact)
-                .setResolveRoot(true)
-                .setResolveTransitively(false)
-                .setLocalRepository(session.getLocalRepository())
-                .setRemoteRepositories(project.getRemoteArtifactRepositories())
-                .setOffline(session.isOffline() || isOffline)
-                .setForceUpdate(session.getRequest().isUpdateSnapshots())
-                .setServers(session.getRequest().getServers())
-                .setMirrors(session.getRequest().getMirrors())
-                .setProxies(session.getRequest().getProxies());
+    private DigestItem resolveArtifact(final Dependency dependency)
+            throws IOException, ArtifactResolutionException, InvalidVersionSpecificationException {
 
-        final ArtifactResolutionResult result = repoSystem.resolve(request);
+        org.eclipse.aether.artifact.Artifact dependencyArtifact = new org.eclipse.aether.artifact.DefaultArtifact(
+                dependency.getGroupId(), dependency.getArtifactId(), null, dependency.getVersion());
 
-        if (!result.isSuccess()) {
+        ArtifactRequest artifactRequest = new ArtifactRequest().setArtifact(dependencyArtifact);
+
+        ArtifactResult result = artifactResolver.resolveArtifact(session.getRepositorySession(), artifactRequest);
+
+        if (!result.isResolved()) {
             throw new DependencyNotResolvedException("Cannot resolve in-project dependency: " + dependencyArtifact);
         }
 
-        if (!result.getMissingArtifacts().isEmpty()) {
-            throw new DependencyNotResolvedException(
-                    "Cannot resolve artifact: " + dependencyArtifact + ", missing: " + result.getMissingArtifacts());
+        if (result.isMissing()) {
+            throw new DependencyNotResolvedException("Cannot resolve missing artifact: " + dependencyArtifact);
         }
 
-        if (result.getArtifacts().size() != 1) {
-            throw new IllegalStateException("Unexpected number of artifacts returned. Requested: " + dependencyArtifact
-                    + ", expected: 1, actual: " + result.getArtifacts());
-        }
+        org.eclipse.aether.artifact.Artifact resolved = result.getArtifact();
 
-        final Artifact resolved = result.getArtifacts().iterator().next();
+        Artifact artifact = createArtifact(
+                resolved.getGroupId(),
+                resolved.getArtifactId(),
+                VersionRange.createFromVersionSpec(resolved.getVersion()),
+                null,
+                resolved.getClassifier(),
+                null,
+                null,
+                false);
 
         final HashAlgorithm algorithm = config.getHashFactory().createAlgorithm();
         final String hash = algorithm.hash(resolved.getFile().toPath());
-        return DtoUtils.createDigestedFile(resolved, hash);
+        return DtoUtils.createDigestedFile(artifact, hash);
     }
 
     /**
