@@ -728,10 +728,7 @@ public class MavenProjectInput {
             // system scopes come through unchanged...
             desiredScope = Artifact.SCOPE_SYSTEM;
         }
-        ArtifactHandler handler = null;
-        if (type != null) {
-            handler = artifactHandlerManager.getArtifactHandler(type);
-        }
+        ArtifactHandler handler = artifactHandlerManager.getArtifactHandler(type);
 
         return new DefaultArtifact(
                 groupId, artifactId, versionRange, desiredScope, type, classifier, handler, optional);
@@ -850,10 +847,10 @@ public class MavenProjectInput {
                 resolved.getGroupId(),
                 resolved.getArtifactId(),
                 VersionRange.createFromVersionSpec(resolved.getVersion()),
-                null,
+                dependency.getType(),
                 resolved.getClassifier(),
-                dependency.getType(), // weird but we do not want NPE
-                null,
+                dependency.getType(),
+                dependency.getScope(),
                 false);
 
         final HashAlgorithm algorithm = config.getHashFactory().createAlgorithm();
