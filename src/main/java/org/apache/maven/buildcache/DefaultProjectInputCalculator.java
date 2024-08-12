@@ -27,13 +27,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.maven.SessionScoped;
+import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.buildcache.checksum.MavenProjectInput;
 import org.apache.maven.buildcache.xml.CacheConfig;
 import org.apache.maven.buildcache.xml.build.ProjectsInputInfo;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.lifecycle.internal.builder.BuilderCommon;
 import org.apache.maven.project.MavenProject;
-import org.apache.maven.repository.RepositorySystem;
+import org.eclipse.aether.RepositorySystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,6 +50,7 @@ public class DefaultProjectInputCalculator implements ProjectInputCalculator {
     private final RepositorySystem repoSystem;
     private final NormalizedModelProvider normalizedModelProvider;
     private final MultiModuleSupport multiModuleSupport;
+    private final ArtifactHandlerManager artifactHandlerManager;
 
     private final ConcurrentMap<String, ProjectsInputInfo> checkSumMap = new ConcurrentHashMap<>();
 
@@ -61,13 +63,15 @@ public class DefaultProjectInputCalculator implements ProjectInputCalculator {
             CacheConfig cacheConfig,
             RepositorySystem repoSystem,
             NormalizedModelProvider rawModelProvider,
-            MultiModuleSupport multiModuleSupport) {
+            MultiModuleSupport multiModuleSupport,
+            ArtifactHandlerManager artifactHandlerManager) {
         this.mavenSession = mavenSession;
         this.remoteCache = remoteCache;
         this.cacheConfig = cacheConfig;
         this.repoSystem = repoSystem;
         this.normalizedModelProvider = rawModelProvider;
         this.multiModuleSupport = multiModuleSupport;
+        this.artifactHandlerManager = artifactHandlerManager;
     }
 
     @Override
@@ -108,7 +112,8 @@ public class DefaultProjectInputCalculator implements ProjectInputCalculator {
                     mavenSession,
                     cacheConfig,
                     repoSystem,
-                    remoteCache);
+                    remoteCache,
+                    artifactHandlerManager);
             return input.calculateChecksum();
         } catch (Exception e) {
             throw new RuntimeException("Failed to calculate checksums for " + project.getArtifactId(), e);

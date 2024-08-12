@@ -88,8 +88,8 @@ import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.descriptor.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.MavenProjectHelper;
-import org.apache.maven.repository.RepositorySystem;
 import org.codehaus.plexus.util.ReflectionUtils;
+import org.eclipse.aether.RepositorySystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
