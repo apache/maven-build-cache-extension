@@ -52,7 +52,6 @@ public class DefaultProjectInputCalculator implements ProjectInputCalculator {
     private final NormalizedModelProvider normalizedModelProvider;
     private final MultiModuleSupport multiModuleSupport;
     private final ArtifactHandlerManager artifactHandlerManager;
-    private final ArtifactResolver artifactResolver;
 
     private final ConcurrentMap<String, ProjectsInputInfo> checkSumMap = new ConcurrentHashMap<>();
 
@@ -75,7 +74,6 @@ public class DefaultProjectInputCalculator implements ProjectInputCalculator {
         this.normalizedModelProvider = rawModelProvider;
         this.multiModuleSupport = multiModuleSupport;
         this.artifactHandlerManager = artifactHandlerManager;
-        this.artifactResolver = artifactResolver;
     }
 
     @Override
@@ -117,8 +115,7 @@ public class DefaultProjectInputCalculator implements ProjectInputCalculator {
                     cacheConfig,
                     repoSystem,
                     remoteCache,
-                    artifactHandlerManager,
-                    artifactResolver);
+                    artifactHandlerManager);
             return input.calculateChecksum();
         } catch (Exception e) {
             throw new RuntimeException("Failed to calculate checksums for " + project.getArtifactId(), e);

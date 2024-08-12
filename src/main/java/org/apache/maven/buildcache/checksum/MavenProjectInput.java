@@ -86,7 +86,6 @@ import org.codehaus.plexus.util.IOUtil;
 import org.codehaus.plexus.util.WriterFactory;
 import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.artifact.DefaultArtifactType;
-import org.eclipse.aether.impl.ArtifactResolver;
 import org.eclipse.aether.resolution.ArtifactRequest;
 import org.eclipse.aether.resolution.ArtifactResolutionException;
 import org.eclipse.aether.resolution.ArtifactResult;
@@ -144,7 +143,7 @@ public class MavenProjectInput {
     private final ProjectInputCalculator projectInputCalculator;
     private final Path baseDirPath;
     private final ArtifactHandlerManager artifactHandlerManager;
-    private final ArtifactResolver artifactResolver;
+
     /**
      * The project glob to use every time there is no override
      */
@@ -165,8 +164,7 @@ public class MavenProjectInput {
             CacheConfig config,
             RepositorySystem repoSystem,
             RemoteCacheRepository remoteCache,
-            ArtifactHandlerManager artifactHandlerManager,
-            ArtifactResolver artifactResolver) {
+            ArtifactHandlerManager artifactHandlerManager) {
         this.project = project;
         this.normalizedModelProvider = normalizedModelProvider;
         this.multiModuleSupport = multiModuleSupport;
@@ -186,7 +184,6 @@ public class MavenProjectInput {
 
         this.fileComparator = new PathIgnoringCaseComparator();
         this.artifactHandlerManager = artifactHandlerManager;
-        this.artifactResolver = artifactResolver;
     }
 
     public ProjectsInputInfo calculateChecksum() throws IOException {
@@ -831,7 +828,7 @@ public class MavenProjectInput {
                 new DefaultArtifactType(dependency.getType()));
         ArtifactRequest artifactRequest = new ArtifactRequest().setArtifact(dependencyArtifact);
 
-        ArtifactResult result = artifactResolver.resolveArtifact(session.getRepositorySession(), artifactRequest);
+        ArtifactResult result = repoSystem.resolveArtifact(session.getRepositorySession(), artifactRequest);
 
         if (!result.isResolved()) {
             throw new DependencyNotResolvedException("Cannot resolve in-project dependency: " + dependencyArtifact);
