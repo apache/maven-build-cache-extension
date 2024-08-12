@@ -141,6 +141,7 @@ public class CacheControllerImpl implements CacheController {
 
     private int attachedResourceCounter = 0;
 
+    @SuppressWarnings("ParameterNumber")
     @Inject
     public CacheControllerImpl(
             MavenProjectHelper projectHelper,
