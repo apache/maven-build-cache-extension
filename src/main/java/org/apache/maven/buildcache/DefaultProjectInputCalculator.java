@@ -35,7 +35,6 @@ import org.apache.maven.execution.MavenSession;
 import org.apache.maven.lifecycle.internal.builder.BuilderCommon;
 import org.apache.maven.project.MavenProject;
 import org.eclipse.aether.RepositorySystem;
-import org.eclipse.aether.impl.ArtifactResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,8 +64,7 @@ public class DefaultProjectInputCalculator implements ProjectInputCalculator {
             RepositorySystem repoSystem,
             NormalizedModelProvider rawModelProvider,
             MultiModuleSupport multiModuleSupport,
-            ArtifactHandlerManager artifactHandlerManager,
-            ArtifactResolver artifactResolver) {
+            ArtifactHandlerManager artifactHandlerManager) {
         this.mavenSession = mavenSession;
         this.remoteCache = remoteCache;
         this.cacheConfig = cacheConfig;
