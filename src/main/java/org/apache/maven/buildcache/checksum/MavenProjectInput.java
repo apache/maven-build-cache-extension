@@ -85,6 +85,7 @@ import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.util.IOUtil;
 import org.codehaus.plexus.util.WriterFactory;
 import org.eclipse.aether.RepositorySystem;
+import org.eclipse.aether.artifact.DefaultArtifactType;
 import org.eclipse.aether.impl.ArtifactResolver;
 import org.eclipse.aether.resolution.ArtifactRequest;
 import org.eclipse.aether.resolution.ArtifactResolutionException;
@@ -727,8 +728,10 @@ public class MavenProjectInput {
             // system scopes come through unchanged...
             desiredScope = Artifact.SCOPE_SYSTEM;
         }
-
-        ArtifactHandler handler = artifactHandlerManager.getArtifactHandler(type);
+        ArtifactHandler handler = null;
+        if (type != null) {
+            handler = artifactHandlerManager.getArtifactHandler(type);
+        }
 
         return new DefaultArtifact(
                 groupId, artifactId, versionRange, desiredScope, type, classifier, handler, optional);
@@ -823,8 +826,12 @@ public class MavenProjectInput {
             throws IOException, ArtifactResolutionException, InvalidVersionSpecificationException {
 
         org.eclipse.aether.artifact.Artifact dependencyArtifact = new org.eclipse.aether.artifact.DefaultArtifact(
-                dependency.getGroupId(), dependency.getArtifactId(), null, dependency.getVersion());
-
+                dependency.getGroupId(),
+                dependency.getArtifactId(),
+                dependency.getClassifier(),
+                null,
+                dependency.getVersion(),
+                new DefaultArtifactType(dependency.getType()));
         ArtifactRequest artifactRequest = new ArtifactRequest().setArtifact(dependencyArtifact);
 
         ArtifactResult result = artifactResolver.resolveArtifact(session.getRepositorySession(), artifactRequest);
@@ -845,7 +852,7 @@ public class MavenProjectInput {
                 VersionRange.createFromVersionSpec(resolved.getVersion()),
                 null,
                 resolved.getClassifier(),
-                null,
+                dependency.getType(), // weird but we do not want NPE
                 null,
                 false);
 
