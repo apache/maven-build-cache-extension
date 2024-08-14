@@ -82,7 +82,6 @@ import org.apache.maven.model.PluginExecution;
 import org.apache.maven.model.Resource;
 import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
 import org.apache.maven.project.MavenProject;
-import org.codehaus.plexus.util.IOUtil;
 import org.codehaus.plexus.util.WriterFactory;
 import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.artifact.DefaultArtifactType;
@@ -344,19 +343,13 @@ public class MavenProjectInput {
     private String getEffectivePom(Model prototype) throws IOException {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
 
-        Writer writer = null;
-        try {
-            writer = WriterFactory.newXmlWriter(output);
+        try (Writer writer = WriterFactory.newXmlWriter(output)) {
             new MavenXpp3Writer().write(writer, prototype);
 
             // normalize env specifics
             final String[] searchList = {baseDirPath.toString(), "\\", "windows", "linux"};
             final String[] replacementList = {"", "/", "os.classifier", "os.classifier"};
-
             return replaceEachRepeatedly(output.toString(), searchList, replacementList);
-
-        } finally {
-            IOUtil.close(writer);
         }
     }
 
@@ -520,7 +513,7 @@ public class MavenProjectInput {
                     return FileVisitResult.SKIP_SUBTREE;
                 }
 
-                walkDirectoryFiles(path, collectedFiles, key.getGlob(), entry -> exclusionResolver.excludesPath(entry));
+                walkDirectoryFiles(path, collectedFiles, key.getGlob(), exclusionResolver::excludesPath);
 
                 if (!key.isRecursive()) {
                     LOGGER.debug("Skipping subtree (non recursive): {}", path);

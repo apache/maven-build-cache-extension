@@ -79,7 +79,7 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
     private final MojoParametersListener mojoListener;
     private final LifecyclePhasesHelper lifecyclePhasesHelper;
     private final MavenPluginManager mavenPluginManager;
-    private MojoExecutionScope mojoExecutionScope;
+    private final MojoExecutionScope mojoExecutionScope;
 
     @Inject
     public BuildCacheMojosExecutionStrategy(
@@ -434,6 +434,6 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
     private enum CacheRestorationStatus {
         SUCCESS,
         FAILURE,
-        FAILURE_NEEDS_CLEAN;
+        FAILURE_NEEDS_CLEAN
     }
 }

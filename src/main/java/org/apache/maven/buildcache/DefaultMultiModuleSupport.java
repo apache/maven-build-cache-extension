@@ -24,6 +24,7 @@ import javax.inject.Named;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -132,7 +133,7 @@ public class DefaultMultiModuleSupport implements MultiModuleSupport {
         File multiModulePomFile = getMultiModulePomFile(session);
 
         ProjectBuildingRequest projectBuildingRequest = currentProject.getProjectBuildingRequest();
-        boolean profilesMatched = projectBuildingRequest.getActiveProfileIds().containsAll(scanProfiles);
+        boolean profilesMatched = new HashSet<>(projectBuildingRequest.getActiveProfileIds()).containsAll(scanProfiles);
 
         // we are building from root with the same profiles, no need to re-scan the whole multi-module project
         if (currentProject.getFile().getAbsolutePath().equals(multiModulePomFile.getAbsolutePath())

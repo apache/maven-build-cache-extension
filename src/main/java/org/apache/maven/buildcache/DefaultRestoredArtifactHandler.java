@@ -24,10 +24,10 @@ import javax.inject.Singleton;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Enumeration;
@@ -96,7 +96,7 @@ public class DefaultRestoredArtifactHandler implements RestoredArtifactHandler {
         String pomPropsVersion = "version=" + currentVersion;
         try (JarFile jarFile = new JarFile(artifactFile.toFile())) {
             try (JarOutputStream jos =
-                    new JarOutputStream(new BufferedOutputStream(new FileOutputStream(tmpJarFile)))) {
+                    new JarOutputStream(new BufferedOutputStream(Files.newOutputStream(tmpJarFile.toPath())))) {
                 // Copy original jar file to the temporary one.
                 Enumeration<JarEntry> jarEntries = jarFile.entries();
                 byte[] buffer = new byte[1024];
@@ -140,7 +140,7 @@ public class DefaultRestoredArtifactHandler implements RestoredArtifactHandler {
     private static void replaceEntry(
             JarFile jarFile, JarEntry entry, String toReplace, String replacement, JarOutputStream jos)
             throws IOException {
-        String fullManifest = IOUtils.toString(jarFile.getInputStream(entry), StandardCharsets.UTF_8.name());
+        String fullManifest = IOUtils.toString(jarFile.getInputStream(entry), StandardCharsets.UTF_8);
         String modified = fullManifest.replaceAll(toReplace, replacement);
 
         byte[] bytes = modified.getBytes(StandardCharsets.UTF_8);
