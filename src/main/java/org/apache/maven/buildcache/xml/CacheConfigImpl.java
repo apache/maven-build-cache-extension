@@ -138,8 +138,9 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
                     final boolean enabled = getProperty(CACHE_ENABLED_PROPERTY_NAME, true);
 
                     if (!rtInfo.isMavenVersion("[3.9.0,)")) {
-                        LOGGER.warn("Cache requires Maven >= 3.9, but version is " + rtInfo.getMavenVersion()
-                                + ". Disabling cache.");
+                        LOGGER.warn(
+                                "Cache requires Maven >= 3.9, but version is {}. Disabling cache.",
+                                rtInfo.getMavenVersion());
                         state = CacheState.DISABLED;
                     } else if (!enabled) {
                         LOGGER.info("Cache disabled by command line flag, project will be built fully and not cached");

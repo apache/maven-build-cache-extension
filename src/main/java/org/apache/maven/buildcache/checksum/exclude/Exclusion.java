@@ -146,12 +146,12 @@ public class Exclusion {
 
     public enum MatcherType {
         FILENAME,
-        PATH;
+        PATH
     }
 
     public enum EntryType {
         FILE,
         DIRECTORY,
-        ALL;
+        ALL
     }
 }

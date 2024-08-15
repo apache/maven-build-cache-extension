@@ -58,7 +58,6 @@ public class RemoteCacheRepositoryNoOp implements RemoteCacheRepository {
         return false;
     }
 
-    @Nonnull
     @Override
     public String getResourceUrl(CacheContext context, String filename) {
         return null;

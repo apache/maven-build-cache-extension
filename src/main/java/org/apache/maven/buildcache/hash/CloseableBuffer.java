@@ -34,16 +34,12 @@ import static org.apache.maven.buildcache.hash.ReflectionUtils.getMethod;
  */
 public class CloseableBuffer implements AutoCloseable {
 
-    private static final Cleaner CLEANER = doPrivileged(new PrivilegedAction<Cleaner>() {
-
-        @Override
-        public Cleaner run() {
-            final String jsv = System.getProperty("java.specification.version", "9");
-            if (jsv.startsWith("1.")) {
-                return DirectCleaner.isSupported() ? new DirectCleaner() : new NoopCleaner();
-            } else {
-                return UnsafeCleaner.isSupported() ? new UnsafeCleaner() : new NoopCleaner();
-            }
+    private static final Cleaner CLEANER = doPrivileged((PrivilegedAction<Cleaner>) () -> {
+        final String jsv = System.getProperty("java.specification.version", "9");
+        if (jsv.startsWith("1.")) {
+            return DirectCleaner.isSupported() ? new DirectCleaner() : new NoopCleaner();
+        } else {
+            return UnsafeCleaner.isSupported() ? new UnsafeCleaner() : new NoopCleaner();
         }
     });
 
@@ -75,13 +71,7 @@ public class CloseableBuffer implements AutoCloseable {
     @Override
     public void close() {
         // Java 8: () -> CLEANER.clean(buffer)
-        boolean done = doPrivileged(new PrivilegedAction<Boolean>() {
-
-            @Override
-            public Boolean run() {
-                return CLEANER.clean(buffer);
-            }
-        });
+        boolean done = doPrivileged((PrivilegedAction<Boolean>) () -> CLEANER.clean(buffer));
         if (done) {
             buffer = null;
         }

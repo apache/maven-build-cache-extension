@@ -137,7 +137,7 @@ public class CacheControllerImpl implements CacheController {
      * (ex : generated source basedir).
      * Used to link the resource to its path on disk
      */
-    private Map<String, Path> attachedResourcesPathsById = new HashMap<>();
+    private final Map<String, Path> attachedResourcesPathsById = new HashMap<>();
 
     private int attachedResourceCounter = 0;
 
@@ -467,7 +467,7 @@ public class CacheControllerImpl implements CacheController {
             if (!Files.exists(artifactFile)) {
                 throw new FileNotFoundException("Missing file for cached build, cannot restore. File: " + artifactFile);
             }
-            LOGGER.debug("Downloaded artifact " + artifact.getArtifactId() + " to: " + artifactFile);
+            LOGGER.debug("Downloaded artifact {} to: {}", artifact.getArtifactId(), artifactFile);
             return restoreArtifactHandler
                     .adjustArchiveArtifactVersion(project, originalVersion, artifactFile)
                     .toFile();
