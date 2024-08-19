@@ -23,7 +23,7 @@ Cache tuning could significantly reduce resource consumption and build execution
 
 ### Hash algorithm selection
 
-By default, the cache uses the [XX](https://cyan4973.github.io/xxHash/) algorithm, which is a very fast hash algorithm and should be enough for most use cases. 
+By default, the cache uses the [XX](https://cyan4973.github.io/xxHash/) algorithm, which is a very fast hash algorithm and should be enough for most use cases.
 In projects with a large codebase, the performance of hash algorithms becomes more critical, and other algorithms like
 XXMM (XX with memory-mapped files) could provide better performance, depending on the environment.
 
@@ -31,7 +31,7 @@ XXMM (XX with memory-mapped files) could provide better performance, depending o
 <hashAlgorithm>XX</hashAlgorithm>
 ```
 
-Also note that the usage of the XXMM or METRO+MM algorithms require the creation of a file `.mvn/jvm.config` in the 
+Also note that the usage of the XXMM or METRO+MM algorithms require the creation of a file `.mvn/jvm.config` in the
 top directory with the following line to run successfully on JDK >= 17.
 ```
 --add-opens java.base/sun.nio.ch=ALL-UNNAMED
@@ -83,7 +83,7 @@ The cache could be configured to auto-correct metadata (most notably [MANIFEST.M
 <cache>
     <configuration>
         ...
-        <projectVersioning adadjustMetaInf="false"/>
+        <projectVersioning adjustMetaInf="false"/>
         ...
     </configuration>
     ...
