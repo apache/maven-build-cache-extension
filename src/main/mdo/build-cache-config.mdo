@@ -160,8 +160,8 @@ under the License.
           <xs:element minOccurs="0" name="debugs">
             <xs:annotation>
               <xs:documentation source="version">0.0.0+</xs:documentation>
-              <xs:documentation source="description">FileHash (causes file hash is saved in build metadata) or
-                EffectivePom (causes effective pom info is saved in build metadata)</xs:documentation>
+              <xs:documentation source="description">FileHash (causes file hash to be saved in build metadata) or
+                EffectivePom (causes effective pom info to be saved in build metadata)</xs:documentation>
             </xs:annotation>
             <xs:complexType>
               <xs:sequence>
@@ -238,8 +238,8 @@ under the License.
                         <type>String</type>
                         <multiplicity>*</multiplicity>
                     </association>
-                    <description>FileHash (causes file hash is saved in build metadata) or
-                        EffectivePom (causes effective pom info is saved in build metadata)</description>
+                    <description>FileHash (causes file hash to be saved in build metadata) or
+                        EffectivePom (causes effective pom info to be saved in build metadata)</description>
                 </field>
             </fields>
         </class>
@@ -394,7 +394,7 @@ under the License.
             <ul>
               <li><code>&lt;dirName&gt;classes&lt;/dirName&gt;</code> : files in ${project.basedir}/target/classes</li>
               <li><code>&lt;dirName glob="jacoco.xml"&gt;&lt;/dirName&gt;</code> : jacoco report files in ${project.basedir}/target</li>
-              <li><code>&lt;dirName&gt;../src/main/javagen&lt;/dirName&gt;</code> : files in ${project.basedir}/src/main/javagen (in this exemple, javagen is a folder saved in git but erased on clean) </li>
+              <li><code>&lt;dirName&gt;../src/main/javagen&lt;/dirName&gt;</code> : files in ${project.basedir}/src/main/javagen (in this example, javagen is a folder saved in git but erased on clean) </li>
             </ul>
             <br><br>
 
@@ -919,7 +919,7 @@ under the License.
         </class>
         <class>
             <name>Include</name>
-           <description><![CDATA[A <p>file or a directory path to add to checksum computation. Relative path are relative to each module basedir.</p>
+           <description><![CDATA[<p>A file or a directory path to add to checksum computation. Relative paths are relative to each module basedir.</p>
            <p>Include elements can also be added per project with the use of <a href="parameters.html#project-level-properties">maven properties.</a></p>
            ]]></description>
             <fields>
@@ -1305,7 +1305,7 @@ under the License.
                     <xs:element name="execId" type="xs:string" minOccurs="0" maxOccurs="unbounded">
                         <xs:annotation>
                             <xs:documentation>
-                                Executions ids list with plugin identifier
+                                Execution ids list with plugin identifier
                             </xs:documentation>
                         </xs:annotation>
                     </xs:element>
@@ -1325,7 +1325,7 @@ under the License.
                         <type>String</type>
                         <multiplicity>*</multiplicity>
                     </association>
-                    <description>Executions ids list with plugin identifier</description>
+                    <description>Execution ids list with plugin identifier</description>
                 </field>
             </fields>
         </class>

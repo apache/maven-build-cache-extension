@@ -28,7 +28,6 @@ To onboard the build-cache extension you need to complete several steps:
 #[[###]]# Declaring build cache extension
 
 ```xml
-
 <extension>
     <groupId>org.apache.maven.extensions</groupId>
     <artifactId>maven-build-cache-extension</artifactId>
