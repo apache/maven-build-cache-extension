@@ -31,12 +31,15 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.SessionScoped;
 import org.apache.maven.buildcache.DefaultPluginScanConfig;
 import org.apache.maven.buildcache.PluginScanConfig;
 import org.apache.maven.buildcache.PluginScanConfigImpl;
+import org.apache.maven.buildcache.Zone;
 import org.apache.maven.buildcache.hash.HashFactory;
 import org.apache.maven.buildcache.xml.config.AttachedOutputs;
 import org.apache.maven.buildcache.xml.config.CacheConfig;
@@ -95,6 +98,8 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     public static final String RESTORE_GENERATED_SOURCES_PROPERTY_NAME = "maven.build.cache.restoreGeneratedSources";
     public static final String ALWAYS_RUN_PLUGINS = "maven.build.cache.alwaysRunPlugins";
     public static final String MANDATORY_CLEAN = "maven.build.cache.mandatoryClean";
+    public static final String INPUT_ZONES = "maven.build.cache.inputZones";
+    public static final String OUTPUT_ZONES = "maven.build.cache.outputZones";
 
     /**
      * Flag to control if we should skip lookup for cached artifacts globally or for a particular project even if
@@ -110,6 +115,8 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
      * Flag to disable cache saving
      */
     public static final String SKIP_SAVE = "maven.build.cache.skipSave";
+
+    private static final String DEFAULT_CACHE_ZONE = "default-zone";
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CacheConfigImpl.class);
 
@@ -536,6 +543,30 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     @Override
     public boolean isMandatoryClean() {
         return getProperty(MANDATORY_CLEAN, getConfiguration().isMandatoryClean());
+    }
+
+    @Override
+    public List<Zone> getInputZones() {
+        String rawCacheZones = getProperty(INPUT_ZONES, null);
+        if (StringUtils.isBlank(rawCacheZones)) {
+            return Collections.singletonList(new Zone(DEFAULT_CACHE_ZONE));
+        }
+        return Stream.of(StringUtils.split(rawCacheZones, ","))
+                .distinct()
+                .map(Zone::new)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Zone> getOutputZones() {
+        String rawCacheZones = getProperty(OUTPUT_ZONES, null);
+        if (StringUtils.isBlank(rawCacheZones)) {
+            return Collections.singletonList(new Zone(DEFAULT_CACHE_ZONE));
+        }
+        return Stream.of(StringUtils.split(rawCacheZones, ","))
+                .distinct()
+                .map(Zone::new)
+                .collect(Collectors.toList());
     }
 
     @Override

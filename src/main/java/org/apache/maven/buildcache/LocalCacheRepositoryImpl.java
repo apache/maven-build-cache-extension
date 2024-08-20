@@ -102,8 +102,8 @@ public class LocalCacheRepositoryImpl implements LocalCacheRepository {
 
     @Nonnull
     @Override
-    public Optional<Build> findLocalBuild(CacheContext context) throws IOException {
-        Path localBuildInfoPath = localBuildPath(context, BUILDINFO_XML, false);
+    public Optional<Build> findLocalBuild(CacheContext context, Zone zone) throws IOException {
+        Path localBuildInfoPath = localBuildPath(context, zone, BUILDINFO_XML, false);
         LOGGER.debug("Checking local build info: {}", localBuildInfoPath);
         if (Files.exists(localBuildInfoPath)) {
             LOGGER.info(
@@ -121,8 +121,8 @@ public class LocalCacheRepositoryImpl implements LocalCacheRepository {
 
     @Nonnull
     @Override
-    public Optional<Build> findBuild(CacheContext context) throws IOException {
-        Path buildInfoPath = remoteBuildPath(context, BUILDINFO_XML);
+    public Optional<Build> findBuild(CacheContext context, Zone inputZone) throws IOException {
+        Path buildInfoPath = remoteBuildPath(context, inputZone, BUILDINFO_XML);
         LOGGER.debug("Checking if build is already downloaded: {}", buildInfoPath);
 
         if (Files.exists(buildInfoPath)) {
@@ -143,7 +143,7 @@ public class LocalCacheRepositoryImpl implements LocalCacheRepository {
         }
 
         try {
-            Path lookupInfoPath = remoteBuildPath(context, LOOKUPINFO_XML);
+            Path lookupInfoPath = remoteBuildPath(context, inputZone, LOOKUPINFO_XML);
             if (Files.exists(lookupInfoPath)) {
                 final BasicFileAttributes fileAttributes =
                         Files.readAttributes(lookupInfoPath, BasicFileAttributes.class);
@@ -166,7 +166,7 @@ public class LocalCacheRepositoryImpl implements LocalCacheRepository {
                 }
             }
 
-            final Optional<Build> build = remoteRepository.findBuild(context);
+            final Optional<Build> build = remoteRepository.findBuild(context, inputZone);
             if (build.isPresent()) {
                 LOGGER.info("Build info downloaded from remote repo, saving to: {}", buildInfoPath);
                 Files.createDirectories(buildInfoPath.getParent());
@@ -182,9 +182,9 @@ public class LocalCacheRepositoryImpl implements LocalCacheRepository {
     }
 
     @Override
-    public void clearCache(CacheContext context) {
+    public void clearCache(CacheContext context, Zone zone) {
         try {
-            final Path buildCacheDir = buildCacheDir(context);
+            final Path buildCacheDir = buildCacheDir(context, zone);
             Path artifactCacheDir = buildCacheDir.getParent();
 
             if (!Files.exists(artifactCacheDir)) {
@@ -206,7 +206,7 @@ public class LocalCacheRepositoryImpl implements LocalCacheRepository {
                     FileUtils.deleteDirectory(dir.toFile());
                 }
             }
-            final Path path = localBuildDir(context);
+            final Path path = localBuildDir(context, zone);
             if (Files.exists(path)) {
                 FileUtils.deleteDirectory(path.toFile());
             }
@@ -306,13 +306,14 @@ public class LocalCacheRepositoryImpl implements LocalCacheRepository {
     }
 
     @Override
-    public Path getArtifactFile(CacheContext context, CacheSource source, Artifact artifact) throws IOException {
+    public Path getArtifactFile(CacheContext context, CacheSource source, Zone zone, Artifact artifact)
+            throws IOException {
         if (source == CacheSource.LOCAL) {
-            return localBuildPath(context, artifact.getFileName(), false);
+            return localBuildPath(context, zone, artifact.getFileName(), false);
         } else {
-            Path cachePath = remoteBuildPath(context, artifact.getFileName());
+            Path cachePath = remoteBuildPath(context, zone, artifact.getFileName());
             if (!Files.exists(cachePath) && cacheConfig.isRemoteCacheEnabled()) {
-                if (!remoteRepository.getArtifactContent(context, artifact, cachePath)) {
+                if (!remoteRepository.getArtifactContent(context, zone, artifact, cachePath)) {
                     Files.deleteIfExists(cachePath);
                 }
             }
@@ -321,17 +322,17 @@ public class LocalCacheRepositoryImpl implements LocalCacheRepository {
     }
 
     @Override
-    public void beforeSave(CacheContext environment) {
-        clearCache(environment);
+    public void beforeSave(CacheContext environment, Zone outputZone) {
+        clearCache(environment, outputZone);
     }
 
     @Override
-    public void saveBuildInfo(CacheResult cacheResult, Build build) throws IOException {
-        final Path path = localBuildPath(cacheResult.getContext(), BUILDINFO_XML, true);
+    public void saveBuildInfo(CacheResult cacheResult, Zone outputZone, Build build) throws IOException {
+        final Path path = localBuildPath(cacheResult.getContext(), outputZone, BUILDINFO_XML, true);
         Files.write(path, xmlService.toBytes(build.getDto()), TRUNCATE_EXISTING, CREATE);
         LOGGER.info("Saved Build to local file: {}", path);
         if (cacheConfig.isSaveToRemote() && !cacheResult.isFinal()) {
-            remoteRepository.saveBuildInfo(cacheResult, build);
+            remoteRepository.saveBuildInfo(cacheResult, outputZone, build);
         }
     }
 
@@ -349,22 +350,23 @@ public class LocalCacheRepositoryImpl implements LocalCacheRepository {
     }
 
     @Override
-    public void saveArtifactFile(CacheResult cacheResult, org.apache.maven.artifact.Artifact artifact)
+    public void saveArtifactFile(CacheResult cacheResult, Zone outputZone, org.apache.maven.artifact.Artifact artifact)
             throws IOException {
         // safe artifacts to cache
         File artifactFile = artifact.getFile();
-        Path cachePath = localBuildPath(cacheResult.getContext(), CacheUtils.normalizedName(artifact), true);
+        Path cachePath =
+                localBuildPath(cacheResult.getContext(), outputZone, CacheUtils.normalizedName(artifact), true);
         Files.copy(artifactFile.toPath(), cachePath, StandardCopyOption.REPLACE_EXISTING);
         if (cacheConfig.isSaveToRemote() && !cacheResult.isFinal()) {
-            remoteRepository.saveArtifactFile(cacheResult, artifact);
+            remoteRepository.saveArtifactFile(cacheResult, outputZone, artifact);
         }
     }
 
-    private Path buildCacheDir(CacheContext context) throws IOException {
+    private Path buildCacheDir(CacheContext context, Zone zone) throws IOException {
         final MavenProject project = context.getProject();
         final Path artifactCacheDir =
                 artifactCacheDir(context.getSession(), project.getGroupId(), project.getArtifactId());
-        return artifactCacheDir.resolve(context.getInputInfo().getChecksum());
+        return artifactCacheDir.resolve(context.getInputInfo().getChecksum()).resolve(zone.value());
     }
 
     private Path artifactCacheDir(MavenSession session, String groupId, String artifactId) throws IOException {
@@ -385,24 +387,25 @@ public class LocalCacheRepositoryImpl implements LocalCacheRepository {
         }
     }
 
-    private Path remoteBuildPath(CacheContext context, String filename) throws IOException {
-        return remoteBuildDir(context).resolve(filename);
+    private Path remoteBuildPath(CacheContext context, Zone zone, String filename) throws IOException {
+        return remoteBuildDir(context, zone).resolve(filename);
     }
 
-    private Path localBuildPath(CacheContext context, String filename, boolean createDir) throws IOException {
-        final Path localBuildDir = localBuildDir(context);
+    private Path localBuildPath(CacheContext context, Zone zone, String filename, boolean createDir)
+            throws IOException {
+        final Path localBuildDir = localBuildDir(context, zone);
         if (createDir) {
             Files.createDirectories(localBuildDir);
         }
         return localBuildDir.resolve(filename);
     }
 
-    private Path remoteBuildDir(CacheContext context) throws IOException {
-        return buildCacheDir(context).resolve(cacheConfig.getId());
+    private Path remoteBuildDir(CacheContext context, Zone zone) throws IOException {
+        return buildCacheDir(context, zone).resolve(cacheConfig.getId());
     }
 
-    private Path localBuildDir(CacheContext context) throws IOException {
-        return buildCacheDir(context).resolve("local");
+    private Path localBuildDir(CacheContext context, Zone zone) throws IOException {
+        return buildCacheDir(context, zone).resolve("local");
     }
 
     private static FileTime lastModifiedTime(Path p) {
