@@ -95,6 +95,8 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     public static final String RESTORE_GENERATED_SOURCES_PROPERTY_NAME = "maven.build.cache.restoreGeneratedSources";
     public static final String ALWAYS_RUN_PLUGINS = "maven.build.cache.alwaysRunPlugins";
     public static final String MANDATORY_CLEAN = "maven.build.cache.mandatoryClean";
+    public static final String INCREMENTAL_RECONCILIATION_ON_PARAMETER_MISMATCH =
+            "maven.build.cache.incrementalReconciliationOnParameterMismatch";
 
     /**
      * Flag to control if we should skip lookup for cached artifacts globally or for a particular project even if
@@ -536,6 +538,13 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     @Override
     public boolean isMandatoryClean() {
         return getProperty(MANDATORY_CLEAN, getConfiguration().isMandatoryClean());
+    }
+
+    @Override
+    public boolean isIncrementalReconciliationOnParameterMismatch() {
+        return getProperty(
+                INCREMENTAL_RECONCILIATION_ON_PARAMETER_MISMATCH,
+                getConfiguration().isIncrementalReconciliationOnParameterMismatch());
     }
 
     @Override

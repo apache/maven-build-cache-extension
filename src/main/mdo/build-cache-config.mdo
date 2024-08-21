@@ -241,6 +241,14 @@ under the License.
                     <description>FileHash (causes file hash is saved in build metadata) or
                         EffectivePom (causes effective pom info is saved in build metadata)</description>
                 </field>
+                <field>
+                    <name>incrementalReconciliationOnParameterMismatch</name>
+                    <type>boolean</type>
+                    <defaultValue>false</defaultValue>
+                    <description>If true, on plugin execution parameter mismatch, the build will try to complete by
+                    running the mismatched execution and executions that follow. If false, on plugin execution parameter
+                    mismatch, a full build will be performed.</description>
+                </field>
             </fields>
         </class>
 

@@ -35,7 +35,7 @@ public interface CacheController {
     CacheResult findCachedBuild(
             MavenSession session, MavenProject project, List<MojoExecution> mojoExecutions, boolean skipCache);
 
-    ArtifactRestorationReport restoreProjectArtifacts(CacheResult cacheResult);
+    ArtifactRestorationReport restoreProjectArtifacts(CacheResult cacheResult, boolean setProjectArtifact);
 
     void save(
             CacheResult cacheResult,
