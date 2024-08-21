@@ -892,6 +892,18 @@ public class CacheControllerImpl implements CacheController {
             Files.createDirectories(outputDir);
         }
         CacheUtils.unzip(artifactFilePath, outputDir);
+        OutputType outputType = OutputType.fromClassifier(artifact.getClassifier());
+        if (outputType != OutputType.GENERATED_SOURCE) {
+            return;
+        }
+        Path targetDir = Paths.get(project.getBuild().getDirectory());
+        if (outputDir.equals(targetDir.resolve("generated-sources"))
+                && !project.getCompileSourceRoots().contains(outputDir.toString())) {
+            project.addCompileSourceRoot(outputDir.toString());
+        } else if (outputDir.equals(targetDir.resolve("generated-test-sources"))
+                && !project.getTestCompileSourceRoots().contains(outputDir.toString())) {
+            project.addTestCompileSourceRoot(outputDir.toString());
+        }
     }
 
     // TODO: move to config
