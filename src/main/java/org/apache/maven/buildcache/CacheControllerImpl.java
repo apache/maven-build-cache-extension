@@ -345,7 +345,7 @@ public class CacheControllerImpl implements CacheController {
     }
 
     @Override
-    public ArtifactRestorationReport restoreProjectArtifacts(CacheResult cacheResult) {
+    public ArtifactRestorationReport restoreProjectArtifacts(CacheResult cacheResult, boolean setProjectArtifact) {
 
         LOGGER.debug("Restore project artifacts");
         final Build build = cacheResult.getBuildInfo();
@@ -412,7 +412,9 @@ public class CacheControllerImpl implements CacheController {
             // Actually modify project at the end in case something went wrong during restoration,
             // in which case, the project is unmodified and we continue with normal build.
             if (restoredProjectArtifact != null) {
-                project.setArtifact(restoredProjectArtifact);
+                if (setProjectArtifact) {
+                    project.setArtifact(restoredProjectArtifact);
+                }
                 // need to include package lifecycle to save build info for incremental builds
                 if (!project.hasLifecyclePhase("package")) {
                     project.addLifecyclePhase("package");
