@@ -255,6 +255,11 @@ public class CacheControllerImpl implements CacheController {
                         build.getCacheImplementationVersion());
             }
 
+            if (lifecyclePhasesHelper.isLaterPhaseThanBuild("package", build)) {
+                LOGGER.warn("Cached build doesn't include phase 'package', cannot restore");
+                return failure(build, context);
+            }
+
             List<MojoExecution> cachedSegment =
                     lifecyclePhasesHelper.getCachedSegment(context.getProject(), mojoExecutions, build);
             List<MojoExecution> missingMojos = build.getMissingExecutions(cachedSegment);
