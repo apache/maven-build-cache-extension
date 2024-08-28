@@ -38,7 +38,7 @@ import org.junit.jupiter.api.Test;
 @IntegrationTest("src/test/projects/mbuildcache-105")
 class Issue105Test {
 
-    public static final String GENERATED_JAR = "target/simple-0.0.1-SNAPSHOT.jar";
+    public static final String BUILT_JAR = "target/simple-0.0.1-SNAPSHOT.jar";
 
     @Test
     void simple(Verifier verifier) throws VerificationException, IOException {
@@ -52,9 +52,9 @@ class Issue105Test {
         verifier.executeGoals(Arrays.asList("clean", "verify"));
         verifier.verifyErrorFreeLog();
         verifier.verifyTextInLog("Cached build doesn't include phase 'package', cannot restore");
-        verifier.verifyFilePresent(GENERATED_JAR);
+        verifier.verifyFilePresent(BUILT_JAR);
 
-        Path jarPath = Paths.get(verifier.getBasedir()).resolve(GENERATED_JAR);
+        Path jarPath = Paths.get(verifier.getBasedir()).resolve(BUILT_JAR);
         assertJarEntryExists(jarPath, "org/apache/maven/buildcache/Test.class");
     }
 
