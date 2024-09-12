@@ -185,7 +185,7 @@ public class LocalCacheRepositoryImpl implements LocalCacheRepository {
     public void clearCache(CacheContext context, Zone zone) {
         try {
             final Path buildCacheDir = buildCacheDir(context, zone);
-            Path artifactCacheDir = buildCacheDir.getParent();
+            Path artifactCacheDir = buildCacheDir.getParent().getParent();
 
             if (!Files.exists(artifactCacheDir)) {
                 return;
@@ -194,8 +194,9 @@ public class LocalCacheRepositoryImpl implements LocalCacheRepository {
             List<Path> cacheDirs = new ArrayList<>();
             try (DirectoryStream<Path> paths = Files.newDirectoryStream(artifactCacheDir)) {
                 for (Path dir : paths) {
-                    if (Files.isDirectory(dir)) {
-                        cacheDirs.add(dir);
+                    Path cacheDir = dir.resolve(zone.value());
+                    if (Files.isDirectory(cacheDir)) {
+                        cacheDirs.add(cacheDir);
                     }
                 }
             }
