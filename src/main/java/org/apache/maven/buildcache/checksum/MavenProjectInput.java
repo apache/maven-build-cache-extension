@@ -686,6 +686,7 @@ public class MavenProjectInput {
                 false);
     }
 
+    @SuppressWarnings("checkstyle:parameternumber")
     private Artifact createArtifact(
             String groupId,
             String artifactId,
