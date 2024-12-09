@@ -73,7 +73,7 @@ under the License.
     <commonsCliVersion>1.4</commonsCliVersion>
     <commonsLangVersion>3.17.0</commonsLangVersion>
     <junit.version>5.11.0</junit.version>
-    <mockitoVersion>4.11.0</mockitoVersion>
+    <mockitoVersion>5.0.0</mockitoVersion>
     <plexusUtilsVersion>3.5.1</plexusUtilsVersion>
     <wagonVersion>3.4.3</wagonVersion>
     <securityDispatcherVersion>2.0</securityDispatcherVersion>
