@@ -24,7 +24,9 @@ import javax.inject.Named;
 
 import java.io.File;
 import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -106,7 +108,7 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
 
             // execute clean bound goals before restoring to not interfere/slowdown clean
             CacheState cacheState = DISABLED;
-            CacheResult result = CacheResult.empty();
+            Map<Zone, CacheResult> results = new LinkedHashMap<>();
             boolean skipCache = cacheConfig.isSkipCache() || MavenProjectInput.isSkipCache(project);
             boolean cacheIsDisabled = MavenProjectInput.isCacheDisabled(project);
             // Forked execution should be thought as a part of originating mojo internal implementation
@@ -125,15 +127,21 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                             "Cache is explicitly disabled on project level for {}", getVersionlessProjectKey(project));
                 }
                 if (cacheState == INITIALIZED || skipCache) {
-                    result = cacheController.findCachedBuild(session, project, mojoExecutions, skipCache);
+                    for (Zone zone : cacheConfig.getInputZones()) {
+                        results.put(
+                                zone,
+                                cacheController.findCachedBuild(session, project, mojoExecutions, zone, skipCache));
+                    }
                 }
             }
 
-            boolean restorable = result.isSuccess() || result.isPartialSuccess();
             boolean restored = false; // if partially restored need to save increment
-            if (restorable) {
+            CacheResult bestResult = results.values().stream()
+                    .max(Comparator.comparing(CacheResult::isRestorable))
+                    .orElseGet(CacheResult::empty);
+            if (bestResult.isRestorable()) {
                 CacheRestorationStatus cacheRestorationStatus =
-                        restoreProject(result, mojoExecutions, mojoExecutionRunner, cacheConfig);
+                        restoreProject(bestResult, mojoExecutions, mojoExecutionRunner, cacheConfig);
                 restored = CacheRestorationStatus.SUCCESS == cacheRestorationStatus;
                 executeExtraCleanPhaseIfNeeded(cacheRestorationStatus, cleanPhase, mojoExecutionRunner);
             }
@@ -147,21 +155,32 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                 }
             }
 
-            if (cacheState == INITIALIZED && (!result.isSuccess() || !restored)) {
-                if (cacheConfig.isSkipSave()) {
-                    LOGGER.info("Cache saving is disabled.");
-                } else if (cacheConfig.isMandatoryClean()
-                        && lifecyclePhasesHelper
-                                .getCleanSegment(project, mojoExecutions)
-                                .isEmpty()) {
-                    LOGGER.info("Cache storing is skipped since there was no \"clean\" phase.");
-                } else {
-                    final Map<String, MojoExecutionEvent> executionEvents = mojoListener.getProjectExecutions(project);
-                    cacheController.save(result, mojoExecutions, executionEvents);
+            if (cacheState == INITIALIZED) {
+                final Map<String, MojoExecutionEvent> executionEvents = mojoListener.getProjectExecutions(project);
+                for (Zone outputZone : cacheConfig.getOutputZones()) {
+                    CacheResult zoneResult = results.get(outputZone);
+                    if (bestResult.isSuccess()
+                            && restored
+                            && (bestResult.getInputZone().equals(outputZone)
+                                    || zoneResult != null && zoneResult.isSuccess())) {
+                        continue;
+                    }
+                    if (cacheConfig.isSkipSave()) {
+                        LOGGER.info("Cache saving is disabled.");
+                        break;
+                    }
+                    if (cacheConfig.isMandatoryClean()
+                            && lifecyclePhasesHelper
+                                    .getCleanSegment(project, mojoExecutions)
+                                    .isEmpty()) {
+                        LOGGER.info("Cache storing is skipped since there was no \"clean\" phase.");
+                        break;
+                    }
+                    cacheController.save(bestResult, mojoExecutions, executionEvents, outputZone);
                 }
             }
 
-            if (cacheConfig.isFailFast() && !result.isSuccess() && !skipCache && !forkedExecution) {
+            if (cacheConfig.isFailFast() && !bestResult.isSuccess() && !skipCache && !forkedExecution) {
                 throw new LifecycleExecutionException(
                         "Failed to restore project[" + getVersionlessProjectKey(project)
                                 + "] from cache, failing build.",
@@ -178,8 +197,8 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
      * we execute an extra clean phase to remove any potential partially restored files
      *
      * @param cacheRestorationStatus the restoration status
-     * @param cleanPhase clean phase mojos
-     * @param mojoExecutionRunner mojo runner
+     * @param cleanPhase             clean phase mojos
+     * @param mojoExecutionRunner    mojo runner
      * @throws LifecycleExecutionException
      */
     private void executeExtraCleanPhaseIfNeeded(

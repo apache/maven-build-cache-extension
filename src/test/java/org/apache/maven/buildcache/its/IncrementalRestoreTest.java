@@ -84,7 +84,7 @@ public class IncrementalRestoreTest {
     public static final String JAR_DEFAULT_JAR_MBUILDCACHE_INCREMENTAL = "jar (default-jar) @ mbuildcache-incremental";
     public static final String
             FOUND_CACHED_BUILD_RESTORING_ORG_APACHE_MAVEN_CACHING_TEST_MBUILDCACHE_INCREMENTAL_FROM_CACHE_BY_CHECKSUM =
-                    "Found cached build, restoring org.apache.maven.caching.test:mbuildcache-incremental from cache by checksum";
+                    "Found cached build, restoring org.apache.maven.caching.test:mbuildcache-incremental from cache";
     public static final String MBUILDCACHE_INCREMENTAL_JAR = "mbuildcache-incremental.jar";
     public static final String MBUILDCACHE_INCREMENTAL_SOURCES_JAR = "mbuildcache-incremental-sources.jar";
     public static final String MBUILDCACHE_INCREMENTAL_JAVADOC_JAR = "mbuildcache-incremental-javadoc.jar";
@@ -144,7 +144,7 @@ public class IncrementalRestoreTest {
         verifier.verifyTextInLog(
                 FOUND_CACHED_BUILD_RESTORING_ORG_APACHE_MAVEN_CACHING_TEST_MBUILDCACHE_INCREMENTAL_FROM_CACHE_BY_CHECKSUM);
         verifier.verifyTextInLog(
-                "Found cached build, restoring org.apache.maven.caching.test:mbuildcache-incremental from cache by checksum");
+                "Found cached build, restoring org.apache.maven.caching.test:mbuildcache-incremental from cache");
         verifier.verifyErrorFreeLog();
         verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_RESOURCES_RESOURCES);
         verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_COMPILER_COMPILE);
