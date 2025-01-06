@@ -74,7 +74,6 @@ under the License.
     <commonsLangVersion>3.17.0</commonsLangVersion>
     <junit.version>5.11.0</junit.version>
     <mockitoVersion>4.11.0</mockitoVersion>
-    <plexusUtilsVersion>3.5.1</plexusUtilsVersion>
     <wagonVersion>3.4.3</wagonVersion>
     <securityDispatcherVersion>2.0</securityDispatcherVersion>
     <cipherVersion>2.0</cipherVersion>
@@ -148,7 +147,10 @@ under the License.
     <dependency>
       <groupId>org.codehaus.plexus</groupId>
       <artifactId>plexus-utils</artifactId>
-      <version>${plexusUtilsVersion}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.codehaus.plexus</groupId>
+      <artifactId>plexus-xml</artifactId>
     </dependency>
     <dependency>
       <groupId>com.google.code.findbugs</groupId>
