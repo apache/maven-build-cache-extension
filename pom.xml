@@ -450,7 +450,7 @@ under the License.
     <profile>
       <id>maven3</id>
       <properties>
-        <mavenVersion>3.9.8</mavenVersion>
+        <mavenVersion>3.9.9</mavenVersion>
         <maven.dir>maven3</maven.dir>
         <maven.basedir>${project.build.directory}/${maven.dir}</maven.basedir>
       </properties>
