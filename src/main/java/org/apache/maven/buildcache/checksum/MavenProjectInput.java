@@ -685,7 +685,7 @@ public class MavenProjectInput {
                 null,
                 false);
     }
-
+    // CHECKSTYLE_OFF: ParameterNumber
     private Artifact createArtifact(
             String groupId,
             String artifactId,
@@ -695,6 +695,7 @@ public class MavenProjectInput {
             String scope,
             String inheritedScope,
             boolean optional) {
+        // CHECKSTYLE_OFF: ParameterNumber
         String desiredScope = Artifact.SCOPE_RUNTIME;
 
         if (inheritedScope == null) {

@@ -140,7 +140,7 @@ public class CacheControllerImpl implements CacheController {
     private final Map<String, Path> attachedResourcesPathsById = new HashMap<>();
 
     private int attachedResourceCounter = 0;
-
+    // CHECKSTYLE_OFF: ParameterNumber
     @Inject
     public CacheControllerImpl(
             MavenProjectHelper projectHelper,
@@ -154,6 +154,7 @@ public class CacheControllerImpl implements CacheController {
             RestoredArtifactHandler restoreArtifactHandler,
             LifecyclePhasesHelper lifecyclePhasesHelper,
             MavenSession session) {
+        // CHECKSTYLE_OFF: ParameterNumber
         this.projectHelper = projectHelper;
         this.localCache = localCache;
         this.remoteCache = remoteCache;
