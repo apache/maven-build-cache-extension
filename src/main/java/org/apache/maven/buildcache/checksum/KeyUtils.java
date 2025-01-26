@@ -19,6 +19,7 @@
 package org.apache.maven.buildcache.checksum;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.maven.buildcache.Zone;
 import org.apache.maven.buildcache.xml.build.Artifact;
 import org.apache.maven.project.MavenProject;
 
@@ -39,6 +40,10 @@ public class KeyUtils {
 
     public static String getVersionlessProjectKey(MavenProject project) {
         return StringUtils.joinWith(SEPARATOR, project.getGroupId(), project.getArtifactId());
+    }
+
+    public static String getVersionlessProjectKey(MavenProject project, Zone zone) {
+        return StringUtils.joinWith(SEPARATOR, project.getGroupId(), project.getArtifactId(), zone.value());
     }
 
     public static String getArtifactKey(Artifact artifact) {
