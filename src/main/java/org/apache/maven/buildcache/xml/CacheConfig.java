@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 import org.apache.maven.buildcache.PluginScanConfig;
+import org.apache.maven.buildcache.Zone;
 import org.apache.maven.buildcache.hash.HashFactory;
 import org.apache.maven.buildcache.xml.config.DirName;
 import org.apache.maven.buildcache.xml.config.Exclude;
@@ -152,4 +153,8 @@ public interface CacheConfig {
      * Flag to save in cache only if a build went through the clean lifecycle
      */
     boolean isMandatoryClean();
+
+    List<Zone> getInputZones();
+
+    List<Zone> getOutputZones();
 }
