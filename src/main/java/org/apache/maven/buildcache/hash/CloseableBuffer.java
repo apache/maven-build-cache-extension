@@ -23,9 +23,7 @@ import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileChannel.MapMode;
-import java.security.PrivilegedAction;
 
-import static java.security.AccessController.doPrivileged;
 import static org.apache.maven.buildcache.hash.ReflectionUtils.getField;
 import static org.apache.maven.buildcache.hash.ReflectionUtils.getMethod;
 
@@ -34,14 +32,16 @@ import static org.apache.maven.buildcache.hash.ReflectionUtils.getMethod;
  */
 public class CloseableBuffer implements AutoCloseable {
 
-    private static final Cleaner CLEANER = doPrivileged((PrivilegedAction<Cleaner>) () -> {
+    private static final Cleaner CLEANER = getJVMDependentCleaner();
+
+    private static Cleaner getJVMDependentCleaner() {
         final String jsv = System.getProperty("java.specification.version", "9");
         if (jsv.startsWith("1.")) {
             return DirectCleaner.isSupported() ? new DirectCleaner() : new NoopCleaner();
         } else {
             return UnsafeCleaner.isSupported() ? new UnsafeCleaner() : new NoopCleaner();
         }
-    });
+    };
 
     public static CloseableBuffer directBuffer(int capacity) {
         return new CloseableBuffer(ByteBuffer.allocateDirect(capacity));
@@ -70,8 +70,7 @@ public class CloseableBuffer implements AutoCloseable {
 
     @Override
     public void close() {
-        // Java 8: () -> CLEANER.clean(buffer)
-        boolean done = doPrivileged((PrivilegedAction<Boolean>) () -> CLEANER.clean(buffer));
+        boolean done = CLEANER.clean(buffer);
         if (done) {
             buffer = null;
         }
