@@ -41,7 +41,7 @@ public class CloseableBuffer implements AutoCloseable {
         } else {
             return UnsafeCleaner.isSupported() ? new UnsafeCleaner() : new NoopCleaner();
         }
-    };
+    }
 
     public static CloseableBuffer directBuffer(int capacity) {
         return new CloseableBuffer(ByteBuffer.allocateDirect(capacity));
