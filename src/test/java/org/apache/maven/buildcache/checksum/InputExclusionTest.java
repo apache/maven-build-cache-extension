@@ -32,10 +32,12 @@ import org.apache.maven.buildcache.xml.CacheConfig;
 import org.apache.maven.buildcache.xml.config.Exclude;
 import org.apache.maven.model.Build;
 import org.apache.maven.project.MavenProject;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mockito;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class InputExclusionTest {
 
@@ -53,31 +55,31 @@ public class InputExclusionTest {
         // Exclude folder 1 + everything inside based on the starting path
         ExclusionResolver exclusionResolver =
                 createExclusionResolver("folder1", "**", EntryType.ALL, MatcherType.FILENAME);
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.txtFileRootFolder));
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.folder1));
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.javaFileFolder1));
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.subFolder1));
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.txtFileSubFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.folder2));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.txtFileFolder2));
+        assertFalse(exclusionResolver.excludesPath(fsTree.txtFileRootFolder));
+        assertTrue(exclusionResolver.excludesPath(fsTree.folder1));
+        assertTrue(exclusionResolver.excludesPath(fsTree.javaFileFolder1));
+        assertTrue(exclusionResolver.excludesPath(fsTree.subFolder1));
+        assertTrue(exclusionResolver.excludesPath(fsTree.txtFileSubFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.folder2));
+        assertFalse(exclusionResolver.excludesPath(fsTree.txtFileFolder2));
 
         // Exclude everything inside folder 1 based on the glob
         exclusionResolver = createExclusionResolver("", "folder1/**", EntryType.ALL, MatcherType.PATH);
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.txtFileRootFolder));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.folder1));
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.javaFileFolder1));
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.subFolder1));
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.txtFileSubFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.folder2));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.txtFileFolder2));
+        assertFalse(exclusionResolver.excludesPath(fsTree.txtFileRootFolder));
+        assertFalse(exclusionResolver.excludesPath(fsTree.folder1));
+        assertTrue(exclusionResolver.excludesPath(fsTree.javaFileFolder1));
+        assertTrue(exclusionResolver.excludesPath(fsTree.subFolder1));
+        assertTrue(exclusionResolver.excludesPath(fsTree.txtFileSubFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.folder2));
+        assertFalse(exclusionResolver.excludesPath(fsTree.txtFileFolder2));
 
         // Exclusion on folder
         exclusionResolver = createExclusionResolver("", "folder1", EntryType.DIRECTORY, MatcherType.PATH);
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.folder1));
+        assertTrue(exclusionResolver.excludesPath(fsTree.folder1));
         exclusionResolver = createExclusionResolver("", "folder1", EntryType.DIRECTORY, MatcherType.FILENAME);
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.folder1));
+        assertTrue(exclusionResolver.excludesPath(fsTree.folder1));
         exclusionResolver = createExclusionResolver("", "folder1", EntryType.FILE, MatcherType.FILENAME);
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.folder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.folder1));
     }
 
     /**
@@ -91,25 +93,25 @@ public class InputExclusionTest {
         // Excludes all json files
         ExclusionResolver exclusionResolver =
                 createExclusionResolver("", "*.json", EntryType.FILE, MatcherType.FILENAME);
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.javaFileRootFolder));
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.jsonFileRootFolder));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.javaFileFolder1));
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.jsonFileFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.javaFileSubFolder1));
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.jsonFileSubFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.javaFileFolder2));
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.jsonFileFolder2));
+        assertFalse(exclusionResolver.excludesPath(fsTree.javaFileRootFolder));
+        assertTrue(exclusionResolver.excludesPath(fsTree.jsonFileRootFolder));
+        assertFalse(exclusionResolver.excludesPath(fsTree.javaFileFolder1));
+        assertTrue(exclusionResolver.excludesPath(fsTree.jsonFileFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.javaFileSubFolder1));
+        assertTrue(exclusionResolver.excludesPath(fsTree.jsonFileSubFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.javaFileFolder2));
+        assertTrue(exclusionResolver.excludesPath(fsTree.jsonFileFolder2));
 
         // Excludes all json files under folder 1
         exclusionResolver = createExclusionResolver("folder1", "*.json", EntryType.FILE, MatcherType.FILENAME);
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.javaFileRootFolder));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileRootFolder));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.javaFileFolder1));
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.jsonFileFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.javaFileSubFolder1));
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.jsonFileSubFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.javaFileFolder2));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileFolder2));
+        assertFalse(exclusionResolver.excludesPath(fsTree.javaFileRootFolder));
+        assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileRootFolder));
+        assertFalse(exclusionResolver.excludesPath(fsTree.javaFileFolder1));
+        assertTrue(exclusionResolver.excludesPath(fsTree.jsonFileFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.javaFileSubFolder1));
+        assertTrue(exclusionResolver.excludesPath(fsTree.jsonFileSubFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.javaFileFolder2));
+        assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileFolder2));
     }
 
     /**
@@ -123,50 +125,50 @@ public class InputExclusionTest {
         // Exclude the json file in subfolder 1
         ExclusionResolver exclusionResolver = createExclusionResolver(
                 "folder1/subfolder1/other-file.json", "**", EntryType.ALL, MatcherType.FILENAME);
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.javaFileRootFolder));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.txtFileRootFolder));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileRootFolder));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.javaFileFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.txtFileFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.javaFileSubFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.txtFileSubFolder1));
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.jsonFileSubFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.javaFileFolder2));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.txtFileFolder2));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileFolder2));
+        assertFalse(exclusionResolver.excludesPath(fsTree.javaFileRootFolder));
+        assertFalse(exclusionResolver.excludesPath(fsTree.txtFileRootFolder));
+        assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileRootFolder));
+        assertFalse(exclusionResolver.excludesPath(fsTree.javaFileFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.txtFileFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.javaFileSubFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.txtFileSubFolder1));
+        assertTrue(exclusionResolver.excludesPath(fsTree.jsonFileSubFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.javaFileFolder2));
+        assertFalse(exclusionResolver.excludesPath(fsTree.txtFileFolder2));
+        assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileFolder2));
 
         // Exclude the json file in subfolder 1 by glob v1
         exclusionResolver =
                 createExclusionResolver("folder1/subfolder1", "other-file.json", EntryType.ALL, MatcherType.FILENAME);
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.javaFileRootFolder));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.txtFileRootFolder));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileRootFolder));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.javaFileFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.txtFileFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.javaFileSubFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.txtFileSubFolder1));
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.jsonFileSubFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.javaFileFolder2));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.txtFileFolder2));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileFolder2));
+        assertFalse(exclusionResolver.excludesPath(fsTree.javaFileRootFolder));
+        assertFalse(exclusionResolver.excludesPath(fsTree.txtFileRootFolder));
+        assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileRootFolder));
+        assertFalse(exclusionResolver.excludesPath(fsTree.javaFileFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.txtFileFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.javaFileSubFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.txtFileSubFolder1));
+        assertTrue(exclusionResolver.excludesPath(fsTree.jsonFileSubFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.javaFileFolder2));
+        assertFalse(exclusionResolver.excludesPath(fsTree.txtFileFolder2));
+        assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileFolder2));
 
         // Exclude the json file in subfolder 1 by glob v2
         exclusionResolver =
                 createExclusionResolver("", "folder1/subfolder1/other-file.json", EntryType.ALL, MatcherType.PATH);
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.javaFileRootFolder));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.txtFileRootFolder));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileRootFolder));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.javaFileFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.txtFileFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.javaFileSubFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.txtFileSubFolder1));
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.jsonFileSubFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.javaFileFolder2));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.txtFileFolder2));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileFolder2));
+        assertFalse(exclusionResolver.excludesPath(fsTree.javaFileRootFolder));
+        assertFalse(exclusionResolver.excludesPath(fsTree.txtFileRootFolder));
+        assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileRootFolder));
+        assertFalse(exclusionResolver.excludesPath(fsTree.javaFileFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.txtFileFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.javaFileSubFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.txtFileSubFolder1));
+        assertTrue(exclusionResolver.excludesPath(fsTree.jsonFileSubFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.javaFileFolder2));
+        assertFalse(exclusionResolver.excludesPath(fsTree.txtFileFolder2));
+        assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileFolder2));
     }
 
     /**
@@ -180,51 +182,51 @@ public class InputExclusionTest {
         // Exclude the json file in subfolder 1
         ExclusionResolver exclusionResolver = createExclusionResolver(
                 "folder1\\subfolder1\\other-file.json", "**", EntryType.ALL, MatcherType.FILENAME);
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.javaFileRootFolder));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.txtFileRootFolder));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileRootFolder));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.javaFileFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.txtFileFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.javaFileSubFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.txtFileSubFolder1));
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.jsonFileSubFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.javaFileFolder2));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.txtFileFolder2));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileFolder2));
+        assertFalse(exclusionResolver.excludesPath(fsTree.javaFileRootFolder));
+        assertFalse(exclusionResolver.excludesPath(fsTree.txtFileRootFolder));
+        assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileRootFolder));
+        assertFalse(exclusionResolver.excludesPath(fsTree.javaFileFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.txtFileFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.javaFileSubFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.txtFileSubFolder1));
+        assertTrue(exclusionResolver.excludesPath(fsTree.jsonFileSubFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.javaFileFolder2));
+        assertFalse(exclusionResolver.excludesPath(fsTree.txtFileFolder2));
+        assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileFolder2));
 
         // Exclude the json file in subfolder 1 by glob v1
         exclusionResolver =
                 createExclusionResolver("folder1\\subfolder1", "other-file.json", EntryType.ALL, MatcherType.FILENAME);
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.javaFileRootFolder));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.txtFileRootFolder));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileRootFolder));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.javaFileFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.txtFileFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.javaFileSubFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.txtFileSubFolder1));
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.jsonFileSubFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.javaFileFolder2));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.txtFileFolder2));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileFolder2));
+        assertFalse(exclusionResolver.excludesPath(fsTree.javaFileRootFolder));
+        assertFalse(exclusionResolver.excludesPath(fsTree.txtFileRootFolder));
+        assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileRootFolder));
+        assertFalse(exclusionResolver.excludesPath(fsTree.javaFileFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.txtFileFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.javaFileSubFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.txtFileSubFolder1));
+        assertTrue(exclusionResolver.excludesPath(fsTree.jsonFileSubFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.javaFileFolder2));
+        assertFalse(exclusionResolver.excludesPath(fsTree.txtFileFolder2));
+        assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileFolder2));
 
         // Exclude the json file in subfolder 1 by glob v2 (\ is a meta character in glob syntax + in java syntax, so we
         // need to double escape it)
         exclusionResolver = createExclusionResolver(
                 "", "folder1\\\\subfolder1\\\\other-file.json", EntryType.ALL, MatcherType.PATH);
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.javaFileRootFolder));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.txtFileRootFolder));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileRootFolder));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.javaFileFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.txtFileFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.javaFileSubFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.txtFileSubFolder1));
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.jsonFileSubFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.javaFileFolder2));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.txtFileFolder2));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileFolder2));
+        assertFalse(exclusionResolver.excludesPath(fsTree.javaFileRootFolder));
+        assertFalse(exclusionResolver.excludesPath(fsTree.txtFileRootFolder));
+        assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileRootFolder));
+        assertFalse(exclusionResolver.excludesPath(fsTree.javaFileFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.txtFileFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.javaFileSubFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.txtFileSubFolder1));
+        assertTrue(exclusionResolver.excludesPath(fsTree.jsonFileSubFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.javaFileFolder2));
+        assertFalse(exclusionResolver.excludesPath(fsTree.txtFileFolder2));
+        assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileFolder2));
     }
 
     /**
@@ -238,33 +240,33 @@ public class InputExclusionTest {
         // Excludes all files containing the string "my-f" in their filename
         ExclusionResolver exclusionResolver =
                 createExclusionResolver("", "*my-f*", EntryType.ALL, MatcherType.FILENAME);
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.javaFileRootFolder));
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.txtFileRootFolder));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileRootFolder));
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.javaFileFolder1));
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.txtFileFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileFolder1));
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.javaFileSubFolder1));
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.txtFileSubFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileSubFolder1));
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.javaFileFolder2));
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.txtFileFolder2));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileFolder2));
+        assertTrue(exclusionResolver.excludesPath(fsTree.javaFileRootFolder));
+        assertTrue(exclusionResolver.excludesPath(fsTree.txtFileRootFolder));
+        assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileRootFolder));
+        assertTrue(exclusionResolver.excludesPath(fsTree.javaFileFolder1));
+        assertTrue(exclusionResolver.excludesPath(fsTree.txtFileFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileFolder1));
+        assertTrue(exclusionResolver.excludesPath(fsTree.javaFileSubFolder1));
+        assertTrue(exclusionResolver.excludesPath(fsTree.txtFileSubFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileSubFolder1));
+        assertTrue(exclusionResolver.excludesPath(fsTree.javaFileFolder2));
+        assertTrue(exclusionResolver.excludesPath(fsTree.txtFileFolder2));
+        assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileFolder2));
 
         // Excludes all files containing the string "my-f" in their path
         exclusionResolver = createExclusionResolver("", "**my-f*", EntryType.ALL, MatcherType.PATH);
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.javaFileRootFolder));
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.txtFileRootFolder));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileRootFolder));
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.javaFileFolder1));
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.txtFileFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileFolder1));
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.javaFileSubFolder1));
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.txtFileSubFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileSubFolder1));
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.javaFileFolder2));
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.txtFileFolder2));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileFolder2));
+        assertTrue(exclusionResolver.excludesPath(fsTree.javaFileRootFolder));
+        assertTrue(exclusionResolver.excludesPath(fsTree.txtFileRootFolder));
+        assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileRootFolder));
+        assertTrue(exclusionResolver.excludesPath(fsTree.javaFileFolder1));
+        assertTrue(exclusionResolver.excludesPath(fsTree.txtFileFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileFolder1));
+        assertTrue(exclusionResolver.excludesPath(fsTree.javaFileSubFolder1));
+        assertTrue(exclusionResolver.excludesPath(fsTree.txtFileSubFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileSubFolder1));
+        assertTrue(exclusionResolver.excludesPath(fsTree.javaFileFolder2));
+        assertTrue(exclusionResolver.excludesPath(fsTree.txtFileFolder2));
+        assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileFolder2));
     }
 
     /**
@@ -307,18 +309,18 @@ public class InputExclusionTest {
         Mockito.when(mavenProject.getProperties()).thenReturn(properties);
 
         ExclusionResolver exclusionResolver = createExclusionResolver(mavenProject);
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.javaFileRootFolder));
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.txtFileRootFolder));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileRootFolder));
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.javaFileFolder1));
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.txtFileFolder1));
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.jsonFileFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.javaFileSubFolder1));
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.txtFileSubFolder1));
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.jsonFileSubFolder1));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.javaFileFolder2));
-        Assertions.assertTrue(exclusionResolver.excludesPath(fsTree.txtFileFolder2));
-        Assertions.assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileFolder2));
+        assertFalse(exclusionResolver.excludesPath(fsTree.javaFileRootFolder));
+        assertTrue(exclusionResolver.excludesPath(fsTree.txtFileRootFolder));
+        assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileRootFolder));
+        assertTrue(exclusionResolver.excludesPath(fsTree.javaFileFolder1));
+        assertTrue(exclusionResolver.excludesPath(fsTree.txtFileFolder1));
+        assertTrue(exclusionResolver.excludesPath(fsTree.jsonFileFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.javaFileSubFolder1));
+        assertTrue(exclusionResolver.excludesPath(fsTree.txtFileSubFolder1));
+        assertTrue(exclusionResolver.excludesPath(fsTree.jsonFileSubFolder1));
+        assertFalse(exclusionResolver.excludesPath(fsTree.javaFileFolder2));
+        assertTrue(exclusionResolver.excludesPath(fsTree.txtFileFolder2));
+        assertFalse(exclusionResolver.excludesPath(fsTree.jsonFileFolder2));
     }
 
     private FsTree createFsTree() throws IOException {
@@ -399,6 +401,7 @@ public class InputExclusionTest {
      *     - my-file.java
      *     - other-file.json
      */
+    @SuppressWarnings("checkstyle:VisibilityModifier")
     private class FsTree {
         public Path txtFileRootFolder;
         public Path javaFileRootFolder;

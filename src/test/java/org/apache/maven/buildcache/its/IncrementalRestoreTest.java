@@ -96,6 +96,7 @@ public class IncrementalRestoreTest {
     public static final String SKIPPING_PLUGIN_EXECUTION_CACHED_FAILSAFE_VERIFY =
             "Skipping plugin execution (cached): failsafe:verify";
 
+    @SuppressWarnings("checkstyle:methodlength")
     @Test
     void simple(Verifier verifier) throws VerificationException, IOException {
         verifier.setAutoclean(false);

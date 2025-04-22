@@ -284,6 +284,7 @@ public class RemoteCacheDavTest {
         return sb.toString();
     }
 
+    @SuppressWarnings("checkstyle:methodlength")
     private static void ls(Path currentDir, Consumer<String> out) throws IOException {
         class PathEntry implements Comparable<PathEntry> {
 
@@ -291,7 +292,7 @@ public class RemoteCacheDavTest {
             final Path path;
             final Map<String, Object> attributes;
 
-            public PathEntry(Path abs, Path root) {
+            PathEntry(Path abs, Path root) {
                 this.abs = abs;
                 this.path = abs.startsWith(root) ? root.relativize(abs) : abs;
                 this.attributes = readAttributes(abs);

@@ -23,11 +23,10 @@ under the License.
   <parent>
     <groupId>org.apache.maven.extensions</groupId>
     <artifactId>maven-extensions</artifactId>
-    <version>41</version>
+    <version>44</version>
     <relativePath />
   </parent>
 
-  <groupId>org.apache.maven.extensions</groupId>
   <artifactId>maven-build-cache-extension</artifactId>
   <version>1.2.1-SNAPSHOT</version>
   <packaging>jar</packaging>
@@ -299,11 +298,6 @@ under the License.
               </configuration>
             </execution>
           </executions>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-invoker-plugin</artifactId>
-          <version>3.9.0</version>
         </plugin>
         <plugin>
           <groupId>org.apache.rat</groupId>
