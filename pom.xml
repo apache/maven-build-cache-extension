@@ -414,6 +414,19 @@ under the License.
           </execution>
         </executions>
       </plugin>
+      <!-- mvn sisu:main-index to generate META-INF/sisu/javax.inject.Named -->
+      <plugin>
+        <groupId>org.eclipse.sisu</groupId>
+        <artifactId>sisu-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>generate-index</id>
+            <goals>
+              <goal>main-index</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
 
