@@ -18,7 +18,6 @@
  */
 package org.apache.maven.buildcache;
 
-import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
@@ -26,8 +25,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import org.apache.maven.buildcache.checksum.MavenProjectInput;
-import org.apache.maven.buildcache.xml.CacheConfig;
 import org.apache.maven.buildcache.xml.CacheState;
 import org.apache.maven.execution.MojoExecutionEvent;
 import org.apache.maven.execution.MojoExecutionListener;
@@ -52,28 +49,18 @@ public class MojoParametersListener implements MojoExecutionListener {
     private final ConcurrentMap<MavenProject, Map<String, MojoExecutionEvent>> projectExecutions =
             new ConcurrentHashMap<>();
 
-    private final CacheConfig cacheConfig;
-
-    @Inject
-    public MojoParametersListener(CacheConfig cacheConfig) {
-        this.cacheConfig = cacheConfig;
-    }
+    private CacheState cacheState = DISABLED;
 
     @Override
     public void beforeMojoExecution(MojoExecutionEvent event) {
         final String executionKey = CacheUtils.mojoExecutionKey(event.getExecution());
         LOGGER.debug(
-                "Starting mojo execution: {}, class: {}",
+                "Starting mojo execution: {}, class: {}, cacheState: {}",
                 executionKey,
-                event.getMojo().getClass());
-        final MavenProject project = event.getProject();
-        CacheState cacheState = DISABLED;
-        boolean cacheIsDisabled = MavenProjectInput.isCacheDisabled(project);
-        if (!cacheIsDisabled) {
-            cacheState = cacheConfig.initialize();
-        }
-        LOGGER.debug("cacheState: {}", cacheState);
+                event.getMojo().getClass(),
+                cacheState);
         if (cacheState == INITIALIZED) {
+            final MavenProject project = event.getProject();
             Map<String, MojoExecutionEvent> projectEvents = projectExecutions.get(project);
             if (projectEvents == null) {
                 Map<String, MojoExecutionEvent> candidate = new ConcurrentHashMap<>();
@@ -98,5 +85,9 @@ public class MojoParametersListener implements MojoExecutionListener {
 
     public Map<String, MojoExecutionEvent> getProjectExecutions(MavenProject project) {
         return projectExecutions.get(project);
+    }
+
+    public void setCacheState(CacheState cacheState) {
+        this.cacheState = cacheState;
     }
 }

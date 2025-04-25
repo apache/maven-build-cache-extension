@@ -112,21 +112,28 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
             // Forked execution should be thought as a part of originating mojo internal implementation
             // If forkedExecution is detected, it means that originating mojo is not cached so forks should rerun too
             boolean forkedExecution = lifecyclePhasesHelper.isForkedProject(project);
+            String projectName = getVersionlessProjectKey(project);
             List<MojoExecution> cleanPhase = null;
             if (source == Source.LIFECYCLE && !forkedExecution) {
+                if (!cacheIsDisabled) {
+                    cacheState = cacheConfig.initialize();
+                    if (cacheState == INITIALIZED) {
+                        // change mojoListener cacheState to INITIALIZED
+                        mojoListener.setCacheState(cacheState);
+                    }
+                    LOGGER.info("Cache is {} on project level for {}", cacheState, projectName);
+                } else {
+                    LOGGER.info("Cache is explicitly disabled on project level for {}", projectName);
+                }
                 cleanPhase = lifecyclePhasesHelper.getCleanSegment(project, mojoExecutions);
                 for (MojoExecution mojoExecution : cleanPhase) {
                     mojoExecutionRunner.run(mojoExecution);
                 }
-                if (!cacheIsDisabled) {
-                    cacheState = cacheConfig.initialize();
-                } else {
-                    LOGGER.info(
-                            "Cache is explicitly disabled on project level for {}", getVersionlessProjectKey(project));
-                }
                 if (cacheState == INITIALIZED || skipCache) {
                     result = cacheController.findCachedBuild(session, project, mojoExecutions, skipCache);
                 }
+            } else {
+                LOGGER.info("Cache is disabled on project level for {}", projectName);
             }
 
             boolean restorable = result.isSuccess() || result.isPartialSuccess();
@@ -163,9 +170,7 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
 
             if (cacheConfig.isFailFast() && !result.isSuccess() && !skipCache && !forkedExecution) {
                 throw new LifecycleExecutionException(
-                        "Failed to restore project[" + getVersionlessProjectKey(project)
-                                + "] from cache, failing build.",
-                        project);
+                        "Failed to restore project[" + projectName + "] from cache, failing build.", project);
             }
         } catch (MojoExecutionException e) {
             throw new LifecycleExecutionException(e.getMessage(), e);
