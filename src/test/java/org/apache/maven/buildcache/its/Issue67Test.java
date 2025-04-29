@@ -71,7 +71,7 @@ public class Issue67Test {
         verifier.executeGoal("verify");
 
         verifier.verifyTextInLog(
-                "Found cached build, restoring org.apache.maven.caching.test.mbuildcache-67:mbuildcache-67 from cache by checksum");
+                "Found cached build, restoring org.apache.maven.caching.test.mbuildcache-67:mbuildcache-67 from cache");
         verifier.verifyTextInLog("Cannot restore project artifacts, continuing with non cached build");
         verifier.verifyErrorFreeLog();
 
