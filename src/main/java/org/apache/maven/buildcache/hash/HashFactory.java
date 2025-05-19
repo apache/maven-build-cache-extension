@@ -28,14 +28,14 @@ import net.openhft.hashing.LongHashFunction;
  * HashFactory
  */
 public enum HashFactory {
-    SHA1(new SHA("SHA-1")),
-    SHA256(new SHA("SHA-256")),
-    SHA384(new SHA("SHA-384")),
-    SHA512(new SHA("SHA-512")),
-    XX(new Zah("XX", LongHashFunction.xx(), Zah.MemoryPolicy.Standard)),
-    XXMM(new Zah("XXMM", LongHashFunction.xx(), Zah.MemoryPolicy.MemoryMappedBuffers)),
-    METRO(new Zah("METRO", LongHashFunction.metro(), Zah.MemoryPolicy.Standard)),
-    METRO_MM(new Zah("METRO+MM", LongHashFunction.metro(), Zah.MemoryPolicy.MemoryMappedBuffers));
+    sha1(new SHA("SHA-1")),
+    sha256(new SHA("SHA-256")),
+    sha384(new SHA("SHA-384")),
+    sha512(new SHA("SHA-512")),
+    xx(new Zah("XX", LongHashFunction.xx(), Zah.MemoryPolicy.Standard)),
+    xxmm(new Zah("XXMM", LongHashFunction.xx(), Zah.MemoryPolicy.MemoryMappedBuffers)),
+    metro(new Zah("METRO", LongHashFunction.metro(), Zah.MemoryPolicy.Standard)),
+    metroMm(new Zah("METRO+MM", LongHashFunction.metro(), Zah.MemoryPolicy.MemoryMappedBuffers));
 
     private static final Map<String, HashFactory> LOOKUP = new HashMap<>();
 

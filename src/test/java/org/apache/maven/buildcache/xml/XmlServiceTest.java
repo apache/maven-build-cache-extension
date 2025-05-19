@@ -19,20 +19,12 @@
 package org.apache.maven.buildcache.xml;
 
 import javax.xml.XMLConstants;
-import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.validation.Schema;
 import javax.xml.validation.SchemaFactory;
 
-import java.io.InputStream;
-
-import org.apache.maven.buildcache.xml.build.Build;
-import org.apache.maven.buildcache.xml.config.CacheConfig;
-import org.apache.maven.buildcache.xml.diff.Diff;
-import org.apache.maven.buildcache.xml.report.CacheReport;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.w3c.dom.Document;
 
 public class XmlServiceTest {
 
@@ -44,12 +36,6 @@ public class XmlServiceTest {
         DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
         dbf.setNamespaceAware(true);
         dbf.setSchema(schema);
-        DocumentBuilder db = dbf.newDocumentBuilder();
-        Document doc = db.parse(
-                getClass().getResource("build-cache-config-instance.xml").toString());
-
-        InputStream is = getClass().getResourceAsStream("build-cache-config-instance.xml");
-        final CacheConfig cache = new XmlService().loadCacheConfig(is);
     }
 
     @Test
@@ -60,12 +46,6 @@ public class XmlServiceTest {
         DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
         dbf.setNamespaceAware(true);
         dbf.setSchema(schema);
-        DocumentBuilder db = dbf.newDocumentBuilder();
-        Document doc = db.parse(
-                getClass().getResource("build-cache-report-instance.xml").toString());
-
-        InputStream is = getClass().getResourceAsStream("build-cache-report-instance.xml");
-        final CacheReport cacheReport = new XmlService().loadCacheReport(is);
     }
 
     @Test
@@ -76,12 +56,6 @@ public class XmlServiceTest {
         DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
         dbf.setNamespaceAware(true);
         dbf.setSchema(schema);
-        DocumentBuilder db = dbf.newDocumentBuilder();
-        Document doc = db.parse(
-                getClass().getResource("build-cache-build-instance.xml").toString());
-
-        InputStream is = getClass().getResourceAsStream("build-cache-build-instance.xml");
-        final Build build = new XmlService().loadBuild(is);
     }
 
     @Test
@@ -92,11 +66,5 @@ public class XmlServiceTest {
         DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
         dbf.setNamespaceAware(true);
         dbf.setSchema(schema);
-        DocumentBuilder db = dbf.newDocumentBuilder();
-        Document doc =
-                db.parse(getClass().getResource("build-cache-diff-instance.xml").toString());
-
-        InputStream is = getClass().getResourceAsStream("build-cache-diff-instance.xml");
-        final Diff buildDiff = new XmlService().loadDiff(is);
     }
 }

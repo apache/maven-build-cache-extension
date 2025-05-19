@@ -41,7 +41,7 @@ import org.slf4j.LoggerFactory;
 @IntegrationTest("src/test/projects/mbuildcache-74-clean-cache-any-artifact")
 public class Issue74Test {
 
-    private static final Logger logger = LoggerFactory.getLogger(Issue74Test.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(Issue74Test.class);
 
     @Test
     void simple(Verifier verifier) throws VerificationException, IOException {
@@ -79,7 +79,7 @@ public class Issue74Test {
         // buildinfo.xml -> local -> hash -> project
         Path projectPathInCache = buildInfoXmlPath.getParent().getParent().getParent();
 
-        logger.info("Checking '{}' for cached builds ...", projectPathInCache);
+        LOGGER.info("Checking '{}' for cached builds ...", projectPathInCache);
 
         if (!Files.exists(projectPathInCache)) {
             throw new VerificationException(

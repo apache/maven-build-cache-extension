@@ -400,20 +400,20 @@ public class InputExclusionTest {
      *     - other-file.json
      */
     private class FsTree {
-        public Path txtFileRootFolder;
-        public Path javaFileRootFolder;
-        public Path jsonFileRootFolder;
-        public Path folder1;
-        public Path txtFileFolder1;
-        public Path javaFileFolder1;
-        public Path jsonFileFolder1;
-        public Path subFolder1;
-        public Path txtFileSubFolder1;
-        public Path javaFileSubFolder1;
-        public Path jsonFileSubFolder1;
-        public Path folder2;
-        public Path txtFileFolder2;
-        public Path javaFileFolder2;
-        public Path jsonFileFolder2;
+        private Path txtFileRootFolder;
+        private Path javaFileRootFolder;
+        private Path jsonFileRootFolder;
+        private Path folder1;
+        private Path txtFileFolder1;
+        private Path javaFileFolder1;
+        private Path jsonFileFolder1;
+        private Path subFolder1;
+        private Path txtFileSubFolder1;
+        private Path javaFileSubFolder1;
+        private Path jsonFileSubFolder1;
+        private Path folder2;
+        private Path txtFileFolder2;
+        private Path javaFileFolder2;
+        private Path jsonFileFolder2;
     }
 }

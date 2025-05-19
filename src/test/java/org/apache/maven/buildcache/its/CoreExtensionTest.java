@@ -43,7 +43,7 @@ public class CoreExtensionTest {
     }
 
     @Test
-    void simple_build_change_version_reuse_build_cache(Verifier verifier) throws VerificationException {
+    void simpleBuildChangeVersionReuseBuildCache(Verifier verifier) throws VerificationException {
         verifier.setAutoclean(false);
 
         verifier.setLogFileName("../log-1.txt");
