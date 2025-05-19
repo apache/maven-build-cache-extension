@@ -43,8 +43,8 @@ import org.apache.maven.buildcache.hash.HashAlgorithm;
 import org.apache.maven.buildcache.hash.HashChecksum;
 import org.junit.jupiter.api.Test;
 
-import static org.apache.maven.buildcache.hash.HashFactory.XX;
-import static org.apache.maven.buildcache.hash.HashFactory.XXMM;
+import static org.apache.maven.buildcache.hash.HashFactory.xx;
+import static org.apache.maven.buildcache.hash.HashFactory.xxmm;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class XXHashTest {
@@ -60,7 +60,7 @@ public class XXHashTest {
     private static final String WORLD_CHECKSUM = "cb21505d7a714523";
     private static final String FULL_CHECKSUM = "b8ca8fa824d335e9";
 
-    private static final HashAlgorithm ALGORITHM = XX.createAlgorithm();
+    private static final HashAlgorithm ALGORITHM = xx.createAlgorithm();
 
     @Test
     public void testEmptyArray() {
@@ -92,32 +92,32 @@ public class XXHashTest {
 
     @Test
     public void testEmptyBuffer() {
-        assertEmptyBuffer(XX.createChecksum(0));
-        assertEmptyBuffer(XXMM.createChecksum(0));
+        assertEmptyBuffer(xx.createChecksum(0));
+        assertEmptyBuffer(xxmm.createChecksum(0));
     }
 
     @Test
     public void testSingleHash() {
-        assertSingleHash(XX.createChecksum(1));
-        assertSingleHash(XXMM.createChecksum(1));
+        assertSingleHash(xx.createChecksum(1));
+        assertSingleHash(xxmm.createChecksum(1));
     }
 
     @Test
     public void testSingleChecksum() {
-        assertSingleChecksum(XX.createChecksum(1));
-        assertSingleChecksum(XXMM.createChecksum(1));
+        assertSingleChecksum(xx.createChecksum(1));
+        assertSingleChecksum(xxmm.createChecksum(1));
     }
 
     @Test
     public void testNotFullChecksum() {
-        assertSingleChecksum(XX.createChecksum(2));
-        assertSingleChecksum(XXMM.createChecksum(2));
+        assertSingleChecksum(xx.createChecksum(2));
+        assertSingleChecksum(xxmm.createChecksum(2));
     }
 
     @Test
     public void testFullChecksum() {
-        assertFullChecksum(XX.createChecksum(2));
-        assertFullChecksum(XXMM.createChecksum(2));
+        assertFullChecksum(xx.createChecksum(2));
+        assertFullChecksum(xxmm.createChecksum(2));
     }
 
     private void assertEmptyBuffer(HashChecksum checksum) {

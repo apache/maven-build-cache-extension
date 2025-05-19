@@ -96,11 +96,24 @@ public class IncrementalRestoreTest {
     public static final String SKIPPING_PLUGIN_EXECUTION_CACHED_FAILSAFE_VERIFY =
             "Skipping plugin execution (cached): failsafe:verify";
 
+    private Path jarCacheFile;
+    private Path jarSourcesCacheFile;
+    private Path jarJavadocCacheFile;
+
     @Test
     void simple(Verifier verifier) throws VerificationException, IOException {
         verifier.setAutoclean(false);
         verifier.setMavenDebug(true);
 
+        initialBuild(verifier);
+        verifyPackageWithCache(verifier);
+        verifyWithCache(verifier);
+        installWithCache(verifier);
+        deployWithCache(verifier);
+        replayInstallWithCache(verifier);
+    }
+
+    private void initialBuild(Verifier verifier) throws VerificationException, IOException {
         // First build, nothing in cache
         verifier.setLogFileName("../log-package.txt");
         verifier.executeGoal("package");
@@ -116,28 +129,22 @@ public class IncrementalRestoreTest {
         verifier.verifyFilePresent(GENERATED_JAR);
 
         // First build : all resources are present in the target folder
-        verifier.verifyFilePresent(EXTRA_OUTPUT_1);
-        verifier.verifyFilePresent(EXTRA_OUTPUT_2);
-        verifier.verifyFilePresent(EXTRA_OUTPUT_3);
-        verifier.verifyFilePresent(EXTRA_OUTPUT_4);
-        verifier.verifyFilePresent(EXTRA_OUTPUT_5);
-        verifier.verifyFilePresent(EXTRA_OUTPUT_6);
+        verifyAllExtraOutputsPresent(verifier);
 
         Path buildInfoPath = getSavedBuildInfoPath(verifier);
-        Path jarCacheFile = buildInfoPath.getParent().resolve(MBUILDCACHE_INCREMENTAL_JAR);
-        Path jarSourcesCacheFile = buildInfoPath.getParent().resolve(MBUILDCACHE_INCREMENTAL_SOURCES_JAR);
-        Path jarJavadocCacheFile = buildInfoPath.getParent().resolve(MBUILDCACHE_INCREMENTAL_JAVADOC_JAR);
+        jarCacheFile = buildInfoPath.getParent().resolve(MBUILDCACHE_INCREMENTAL_JAR);
+        jarSourcesCacheFile = buildInfoPath.getParent().resolve(MBUILDCACHE_INCREMENTAL_SOURCES_JAR);
+        jarJavadocCacheFile = buildInfoPath.getParent().resolve(MBUILDCACHE_INCREMENTAL_JAVADOC_JAR);
         Assertions.assertTrue(Files.exists(jarCacheFile), "Expected artifact saved in build cache.");
         Assertions.assertFalse(
                 Files.exists(jarSourcesCacheFile), "Not expected sources artifact saved in build cache.");
         Assertions.assertFalse(
                 Files.exists(jarJavadocCacheFile), "Not expected javadoc artifact saved in build cache.");
+    }
 
+    private void verifyPackageWithCache(Verifier verifier) throws VerificationException {
         // Verify clean build, with the same goal should be fully restored
-        verifier.setMavenDebug(false);
-        verifier.setLogFileName("../log-clean.txt");
-        verifier.executeGoal("clean");
-        verifier.verifyFileNotPresent(GENERATED_JAR);
+        cleanBuild(verifier);
 
         verifier.setLogFileName("../log-package-2.txt");
         verifier.executeGoal("package");
@@ -146,28 +153,15 @@ public class IncrementalRestoreTest {
         verifier.verifyTextInLog(
                 "Found cached build, restoring org.apache.maven.caching.test:mbuildcache-incremental from cache by checksum");
         verifier.verifyErrorFreeLog();
-        verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_RESOURCES_RESOURCES);
-        verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_COMPILER_COMPILE);
-        verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_RESOURCES_TEST_RESOURCES);
-        verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_COMPILER_TEST_COMPILE);
-        verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_SUREFIRE_TEST);
-        verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_JAR_JAR);
-        verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_RESOURCES_COPY);
+        verifySkippedPluginExecutions(verifier);
         verifier.verifyFilePresent(GENERATED_JAR);
-        // 2nd build with cache : only cached extra resources are present in the target folder
-        verifier.verifyFilePresent(EXTRA_OUTPUT_1);
-        verifier.verifyFilePresent(EXTRA_OUTPUT_2);
-        verifier.verifyFileNotPresent(EXTRA_OUTPUT_3);
-        verifier.verifyFileNotPresent(EXTRA_OUTPUT_4);
-        verifier.verifyFileNotPresent(EXTRA_OUTPUT_5);
-        verifier.verifyFilePresent(EXTRA_OUTPUT_6);
+        verifyCachedExtraOutputs(verifier);
         Assertions.assertTrue(Files.exists(jarCacheFile), "Expected artifact saved in build cache.");
+    }
 
+    private void verifyWithCache(Verifier verifier) throws VerificationException {
         // Next step : verify
-        verifier.setMavenDebug(false);
-        verifier.setLogFileName("../log-clean.txt");
-        verifier.executeGoal("clean");
-        verifier.verifyFileNotPresent(GENERATED_JAR);
+        cleanBuild(verifier);
 
         verifier.setLogFileName("../log-verify.txt");
         verifier.executeGoal("verify");
@@ -176,98 +170,52 @@ public class IncrementalRestoreTest {
         verifier.verifyTextInLog(
                 "Project org.apache.maven.caching.test:mbuildcache-incremental restored partially. Highest cached goal: package, requested: verify");
         verifier.verifyErrorFreeLog();
-        verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_RESOURCES_RESOURCES);
-        verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_COMPILER_COMPILE);
-        verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_RESOURCES_TEST_RESOURCES);
-        verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_COMPILER_TEST_COMPILE);
-        verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_SUREFIRE_TEST);
-        verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_JAR_JAR);
-        verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_RESOURCES_COPY);
+        verifySkippedPluginExecutions(verifier);
         verifier.verifyTextInLog(INTEGRATION_TEST_DEFAULT_MBUILDCACHE_INCREMENTAL);
         verifier.verifyTextInLog(VERIFY_DEFAULT_MBUILDCACHE_INCREMENTAL);
         verifier.verifyTextInLog(SAVED_BUILD_TO_LOCAL_FILE);
         verifier.verifyFilePresent(GENERATED_JAR);
-        // only cached extra resources are present in the target folder
-        verifier.verifyFilePresent(EXTRA_OUTPUT_1);
-        verifier.verifyFilePresent(EXTRA_OUTPUT_2);
-        verifier.verifyFileNotPresent(EXTRA_OUTPUT_3);
-        verifier.verifyFileNotPresent(EXTRA_OUTPUT_4);
-        verifier.verifyFileNotPresent(EXTRA_OUTPUT_5);
-        verifier.verifyFilePresent(EXTRA_OUTPUT_6);
+        verifyCachedExtraOutputs(verifier);
         Assertions.assertTrue(Files.exists(jarCacheFile), "Expected artifact saved in build cache.");
+    }
 
+    private void installWithCache(Verifier verifier) throws VerificationException {
         // Install with clean build, with a higher goal should restore cached mojo executions and apply increments
-        verifier.setMavenDebug(false);
-        verifier.setLogFileName("../log-clean.txt");
-        verifier.executeGoal("clean");
-        verifier.verifyFileNotPresent(GENERATED_JAR);
+        cleanBuild(verifier);
 
         verifier.setLogFileName("../log-install.txt");
         verifier.executeGoal("install");
         verifier.verifyErrorFreeLog();
         verifier.verifyTextInLog(
                 "Project org.apache.maven.caching.test:mbuildcache-incremental restored partially. Highest cached goal: verify, requested: install");
-        verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_RESOURCES_RESOURCES);
-        verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_COMPILER_COMPILE);
-        verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_RESOURCES_TEST_RESOURCES);
-        verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_COMPILER_TEST_COMPILE);
-        verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_SUREFIRE_TEST);
-        verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_JAR_JAR);
-        verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_RESOURCES_COPY);
+        verifySkippedPluginExecutions(verifier);
         verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_FAILSAFE_INTEGRATION_TEST);
         verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_FAILSAFE_VERIFY);
-        verifyNoTextInLog(verifier, RESOURCES_DEFAULT_RESOURCES_MBUILDCACHE_INCREMENTAL);
-        verifyNoTextInLog(verifier, COMPILE_DEFAULT_COMPILE_MBUILDCACHE_INCREMENTAL);
-        verifyNoTextInLog(verifier, TEST_RESOURCES_DEFAULT_TEST_RESOURCES_MBUILDCACHE_INCREMENTAL);
-        verifyNoTextInLog(verifier, TEST_COMPILE_DEFAULT_TEST_COMPILE_MBUILDCACHE_INCREMENTAL);
-        verifyNoTextInLog(verifier, TEST_DEFAULT_TEST_MBUILDCACHE_INCREMENTAL);
-        verifyNoTextInLog(verifier, JAR_DEFAULT_JAR_MBUILDCACHE_INCREMENTAL);
-        verifyNoTextInLog(verifier, INTEGRATION_TEST_DEFAULT_MBUILDCACHE_INCREMENTAL);
-        verifyNoTextInLog(verifier, VERIFY_DEFAULT_MBUILDCACHE_INCREMENTAL);
+        verifyNoCachedPluginExecutions(verifier);
         verifier.verifyTextInLog(INSTALL_DEFAULT_INSTALL_MBUILDCACHE_INCREMENTAL);
         final String installToLocalRepoString =
                 "Installing " + verifier.getBasedir() + File.separatorChar + EXTRA_OUTPUT_1 + " to ";
         verifier.verifyTextInLog(installToLocalRepoString);
         verifier.verifyTextInLog(SAVED_BUILD_TO_LOCAL_FILE);
         verifier.verifyFilePresent(GENERATED_JAR);
-        // only cached extra resources are present in the target folder
-        verifier.verifyFilePresent(EXTRA_OUTPUT_1);
-        verifier.verifyFilePresent(EXTRA_OUTPUT_2);
-        verifier.verifyFileNotPresent(EXTRA_OUTPUT_3);
-        verifier.verifyFileNotPresent(EXTRA_OUTPUT_4);
-        verifier.verifyFileNotPresent(EXTRA_OUTPUT_5);
-        verifier.verifyFilePresent(EXTRA_OUTPUT_6);
+        verifyCachedExtraOutputs(verifier);
         Assertions.assertTrue(Files.exists(jarCacheFile), "Expected artifact saved in build cache.");
+    }
 
+    private void deployWithCache(Verifier verifier) throws VerificationException {
         // Deploy with clean build, with a higher goal should restore cached mojo executions and apply increments
-        verifier.setMavenDebug(false);
-        verifier.setLogFileName("../log-clean.txt");
-        verifier.executeGoal("clean");
-        verifier.verifyFileNotPresent(GENERATED_JAR);
+        cleanBuild(verifier);
 
         verifier.setLogFileName("../log-deploy.txt");
         verifier.executeGoal("deploy");
         verifier.verifyErrorFreeLog();
         verifier.verifyTextInLog(
                 "Project org.apache.maven.caching.test:mbuildcache-incremental restored partially. Highest cached goal: install, requested: deploy");
-        verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_RESOURCES_RESOURCES);
-        verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_COMPILER_COMPILE);
-        verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_RESOURCES_TEST_RESOURCES);
-        verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_COMPILER_TEST_COMPILE);
-        verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_SUREFIRE_TEST);
-        verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_JAR_JAR);
-        verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_RESOURCES_COPY);
+        verifySkippedPluginExecutions(verifier);
         verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_FAILSAFE_INTEGRATION_TEST);
         verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_FAILSAFE_VERIFY);
         verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_INSTALL_INSTALL);
-        verifyNoTextInLog(verifier, RESOURCES_DEFAULT_RESOURCES_MBUILDCACHE_INCREMENTAL);
-        verifyNoTextInLog(verifier, COMPILE_DEFAULT_COMPILE_MBUILDCACHE_INCREMENTAL);
-        verifyNoTextInLog(verifier, TEST_RESOURCES_DEFAULT_TEST_RESOURCES_MBUILDCACHE_INCREMENTAL);
-        verifyNoTextInLog(verifier, TEST_COMPILE_DEFAULT_TEST_COMPILE_MBUILDCACHE_INCREMENTAL);
-        verifyNoTextInLog(verifier, TEST_DEFAULT_TEST_MBUILDCACHE_INCREMENTAL);
-        verifyNoTextInLog(verifier, JAR_DEFAULT_JAR_MBUILDCACHE_INCREMENTAL);
-        verifyNoTextInLog(verifier, INTEGRATION_TEST_DEFAULT_MBUILDCACHE_INCREMENTAL);
-        verifyNoTextInLog(verifier, VERIFY_DEFAULT_MBUILDCACHE_INCREMENTAL);
+        verifyNoCachedPluginExecutions(verifier);
         verifyNoTextInLog(verifier, INSTALL_DEFAULT_INSTALL_MBUILDCACHE_INCREMENTAL);
         verifier.verifyTextInLog(DEPLOY_DEFAULT_DEPLOY_MBUILDCACHE_INCREMENTAL);
         verifier.verifyTextInLog("Using alternate deployment repository local::file:./target/staging");
@@ -275,23 +223,61 @@ public class IncrementalRestoreTest {
         verifier.verifyFilePresent(GENERATED_JAR);
         verifier.verifyFilePresent(GENERATED_SOURCES_JAR);
         verifier.verifyFilePresent(GENERATED_JAVADOC_JAR);
-        // only cached extra resources are present in the target folder
-        verifier.verifyFilePresent(EXTRA_OUTPUT_1);
-        verifier.verifyFilePresent(EXTRA_OUTPUT_2);
-        verifier.verifyFileNotPresent(EXTRA_OUTPUT_3);
-        verifier.verifyFileNotPresent(EXTRA_OUTPUT_4);
-        verifier.verifyFileNotPresent(EXTRA_OUTPUT_5);
-        verifier.verifyFilePresent(EXTRA_OUTPUT_6);
+        verifyCachedExtraOutputs(verifier);
         Assertions.assertTrue(Files.exists(jarCacheFile), "Expected artifact saved in build cache.");
         Assertions.assertTrue(Files.exists(jarSourcesCacheFile), "Expected sources artifact saved in build cache.");
         Assertions.assertTrue(Files.exists(jarJavadocCacheFile), "Expected javadoc artifact saved in build cache.");
+    }
 
+    private void replayInstallWithCache(Verifier verifier) throws VerificationException {
         // Replay install with clean build, with a lower goal should only restore cached mojo executions
         verifier.setLogFileName("../log-install-replay.txt");
         verifier.executeGoal("install");
         verifier.verifyErrorFreeLog();
         verifier.verifyTextInLog(
                 FOUND_CACHED_BUILD_RESTORING_ORG_APACHE_MAVEN_CACHING_TEST_MBUILDCACHE_INCREMENTAL_FROM_CACHE_BY_CHECKSUM);
+        verifySkippedPluginExecutions(verifier);
+        verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_FAILSAFE_INTEGRATION_TEST);
+        verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_FAILSAFE_VERIFY);
+        verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_INSTALL_INSTALL);
+        verifyNoTextInLog(verifier, DEPLOY_DEFAULT_DEPLOY_MBUILDCACHE_INCREMENTAL);
+        verifyNoCachedPluginExecutions(verifier);
+        verifyNoTextInLog(verifier, SAVED_BUILD_TO_LOCAL_FILE, "Expected successful build cache restore.");
+        verifier.verifyFilePresent(GENERATED_JAR);
+        verifier.verifyFilePresent(GENERATED_SOURCES_JAR);
+        verifier.verifyFilePresent(GENERATED_JAVADOC_JAR);
+        verifyCachedExtraOutputs(verifier);
+        Assertions.assertTrue(Files.exists(jarCacheFile), "Expected artifact saved in build cache.");
+        Assertions.assertTrue(Files.exists(jarSourcesCacheFile), "Expected sources artifact saved in build cache.");
+        Assertions.assertTrue(Files.exists(jarJavadocCacheFile), "Expected javadoc artifact saved in build cache.");
+    }
+
+    private void cleanBuild(Verifier verifier) throws VerificationException {
+        verifier.setMavenDebug(false);
+        verifier.setLogFileName("../log-clean.txt");
+        verifier.executeGoal("clean");
+        verifier.verifyFileNotPresent(GENERATED_JAR);
+    }
+
+    private void verifyAllExtraOutputsPresent(Verifier verifier) throws VerificationException {
+        verifier.verifyFilePresent(EXTRA_OUTPUT_1);
+        verifier.verifyFilePresent(EXTRA_OUTPUT_2);
+        verifier.verifyFilePresent(EXTRA_OUTPUT_3);
+        verifier.verifyFilePresent(EXTRA_OUTPUT_4);
+        verifier.verifyFilePresent(EXTRA_OUTPUT_5);
+        verifier.verifyFilePresent(EXTRA_OUTPUT_6);
+    }
+
+    private void verifyCachedExtraOutputs(Verifier verifier) throws VerificationException {
+        verifier.verifyFilePresent(EXTRA_OUTPUT_1);
+        verifier.verifyFilePresent(EXTRA_OUTPUT_2);
+        verifier.verifyFileNotPresent(EXTRA_OUTPUT_3);
+        verifier.verifyFileNotPresent(EXTRA_OUTPUT_4);
+        verifier.verifyFileNotPresent(EXTRA_OUTPUT_5);
+        verifier.verifyFilePresent(EXTRA_OUTPUT_6);
+    }
+
+    private void verifySkippedPluginExecutions(Verifier verifier) throws VerificationException {
         verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_RESOURCES_RESOURCES);
         verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_COMPILER_COMPILE);
         verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_RESOURCES_TEST_RESOURCES);
@@ -299,10 +285,9 @@ public class IncrementalRestoreTest {
         verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_SUREFIRE_TEST);
         verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_JAR_JAR);
         verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_RESOURCES_COPY);
-        verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_FAILSAFE_INTEGRATION_TEST);
-        verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_FAILSAFE_VERIFY);
-        verifier.verifyTextInLog(SKIPPING_PLUGIN_EXECUTION_CACHED_INSTALL_INSTALL);
-        verifyNoTextInLog(verifier, DEPLOY_DEFAULT_DEPLOY_MBUILDCACHE_INCREMENTAL);
+    }
+
+    private void verifyNoCachedPluginExecutions(Verifier verifier) throws VerificationException {
         verifyNoTextInLog(verifier, RESOURCES_DEFAULT_RESOURCES_MBUILDCACHE_INCREMENTAL);
         verifyNoTextInLog(verifier, COMPILE_DEFAULT_COMPILE_MBUILDCACHE_INCREMENTAL);
         verifyNoTextInLog(verifier, TEST_RESOURCES_DEFAULT_TEST_RESOURCES_MBUILDCACHE_INCREMENTAL);
@@ -311,22 +296,6 @@ public class IncrementalRestoreTest {
         verifyNoTextInLog(verifier, JAR_DEFAULT_JAR_MBUILDCACHE_INCREMENTAL);
         verifyNoTextInLog(verifier, INTEGRATION_TEST_DEFAULT_MBUILDCACHE_INCREMENTAL);
         verifyNoTextInLog(verifier, VERIFY_DEFAULT_MBUILDCACHE_INCREMENTAL);
-        verifyNoTextInLog(verifier, INSTALL_DEFAULT_INSTALL_MBUILDCACHE_INCREMENTAL);
-        verifyNoTextInLog(verifier, installToLocalRepoString);
-        verifyNoTextInLog(verifier, SAVED_BUILD_TO_LOCAL_FILE, "Expected successful build cache restore.");
-        verifier.verifyFilePresent(GENERATED_JAR);
-        verifier.verifyFilePresent(GENERATED_SOURCES_JAR);
-        verifier.verifyFilePresent(GENERATED_JAVADOC_JAR);
-        // only cached extra resources are present in the target folder
-        verifier.verifyFilePresent(EXTRA_OUTPUT_1);
-        verifier.verifyFilePresent(EXTRA_OUTPUT_2);
-        verifier.verifyFileNotPresent(EXTRA_OUTPUT_3);
-        verifier.verifyFileNotPresent(EXTRA_OUTPUT_4);
-        verifier.verifyFileNotPresent(EXTRA_OUTPUT_5);
-        verifier.verifyFilePresent(EXTRA_OUTPUT_6);
-        Assertions.assertTrue(Files.exists(jarCacheFile), "Expected artifact saved in build cache.");
-        Assertions.assertTrue(Files.exists(jarSourcesCacheFile), "Expected sources artifact saved in build cache.");
-        Assertions.assertTrue(Files.exists(jarJavadocCacheFile), "Expected javadoc artifact saved in build cache.");
     }
 
     private static void verifyNoTextInLog(Verifier verifier, String text, String message) throws VerificationException {

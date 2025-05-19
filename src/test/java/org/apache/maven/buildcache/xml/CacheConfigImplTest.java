@@ -185,7 +185,7 @@ public class CacheConfigImplTest {
         asserts.put(
                 "getGlobalIncludePaths",
                 () -> assertEquals(Collections.emptyList(), testObject.getGlobalIncludePaths()));
-        asserts.put("getHashFactory", () -> assertEquals(HashFactory.XX, testObject.getHashFactory()));
+        asserts.put("getHashFactory", () -> assertEquals(HashFactory.xx, testObject.getHashFactory()));
         asserts.put("getId", () -> assertEquals("cache", testObject.getId()));
         asserts.put("getLocalRepositoryLocation", () -> assertNull(testObject.getLocalRepositoryLocation()));
         asserts.put(
