@@ -35,7 +35,7 @@ public enum HashFactory {
     XX(new Zah("XX", LongHashFunction.xx(), Zah.MemoryPolicy.Standard)),
     XXMM(new Zah("XXMM", LongHashFunction.xx(), Zah.MemoryPolicy.MemoryMappedBuffers)),
     METRO(new Zah("METRO", LongHashFunction.metro(), Zah.MemoryPolicy.Standard)),
-    METROMM(new Zah("METRO+MM", LongHashFunction.metro(), Zah.MemoryPolicy.MemoryMappedBuffers));
+    METRO_MM(new Zah("METRO+MM", LongHashFunction.metro(), Zah.MemoryPolicy.MemoryMappedBuffers));
 
     private static final Map<String, HashFactory> LOOKUP = new HashMap<>();
 

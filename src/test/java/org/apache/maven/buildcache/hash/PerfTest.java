@@ -99,7 +99,7 @@ public class PerfTest {
 
     @Benchmark
     public String metroMm(HashState state) throws IOException {
-        return doTest(HashFactory.METROMM, state);
+        return doTest(HashFactory.METRO_MM, state);
     }
 
     /*
