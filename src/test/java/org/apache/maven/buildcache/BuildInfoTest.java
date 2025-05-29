@@ -73,7 +73,7 @@ public class BuildInfoTest {
         final org.apache.maven.artifact.Artifact attachedArtifact =
                 new DefaultArtifact("ag", "aa", "av", "as", "at", "ac", new DefaultArtifactHandler());
         buildInfo.setAttachedArtifacts(Build.createAttachedArtifacts(
-                Collections.singletonList(attachedArtifact), HashFactory.xx.createAlgorithm()));
+                Collections.singletonList(attachedArtifact), HashFactory.XX.createAlgorithm()));
         buildInfo.setProjectsInputInfo(main);
         buildInfo.setExecutions(createExecutions());
 

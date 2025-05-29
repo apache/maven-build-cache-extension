@@ -42,7 +42,7 @@ import org.apache.maven.buildcache.hash.HashAlgorithm;
 import org.apache.maven.buildcache.hash.HashChecksum;
 import org.junit.jupiter.api.Test;
 
-import static org.apache.maven.buildcache.hash.HashFactory.sha256;
+import static org.apache.maven.buildcache.hash.HashFactory.SHA256;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class SHAHashTest {
@@ -56,8 +56,8 @@ public class SHAHashTest {
     private static final String WORLD_CHECKSUM = "63e5c163c81ee9a3ed99d365ff963ecea340cc455deeac7c4b63ac75b9cf4706";
     private static final String FULL_CHECKSUM = "7305db9b2abccd706c256db3d97e5ff48d677cfe4d3a5904afb7da0e3950e1e2";
 
-    private static final HashAlgorithm ALGORITHM = sha256.createAlgorithm();
-    private static final HashChecksum CHECKSUM = sha256.createChecksum(0);
+    private static final HashAlgorithm ALGORITHM = SHA256.createAlgorithm();
+    private static final HashChecksum CHECKSUM = SHA256.createChecksum(0);
 
     @Test
     public void testEmptyArray() {

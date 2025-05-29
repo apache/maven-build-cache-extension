@@ -74,32 +74,32 @@ public class PerfTest {
 
     @Benchmark
     public String sha1(HashState state) throws IOException {
-        return doTest(HashFactory.sha1, state);
+        return doTest(HashFactory.SHA1, state);
     }
 
     @Benchmark
     public String sha256(HashState state) throws IOException {
-        return doTest(HashFactory.sha256, state);
+        return doTest(HashFactory.SHA256, state);
     }
 
     @Benchmark
     public String xx(HashState state) throws IOException {
-        return doTest(HashFactory.xx, state);
+        return doTest(HashFactory.XX, state);
     }
 
     @Benchmark
     public String xxmm(HashState state) throws IOException {
-        return doTest(HashFactory.xxmm, state);
+        return doTest(HashFactory.XXMM, state);
     }
 
     @Benchmark
     public String metro(HashState state) throws IOException {
-        return doTest(HashFactory.metro, state);
+        return doTest(HashFactory.METRO, state);
     }
 
     @Benchmark
     public String metroMm(HashState state) throws IOException {
-        return doTest(HashFactory.metroMm, state);
+        return doTest(HashFactory.METROMM, state);
     }
 
     /*
