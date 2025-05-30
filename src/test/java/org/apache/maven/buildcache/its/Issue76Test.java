@@ -29,7 +29,7 @@ public class Issue76Test {
     private static final String PROJECT_NAME = "org.apache.maven.caching.test:mbuildcache-76";
 
     @Test
-    void simple_build_change_version_build_install_again(Verifier verifier) throws VerificationException {
+    void simpleBuildChangeVersionBuildInstallAgain(Verifier verifier) throws VerificationException {
         verifier.setAutoclean(false);
 
         verifier.setLogFileName("../log-1.txt");
