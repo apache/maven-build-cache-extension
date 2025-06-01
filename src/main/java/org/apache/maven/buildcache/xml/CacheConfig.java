@@ -152,4 +152,6 @@ public interface CacheConfig {
      * Flag to save in cache only if a build went through the clean lifecycle
      */
     boolean isMandatoryClean();
+
+    boolean isIncrementalReconciliationOnParameterMismatch();
 }
