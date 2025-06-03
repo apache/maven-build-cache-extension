@@ -215,90 +215,88 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
             MojoExecutionRunner mojoExecutionRunner,
             CacheConfig cacheConfig)
             throws LifecycleExecutionException, MojoExecutionException {
-        mojoExecutionScope.enter();
-        try {
-            final Build build = cacheResult.getBuildInfo();
-            final MavenProject project = cacheResult.getContext().getProject();
-            final MavenSession session = cacheResult.getContext().getSession();
-            mojoExecutionScope.seed(MavenProject.class, project);
-            mojoExecutionScope.seed(MavenSession.class, session);
-            final List<MojoExecution> cachedSegment =
-                    lifecyclePhasesHelper.getCachedSegment(project, mojoExecutions, build);
 
-            // Verify cache consistency for cached mojos
-            LOGGER.debug("Verify consistency on cached mojos");
-            Set<MojoExecution> forcedExecutionMojos = new HashSet<>();
-            for (MojoExecution cacheCandidate : cachedSegment) {
-                if (cacheController.isForcedExecution(project, cacheCandidate)) {
-                    forcedExecutionMojos.add(cacheCandidate);
-                } else {
-                    if (!verifyCacheConsistency(
-                            cacheCandidate, build, project, session, mojoExecutionRunner, cacheConfig)) {
-                        LOGGER.info("A cached mojo is not consistent, continuing with non cached build");
-                        return CacheRestorationStatus.FAILURE;
-                    }
+        final Build build = cacheResult.getBuildInfo();
+        final MavenProject project = cacheResult.getContext().getProject();
+        final MavenSession session = cacheResult.getContext().getSession();
+        final List<MojoExecution> cachedSegment =
+                lifecyclePhasesHelper.getCachedSegment(project, mojoExecutions, build);
+
+        // Verify cache consistency for cached mojos
+        LOGGER.debug("Verify consistency on cached mojos");
+        Set<MojoExecution> forcedExecutionMojos = new HashSet<>();
+        for (MojoExecution cacheCandidate : cachedSegment) {
+            if (cacheController.isForcedExecution(project, cacheCandidate)) {
+                forcedExecutionMojos.add(cacheCandidate);
+            } else {
+                if (!verifyCacheConsistency(
+                        cacheCandidate, build, project, session, mojoExecutionRunner, cacheConfig)) {
+                    LOGGER.info("A cached mojo is not consistent, continuing with non cached build");
+                    return CacheRestorationStatus.FAILURE;
                 }
             }
-
-            // Restore project artifacts
-            ArtifactRestorationReport restorationReport = cacheController.restoreProjectArtifacts(cacheResult);
-            if (!restorationReport.isSuccess()) {
-                LOGGER.info("Cannot restore project artifacts, continuing with non cached build");
-                return restorationReport.isRestoredFilesInProjectDirectory()
-                        ? CacheRestorationStatus.FAILURE_NEEDS_CLEAN
-                        : CacheRestorationStatus.FAILURE;
-            }
-
-            // Execute mandatory mojos (forced by configuration)
-            LOGGER.debug("Execute mandatory mojos in the cache segment");
-            for (MojoExecution cacheCandidate : cachedSegment) {
-                if (forcedExecutionMojos.contains(cacheCandidate)) {
-                    LOGGER.info(
-                            "Mojo execution is forced by project property: {}",
-                            cacheCandidate.getMojoDescriptor().getFullGoalName());
-                    mojoExecutionScope.seed(MojoExecution.class, cacheCandidate);
-                    // need maven 4 as minumum
-                    // mojoExecutionScope.seed(
-                    //        org.apache.maven.api.plugin.Log.class,
-                    //        new DefaultLog(LoggerFactory.getLogger(
-                    //                cacheCandidate.getMojoDescriptor().getFullGoalName())));
-                    // mojoExecutionScope.seed(Project.class, ((DefaultSession)
-                    // session.getSession()).getProject(project));
-                    // mojoExecutionScope.seed(
-                    //        org.apache.maven.api.MojoExecution.class, new DefaultMojoExecution(cacheCandidate));
-                    mojoExecutionRunner.run(cacheCandidate);
-                } else {
-                    LOGGER.info(
-                            "Skipping plugin execution (cached): {}",
-                            cacheCandidate.getMojoDescriptor().getFullGoalName());
-                    // Need to populate cached candidate executions for the build cache save result
-                    Mojo mojo = null;
-                    try {
-                        mojo = mavenPluginManager.getConfiguredMojo(Mojo.class, session, cacheCandidate);
-                        MojoExecutionEvent mojoExecutionEvent =
-                                new MojoExecutionEvent(session, project, cacheCandidate, mojo);
-                        mojoListener.beforeMojoExecution(mojoExecutionEvent);
-                    } catch (PluginConfigurationException | PluginContainerException e) {
-                        throw new RuntimeException(e);
-                    } finally {
-                        if (mojo != null) {
-                            mavenPluginManager.releaseMojo(mojo, cacheCandidate);
-                        }
-                    }
-                }
-            }
-
-            // Execute mojos after the cache segment
-            LOGGER.debug("Execute mojos post cache segment");
-            List<MojoExecution> postCachedSegment =
-                    lifecyclePhasesHelper.getPostCachedSegment(project, mojoExecutions, build);
-            for (MojoExecution mojoExecution : postCachedSegment) {
-                mojoExecutionRunner.run(mojoExecution);
-            }
-            return CacheRestorationStatus.SUCCESS;
-        } finally {
-            mojoExecutionScope.exit();
         }
+
+        // Restore project artifacts
+        ArtifactRestorationReport restorationReport = cacheController.restoreProjectArtifacts(cacheResult);
+        if (!restorationReport.isSuccess()) {
+            LOGGER.info("Cannot restore project artifacts, continuing with non cached build");
+            return restorationReport.isRestoredFilesInProjectDirectory()
+                    ? CacheRestorationStatus.FAILURE_NEEDS_CLEAN
+                    : CacheRestorationStatus.FAILURE;
+        }
+
+        // Execute mandatory mojos (forced by configuration)
+        LOGGER.debug("Execute mandatory mojos in the cache segment");
+        for (MojoExecution cacheCandidate : cachedSegment) {
+            if (forcedExecutionMojos.contains(cacheCandidate)) {
+                LOGGER.info(
+                        "Mojo execution is forced by project property: {}",
+                        cacheCandidate.getMojoDescriptor().getFullGoalName());
+                // need maven 4 as minumum
+                // mojoExecutionScope.seed(
+                //        org.apache.maven.api.plugin.Log.class,
+                //        new DefaultLog(LoggerFactory.getLogger(
+                //                cacheCandidate.getMojoDescriptor().getFullGoalName())));
+                // mojoExecutionScope.seed(Project.class, ((DefaultSession)
+                // session.getSession()).getProject(project));
+                // mojoExecutionScope.seed(
+                //        org.apache.maven.api.MojoExecution.class, new DefaultMojoExecution(cacheCandidate));
+                mojoExecutionRunner.run(cacheCandidate);
+            } else {
+                LOGGER.info(
+                        "Skipping plugin execution (cached): {}",
+                        cacheCandidate.getMojoDescriptor().getFullGoalName());
+                // Need to populate cached candidate executions for the build cache save result
+                Mojo mojo = null;
+                mojoExecutionScope.enter();
+                try {
+                    mojoExecutionScope.seed(MavenProject.class, project);
+                    mojoExecutionScope.seed(MojoExecution.class, cacheCandidate);
+
+                    mojo = mavenPluginManager.getConfiguredMojo(Mojo.class, session, cacheCandidate);
+                    MojoExecutionEvent mojoExecutionEvent =
+                            new MojoExecutionEvent(session, project, cacheCandidate, mojo);
+                    mojoListener.beforeMojoExecution(mojoExecutionEvent);
+                } catch (PluginConfigurationException | PluginContainerException e) {
+                    throw new RuntimeException(e);
+                } finally {
+                    mojoExecutionScope.exit();
+                    if (mojo != null) {
+                        mavenPluginManager.releaseMojo(mojo, cacheCandidate);
+                    }
+                }
+            }
+        }
+
+        // Execute mojos after the cache segment
+        LOGGER.debug("Execute mojos post cache segment");
+        List<MojoExecution> postCachedSegment =
+                lifecyclePhasesHelper.getPostCachedSegment(project, mojoExecutions, build);
+        for (MojoExecution mojoExecution : postCachedSegment) {
+            mojoExecutionRunner.run(mojoExecution);
+        }
+        return CacheRestorationStatus.SUCCESS;
     }
 
     private boolean verifyCacheConsistency(
