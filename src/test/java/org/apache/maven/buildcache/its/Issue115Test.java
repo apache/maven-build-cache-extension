@@ -18,13 +18,12 @@
  */
 package org.apache.maven.buildcache.its;
 
-import org.apache.maven.buildcache.its.junit.IntegrationTest;
+import java.util.List;
 
+import org.apache.maven.buildcache.its.junit.IntegrationTest;
 import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
 import org.junit.jupiter.api.Test;
-
-import java.util.List;
 
 @IntegrationTest("src/test/projects/mbuildcache-115")
 public class Issue115Test {
@@ -38,7 +37,7 @@ public class Issue115Test {
         verifier.setLogFileName("../log-1.txt");
         verifier.executeGoal("package");
         verifier.verifyErrorFreeLog();
-        //verify protobuf-plugin is present and has run
+        // verify protobuf-plugin is present and has run
         verifier.verifyFilePresent("target/generated-sources/protobuf/Test.java");
         verifyTextNotInLog(verifier, RESTORED_MESSAGE);
 
