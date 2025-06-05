@@ -18,27 +18,48 @@
  */
 package org.apache.maven.buildcache;
 
-import javax.annotation.Nonnull;
+import org.apache.commons.lang3.StringUtils;
 
-import java.io.IOException;
-import java.util.Optional;
-
-import org.apache.maven.artifact.Artifact;
-import org.apache.maven.buildcache.xml.Build;
-import org.apache.maven.buildcache.xml.report.CacheReport;
-import org.apache.maven.execution.MavenSession;
+import static java.util.Objects.requireNonNull;
 
 /**
- * Cache repository.
+ * @author Réda Housni Alaoui
  */
-public interface CacheRepository {
+public class Zone {
 
-    @Nonnull
-    Optional<Build> findBuild(CacheContext context, Zone inputZone) throws IOException;
+    private final String name;
 
-    void saveBuildInfo(CacheResult cacheResult, Zone outputZone, Build build) throws IOException;
+    public Zone(String name) {
+        if (StringUtils.isBlank(name)) {
+            throw new IllegalArgumentException("Zone name cannot be blank");
+        }
+        this.name = requireNonNull(name);
+    }
 
-    void saveArtifactFile(CacheResult cacheResult, Zone outputZone, Artifact artifact) throws IOException;
+    public String value() {
+        return name;
+    }
 
-    void saveCacheReport(String buildId, MavenSession session, CacheReport cacheReport) throws IOException;
+    @Override
+    public String toString() {
+        return name;
+    }
+
+    @Override
+    public final boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof Zone)) {
+            return false;
+        }
+
+        Zone zone = (Zone) o;
+        return name.equals(zone.name);
+    }
+
+    @Override
+    public int hashCode() {
+        return name.hashCode();
+    }
 }
