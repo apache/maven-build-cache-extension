@@ -31,22 +31,22 @@ under the License.
     </breadcrumbs>
 
     <menu name="Overview">
-      <item name="Introduction" href="index.html"/>
-      <item name="JavaDocs" href="apidocs/index.html"/>
-      <item name="Source Xref" href="xref/index.html"/>
+      <item name="Getting Started" href="index.html"/>
     </menu>
 
     <menu name="Documentation">
-      <item name="Getting Started" href="getting-started.html"/>
       <item name="Usage" href="usage.html"/>
       <item name="Remote Cache Setup" href="remote-cache.html"/>
       <item name="Howto" href="how-to.html"/>
       <item name="Performance" href="performance.html"/>
       <item name="Cache Parameters" href="parameters.html"/>
+      <item name="Concepts" href="concepts.html"/>
     </menu>
 
     <menu name="Reference">
       <item name="maven-build-cache-config.xml" href="build-cache-config.html"/>
+      <item name="JavaDocs" href="apidocs/index.html"/>
+      <item name="Source Xref" href="xref/index.html"/>
     </menu>
 
     <menu name="Cache Internals">
