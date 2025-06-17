@@ -15,7 +15,7 @@
  limitations under the License.
 -->
 
-## Normal usage
+## Usage
 
 Once the extension is activated, the cache automatically kicks in on every `package` or higher phase.
 
