@@ -82,3 +82,13 @@ supporting get/put operations. Working examples:
 * [Nginx OSS](http://nginx.org/en/) with fs module
 
 See [Remote cache setup](remote-cache.html) for a detailed description of the remote cache setup
+
+## See also
+
+* [Usage](usage.html) - shared cache setup procedure
+* [Remote cache setup](remote-cache.html) - shared cache setup procedure
+* [How-To](how-to.html) - cookbook for typical scenarios
+* [Performance](performance.html) - performance tuning
+* [Cache Parameters](parameters.html) - description of supported parameters
+* [Sample config file](maven-build-cache-config.xml)
+* [Concepts](concepts.html) - getting starting with cache and usage manual

@@ -123,12 +123,3 @@ builds instead.
 Such a scheme allows cache correctness validation by reconciling the outcomes of cached builds against the reference
 builds.
 
-## See also
-
-* [Getting started](getting-started.html) - getting starting with cache and usage manual
-* [Usage](usage.html) - shared cache setup procedure
-* [Remote cache setup](remote-cache.html) - shared cache setup procedure
-* [How-To](how-to.html) - cookbook for typical scenarios
-* [Performance](performance.html) - performance tuning
-* [Cache Parameters](parameters.html) - description of supported parameters
-* [Sample config file](maven-build-cache-config.xml)
