@@ -18,6 +18,8 @@
 Getting Started
 ---------------
 
+**The build-cache extension will be activated only when using Apache Maven from 3.9.x.**
+
 To onboard the build-cache extension you need to complete several steps:
 
 * Declare caching extension in your project (either in `pom.xml` or `.mvn/extensions.xml`)
