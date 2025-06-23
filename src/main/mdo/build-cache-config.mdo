@@ -436,7 +436,7 @@ under the License.
                     <name>location</name>
                     <type>String</type>
                     <description>The base directory where the local cache is located.
-                        Defaults to {@code $\{localRepository}/../cache}.</description>
+                        Defaults to {@code ~/.m2/build-cache/}.</description>
                 </field>
                 <field>
                     <name>maxBuildsCached</name>
