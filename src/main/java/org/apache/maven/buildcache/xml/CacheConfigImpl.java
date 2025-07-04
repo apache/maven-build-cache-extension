@@ -22,6 +22,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Named;
+import javax.inject.Provider;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -114,7 +115,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     private static final Logger LOGGER = LoggerFactory.getLogger(CacheConfigImpl.class);
 
     private final XmlService xmlService;
-    private final MavenSession session;
+    private final Provider<MavenSession> providerSession;
     private final RuntimeInformation rtInfo;
 
     private volatile CacheState state;
@@ -123,9 +124,9 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     private List<Pattern> excludePatterns;
 
     @Inject
-    public CacheConfigImpl(XmlService xmlService, MavenSession session, RuntimeInformation rtInfo) {
+    public CacheConfigImpl(XmlService xmlService, Provider<MavenSession> providerSession, RuntimeInformation rtInfo) {
         this.xmlService = xmlService;
-        this.session = session;
+        this.providerSession = providerSession;
         this.rtInfo = rtInfo;
     }
 
@@ -152,6 +153,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
                         if (StringUtils.isNotBlank(configPathText)) {
                             configPath = Paths.get(configPathText);
                         } else {
+                            final MavenSession session = providerSession.get();
                             configPath =
                                     getMultimoduleRoot(session).resolve(".mvn").resolve("maven-build-cache-config.xml");
                         }
@@ -634,6 +636,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     }
 
     private String getProperty(String key, String defaultValue) {
+        MavenSession session = providerSession.get();
         String value = session.getUserProperties().getProperty(key);
         if (value == null) {
             value = session.getSystemProperties().getProperty(key);
@@ -645,6 +648,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     }
 
     private boolean getProperty(String key, boolean defaultValue) {
+        MavenSession session = providerSession.get();
         String value = session.getUserProperties().getProperty(key);
         if (value == null) {
             value = session.getSystemProperties().getProperty(key);
