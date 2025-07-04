@@ -26,6 +26,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import com.google.inject.Provider;
 import org.apache.maven.SessionScoped;
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.buildcache.checksum.MavenProjectInput;
@@ -44,7 +45,7 @@ public class DefaultProjectInputCalculator implements ProjectInputCalculator {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DefaultProjectInputCalculator.class);
 
-    private final MavenSession mavenSession;
+    private final Provider<MavenSession> providerSession;
     private final RemoteCacheRepository remoteCache;
     private final CacheConfig cacheConfig;
     private final RepositorySystem repoSystem;
@@ -58,14 +59,14 @@ public class DefaultProjectInputCalculator implements ProjectInputCalculator {
 
     @Inject
     public DefaultProjectInputCalculator(
-            MavenSession mavenSession,
+            Provider<MavenSession> providerSession,
             RemoteCacheRepository remoteCache,
             CacheConfig cacheConfig,
             RepositorySystem repoSystem,
             NormalizedModelProvider rawModelProvider,
             MultiModuleSupport multiModuleSupport,
             ArtifactHandlerManager artifactHandlerManager) {
-        this.mavenSession = mavenSession;
+        this.providerSession = providerSession;
         this.remoteCache = remoteCache;
         this.cacheConfig = cacheConfig;
         this.repoSystem = repoSystem;
@@ -104,6 +105,7 @@ public class DefaultProjectInputCalculator implements ProjectInputCalculator {
                     + ", setOfCalculatingProjects=" + projectsSet + "]");
         }
         try {
+            final MavenSession mavenSession = providerSession.get();
             final MavenProjectInput input = new MavenProjectInput(
                     project,
                     normalizedModelProvider,

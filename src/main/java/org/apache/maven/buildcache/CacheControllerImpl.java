@@ -54,6 +54,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 
+import com.google.inject.Provider;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.mutable.MutableBoolean;
@@ -126,7 +127,7 @@ public class CacheControllerImpl implements CacheController {
     private final LocalCacheRepository localCache;
     private final RemoteCacheRepository remoteCache;
     private final ConcurrentMap<String, CacheResult> cacheResults = new ConcurrentHashMap<>();
-    private final LifecyclePhasesHelper lifecyclePhasesHelper;
+    private final Provider<LifecyclePhasesHelper> providerLifecyclePhasesHelper;
     private volatile Map<String, MavenProject> projectIndex;
     private final ProjectInputCalculator projectInputCalculator;
     private final RestoredArtifactHandler restoreArtifactHandler;
@@ -152,8 +153,7 @@ public class CacheControllerImpl implements CacheController {
             CacheConfig cacheConfig,
             ProjectInputCalculator projectInputCalculator,
             RestoredArtifactHandler restoreArtifactHandler,
-            LifecyclePhasesHelper lifecyclePhasesHelper,
-            MavenSession session) {
+            Provider<LifecyclePhasesHelper> providerLifecyclePhasesHelper) {
         // CHECKSTYLE_OFF: ParameterNumber
         this.projectHelper = projectHelper;
         this.localCache = localCache;
@@ -161,7 +161,7 @@ public class CacheControllerImpl implements CacheController {
         this.cacheConfig = cacheConfig;
         this.artifactHandlerManager = artifactHandlerManager;
         this.xmlService = xmlService;
-        this.lifecyclePhasesHelper = lifecyclePhasesHelper;
+        this.providerLifecyclePhasesHelper = providerLifecyclePhasesHelper;
         this.projectInputCalculator = projectInputCalculator;
         this.restoreArtifactHandler = restoreArtifactHandler;
     }
@@ -170,6 +170,7 @@ public class CacheControllerImpl implements CacheController {
     @Nonnull
     public CacheResult findCachedBuild(
             MavenSession session, MavenProject project, List<MojoExecution> mojoExecutions, boolean skipCache) {
+        final LifecyclePhasesHelper lifecyclePhasesHelper = providerLifecyclePhasesHelper.get();
         final String highestPhase = lifecyclePhasesHelper.resolveHighestLifecyclePhase(project, mojoExecutions);
 
         if (!lifecyclePhasesHelper.isLaterPhaseThanClean(highestPhase)) {
@@ -256,6 +257,7 @@ public class CacheControllerImpl implements CacheController {
                         build.getCacheImplementationVersion());
             }
 
+            final LifecyclePhasesHelper lifecyclePhasesHelper = providerLifecyclePhasesHelper.get();
             List<MojoExecution> cachedSegment =
                     lifecyclePhasesHelper.getCachedSegment(context.getProject(), mojoExecutions, build);
             List<MojoExecution> missingMojos = build.getMissingExecutions(cachedSegment);
@@ -295,6 +297,7 @@ public class CacheControllerImpl implements CacheController {
     }
 
     private boolean canIgnoreMissingSegment(MavenProject project, Build info, List<MojoExecution> mojoExecutions) {
+        final LifecyclePhasesHelper lifecyclePhasesHelper = providerLifecyclePhasesHelper.get();
         final List<MojoExecution> postCachedSegment =
                 lifecyclePhasesHelper.getPostCachedSegment(project, mojoExecutions, info);
 

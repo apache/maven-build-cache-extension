@@ -34,6 +34,7 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.stream.Collectors;
 
+import com.google.inject.Provider;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.maven.buildcache.DefaultPluginScanConfig;
 import org.apache.maven.buildcache.hash.HashFactory;
@@ -110,8 +111,9 @@ public class CacheConfigImplTest {
         testCacheConfig = new XmlService().loadCacheConfig("<cache></cache>".getBytes());
         when(xmlService.loadCacheConfig(rootConfigFile)).thenReturn(testCacheConfig);
 
+        Provider<MavenSession> provider = (() -> mavenSession);
         // test object
-        testObject = new CacheConfigImpl(xmlService, mavenSession, rtInfo);
+        testObject = new CacheConfigImpl(xmlService, provider, rtInfo);
     }
 
     private static void deepMockConfigFile(File mockFile, boolean exists) throws IOException {

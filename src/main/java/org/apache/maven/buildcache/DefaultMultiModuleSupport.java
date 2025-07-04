@@ -35,6 +35,7 @@ import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import com.google.inject.Provider;
 import org.apache.maven.SessionScoped;
 import org.apache.maven.buildcache.checksum.KeyUtils;
 import org.apache.maven.buildcache.xml.CacheConfig;
@@ -58,21 +59,23 @@ public class DefaultMultiModuleSupport implements MultiModuleSupport {
 
     private final ProjectBuilder projectBuilder;
     private final CacheConfig cacheConfig;
-    private final MavenSession session;
+    private final Provider<MavenSession> providerSession;
 
     private volatile boolean built;
     private volatile Map<String, MavenProject> projectMap;
     private volatile Map<String, MavenProject> sessionProjectMap;
 
     @Inject
-    public DefaultMultiModuleSupport(ProjectBuilder projectBuilder, CacheConfig cacheConfig, MavenSession session) {
+    public DefaultMultiModuleSupport(
+            ProjectBuilder projectBuilder, CacheConfig cacheConfig, Provider<MavenSession> providerSession) {
         this.projectBuilder = projectBuilder;
         this.cacheConfig = cacheConfig;
-        this.session = session;
+        this.providerSession = providerSession;
     }
 
     @Override
     public boolean isPartOfSession(String groupId, String artifactId, String version) {
+        MavenSession session = providerSession.get();
         return getProjectMap(session).containsKey(KeyUtils.getProjectKey(groupId, artifactId, version));
     }
 
@@ -85,6 +88,7 @@ public class DefaultMultiModuleSupport implements MultiModuleSupport {
     @Override
     public boolean isPartOfMultiModule(String groupId, String artifactId, String version) {
         String projectKey = KeyUtils.getProjectKey(groupId, artifactId, version);
+        MavenSession session = providerSession.get();
         return getProjectMap(session).containsKey(projectKey)
                 || getMultiModuleProjectsMap().containsKey(projectKey);
     }
@@ -102,6 +106,7 @@ public class DefaultMultiModuleSupport implements MultiModuleSupport {
         if (projectMap != null) {
             return projectMap;
         }
+        MavenSession session = providerSession.get();
         return getMultiModuleProjectsMapInner(session);
     }
 
