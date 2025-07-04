@@ -18,6 +18,8 @@
  */
 package org.apache.maven.buildcache.xml;
 
+import javax.inject.Provider;
+
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
@@ -34,7 +36,6 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.stream.Collectors;
 
-import com.google.inject.Provider;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.maven.buildcache.DefaultPluginScanConfig;
 import org.apache.maven.buildcache.hash.HashFactory;

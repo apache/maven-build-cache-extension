@@ -20,6 +20,7 @@ package org.apache.maven.buildcache;
 
 import javax.inject.Inject;
 import javax.inject.Named;
+import javax.inject.Provider;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -35,7 +36,6 @@ import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import com.google.inject.Provider;
 import org.apache.maven.SessionScoped;
 import org.apache.maven.buildcache.checksum.KeyUtils;
 import org.apache.maven.buildcache.xml.CacheConfig;

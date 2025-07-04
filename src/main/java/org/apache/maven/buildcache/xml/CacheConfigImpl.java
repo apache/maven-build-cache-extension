@@ -22,6 +22,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Named;
+import javax.inject.Provider;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -32,7 +33,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
-import com.google.inject.Provider;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.SessionScoped;
 import org.apache.maven.buildcache.DefaultPluginScanConfig;
