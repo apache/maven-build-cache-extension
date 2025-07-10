@@ -122,7 +122,7 @@ under the License.
     <dependency>
       <groupId>net.openhft</groupId>
       <artifactId>zero-allocation-hashing</artifactId>
-      <version>0.27ea0</version>
+      <version>0.27ea1</version>
     </dependency>
     <dependency>
       <groupId>com.github.albfernandez</groupId>
