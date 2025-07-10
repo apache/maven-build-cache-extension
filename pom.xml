@@ -71,7 +71,7 @@ under the License.
     <maven.basedir>${project.build.directory}/${maven.dir}</maven.basedir>
 
     <commonsCliVersion>1.4</commonsCliVersion>
-    <commonsLangVersion>3.17.0</commonsLangVersion>
+    <commonsLangVersion>3.18.0</commonsLangVersion>
     <junit.version>5.13.2</junit.version>
     <mockitoVersion>4.11.0</mockitoVersion>
     <wagonVersion>3.4.3</wagonVersion>
