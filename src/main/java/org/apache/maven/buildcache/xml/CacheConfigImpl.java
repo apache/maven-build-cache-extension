@@ -33,6 +33,7 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.apache.maven.SessionScoped;
 import org.apache.maven.buildcache.DefaultPluginScanConfig;
 import org.apache.maven.buildcache.PluginScanConfig;
@@ -261,7 +262,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
             final String goal = mojoExecution.getGoal();
 
             if (isPluginMatch(mojoExecution.getPlugin(), goalReconciliationConfig)
-                    && StringUtils.equals(goal, goalReconciliationConfig.getGoal())) {
+                    && Strings.CS.equals(goal, goalReconciliationConfig.getGoal())) {
                 return goalReconciliationConfig;
             }
         }
@@ -339,9 +340,9 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     }
 
     private boolean isPluginMatch(Plugin plugin, CoordinatesBase pluginConfig) {
-        return StringUtils.equals(pluginConfig.getArtifactId(), plugin.getArtifactId())
+        return Strings.CS.equals(pluginConfig.getArtifactId(), plugin.getArtifactId())
                 && (pluginConfig.getGroupId() == null
-                        || StringUtils.equals(pluginConfig.getGroupId(), plugin.getGroupId()));
+                        || Strings.CS.equals(pluginConfig.getGroupId(), plugin.getGroupId()));
     }
 
     @Nonnull

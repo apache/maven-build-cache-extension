@@ -51,11 +51,12 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 import java.util.regex.Pattern;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.maven.SessionScoped;
 import org.apache.maven.artifact.handler.ArtifactHandler;
@@ -306,7 +307,7 @@ public class CacheControllerImpl implements CacheController {
         return true;
     }
 
-    private Function<File, File> createRestorationToDiskConsumer(final MavenProject project, final Artifact artifact) {
+    private UnaryOperator<File> createRestorationToDiskConsumer(final MavenProject project, final Artifact artifact) {
 
         if (cacheConfig.isRestoreOnDiskArtifacts() && MavenProjectInput.isRestoreOnDiskArtifacts(project)) {
 
@@ -436,7 +437,7 @@ public class CacheControllerImpl implements CacheController {
             String artifactType,
             String artifactClassifier,
             Future<File> artifactFile,
-            Function<File, File> restoreToDiskConsumer) {
+            UnaryOperator<File> restoreToDiskConsumer) {
         ArtifactHandler handler = null;
 
         if (artifactType != null) {
@@ -748,7 +749,7 @@ public class CacheControllerImpl implements CacheController {
             List<PropertyName> forceLogProperties) {
         if (!forceLogProperties.isEmpty()) {
             for (PropertyName logProperty : forceLogProperties) {
-                if (StringUtils.equals(propertyName, logProperty.getPropertyName())) {
+                if (Strings.CS.equals(propertyName, logProperty.getPropertyName())) {
                     return false;
                 }
             }
@@ -757,7 +758,7 @@ public class CacheControllerImpl implements CacheController {
 
         if (!excludedProperties.isEmpty()) {
             for (PropertyName excludedProperty : excludedProperties) {
-                if (StringUtils.equals(propertyName, excludedProperty.getPropertyName())) {
+                if (Strings.CS.equals(propertyName, excludedProperty.getPropertyName())) {
                     return true;
                 }
             }
@@ -769,7 +770,7 @@ public class CacheControllerImpl implements CacheController {
 
     private boolean isTracked(String propertyName, List<TrackedProperty> trackedProperties) {
         for (TrackedProperty trackedProperty : trackedProperties) {
-            if (StringUtils.equals(propertyName, trackedProperty.getPropertyName())) {
+            if (Strings.CS.equals(propertyName, trackedProperty.getPropertyName())) {
                 return true;
             }
         }

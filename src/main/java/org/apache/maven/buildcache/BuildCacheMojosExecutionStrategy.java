@@ -30,7 +30,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.apache.maven.SessionScoped;
 import org.apache.maven.buildcache.artifact.ArtifactRestorationReport;
 import org.apache.maven.buildcache.checksum.MavenProjectInput;
@@ -388,8 +388,8 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                 return false;
             }
 
-            if (!StringUtils.equals(currentValue, expectedValue)) {
-                if (!StringUtils.equals(currentValue, trackedProperty.getSkipValue())) {
+            if (!Strings.CS.equals(currentValue, expectedValue)) {
+                if (!Strings.CS.equals(currentValue, trackedProperty.getSkipValue())) {
                     LOGGER.info(
                             "Plugin parameter mismatch found. Parameter: {}, expected: {}, actual: {}",
                             propertyName,

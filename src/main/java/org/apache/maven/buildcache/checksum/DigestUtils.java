@@ -24,9 +24,11 @@ import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Objects;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.apache.maven.buildcache.hash.HashChecksum;
 import org.apache.maven.buildcache.xml.build.DigestItem;
 import org.mozilla.universalchardet.UniversalDetector;
@@ -34,10 +36,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.apache.commons.lang3.StringUtils.containsAny;
-import static org.apache.commons.lang3.StringUtils.equalsAny;
-import static org.apache.commons.lang3.StringUtils.startsWith;
-import static org.apache.commons.lang3.StringUtils.startsWithAny;
 
 /**
  * DigestUtils
@@ -60,8 +58,8 @@ public class DigestUtils {
         DigestItem item = item("file", normalized, checksum.update(content));
         try {
             populateContentDetails(file, content, item);
-        } catch (IOException ignore) {
-            LOGGER.debug("Failed to compute digest for file {}", normalized, ignore);
+        } catch (IOException exception) {
+            LOGGER.debug("Failed to compute digest for file {}", normalized, exception);
         }
         return item;
     }
@@ -86,16 +84,16 @@ public class DigestUtils {
             }
             CharBuffer charBuffer = charset.decode(ByteBuffer.wrap(content));
             String lineSeparator = detectLineSeparator(charBuffer);
-            item.setEol(StringUtils.defaultString(lineSeparator, "unknown"));
+            item.setEol(Objects.toString(lineSeparator, "unknown"));
         }
     }
 
     // TODO add support for .gitattributes to statically configure file type before falling back to probe based content
     // checks
     private static boolean isText(String contentType) {
-        return startsWith(contentType, "text/")
-                || containsAny(contentType, "+json", "+xml") // common mime type suffixes
-                || equalsAny(
+        return Strings.CS.startsWith(contentType, "text/")
+                || Strings.CS.containsAny(contentType, "+json", "+xml") // common mime type suffixes
+                || Strings.CS.equalsAny(
                         contentType, // some common text types
                         "application/json",
                         "application/rtf",
@@ -106,9 +104,9 @@ public class DigestUtils {
     }
 
     private static boolean isBinary(String contentType) {
-        return startsWithAny(contentType, "image/", "audio/", "video/", "font/")
-                || containsAny(contentType, "+zip", "+gzip")
-                || equalsAny(
+        return Strings.CS.startsWithAny(contentType, "image/", "audio/", "video/", "font/")
+                || Strings.CS.containsAny(contentType, "+zip", "+gzip")
+                || Strings.CS.equalsAny(
                         contentType,
                         "application/octet-stream",
                         "application/java-archive",
