@@ -49,7 +49,7 @@ import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.artifact.handler.ArtifactHandler;
@@ -91,12 +91,9 @@ import org.eclipse.aether.resolution.ArtifactResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.commons.lang3.StringUtils.contains;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
-import static org.apache.commons.lang3.StringUtils.equalsAnyIgnoreCase;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.replaceEachRepeatedly;
-import static org.apache.commons.lang3.StringUtils.startsWithAny;
 import static org.apache.commons.lang3.StringUtils.stripToEmpty;
 import static org.apache.maven.buildcache.CacheUtils.isPom;
 import static org.apache.maven.buildcache.CacheUtils.isSnapshot;
@@ -298,7 +295,7 @@ public class MavenProjectInput {
 
         if (pomHolder.isPresent()) {
             DigestItem pomItem = pomHolder.get();
-            final boolean matches = StringUtils.equals(pomItem.getHash(), effectivePomChecksum.getHash());
+            final boolean matches = Strings.CS.equals(pomItem.getHash(), effectivePomChecksum.getHash());
             if (!matches) {
                 LOGGER.info(
                         "Mismatch in effective poms. Current: {}, remote: {}",
@@ -322,7 +319,7 @@ public class MavenProjectInput {
         boolean matched = false;
         if (baselineFileDigest.isPresent()) {
             String hash = baselineFileDigest.get().getHash();
-            matched = StringUtils.equals(hash, fileDigest.getHash());
+            matched = Strings.CS.equals(hash, fileDigest.getHash());
             if (!matched) {
                 LOGGER.info(
                         "Mismatch in {}: {}. Local hash: {}, remote: {}",
@@ -578,12 +575,12 @@ public class MavenProjectInput {
         // small optimization to not probe not-paths
         if (isBlank(text)) {
             // do not even bother logging about blank/null values
-        } else if (equalsAnyIgnoreCase(text, "true", "false", "utf-8", "null", "\\") // common values
-                || contains(text, "*") // tag value is a glob or regex - unclear how to process
-                || (contains(text, ":") && !contains(text, ":\\")) // artifactId
-                || startsWithAny(text, "com.", "org.", "io.", "java.", "javax.") // java packages
-                || startsWithAny(text, "${env.") // env variables in maven notation
-                || startsWithAny(
+        } else if (Strings.CI.equalsAny(text, "true", "false", "utf-8", "null", "\\") // common values
+                || Strings.CS.contains(text, "*") // tag value is a glob or regex - unclear how to process
+                || (Strings.CS.contains(text, ":") && !Strings.CS.contains(text, ":\\")) // artifactId
+                || Strings.CS.startsWithAny(text, "com.", "org.", "io.", "java.", "javax.") // java packages
+                || Strings.CS.startsWithAny(text, "${env.") // env variables in maven notation
+                || Strings.CS.startsWithAny(
                         text,
                         "http:",
                         "https:",
@@ -595,7 +592,7 @@ public class MavenProjectInput {
                         "classpath:")) // urls identified by common protocols
         {
             LOGGER.debug("Skipping directory (blacklisted literal): {}", text);
-        } else if (startsWithAny(text, tmpDir)) // tmp dir
+        } else if (Strings.CS.startsWithAny(text, tmpDir)) // tmp dir
         {
             LOGGER.debug("Skipping directory (temp dir): {}", text);
         } else {

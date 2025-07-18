@@ -22,7 +22,7 @@ import javax.annotation.Nonnull;
 
 import java.util.List;
 
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.apache.maven.buildcache.xml.config.DirScanConfig;
 import org.apache.maven.buildcache.xml.config.TagExclude;
 import org.apache.maven.buildcache.xml.config.TagScanConfig;
@@ -40,7 +40,7 @@ public class PluginScanConfigImpl implements PluginScanConfig {
 
     @Override
     public boolean isSkip() {
-        return StringUtils.equals(dto.getMode(), "skip");
+        return Strings.CS.equals(dto.getMode(), "skip");
     }
 
     @Override
@@ -58,7 +58,7 @@ public class PluginScanConfigImpl implements PluginScanConfig {
 
     private boolean contains(List<TagExclude> excludes, String tagName) {
         for (TagExclude exclude : excludes) {
-            if (StringUtils.equals(exclude.getTagName(), tagName)) {
+            if (Strings.CS.equals(exclude.getTagName(), tagName)) {
                 return true;
             }
         }
@@ -122,7 +122,7 @@ public class PluginScanConfigImpl implements PluginScanConfig {
         }
 
         for (TagScanConfig config : configs) {
-            if (StringUtils.equals(tagName, config.getTagName())) {
+            if (Strings.CS.equals(tagName, config.getTagName())) {
                 return new ScanConfigProperties(config.isRecursive(), config.getGlob());
             }
         }

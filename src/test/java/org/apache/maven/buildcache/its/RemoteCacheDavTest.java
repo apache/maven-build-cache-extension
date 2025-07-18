@@ -53,9 +53,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @IntegrationTest("src/test/projects/remote-cache-dav")
 @Testcontainers(disabledWithoutDocker = true)
-public class RemoteCacheDavTest {
+class RemoteCacheDavTest {
 
-    public static final String DAV_DOCKER_IMAGE =
+    private static final String DAV_DOCKER_IMAGE =
             "xama/nginx-webdav@sha256:84171a7e67d7e98eeaa67de58e3ce141ec1d0ee9c37004e7096698c8379fd9cf";
     private static final String DAV_USERNAME = "admin";
     private static final String DAV_PASSWORD = "admin";
@@ -107,7 +107,7 @@ public class RemoteCacheDavTest {
     }
 
     @AfterEach
-    public void cleanup() throws Exception {
+    void cleanup() throws Exception {
         dav.execInContainer("rm", "-rf", "/var/webdav");
         cleanDirs(localCache);
         dav.close();
@@ -119,7 +119,7 @@ public class RemoteCacheDavTest {
 
     @ParameterizedTest
     @MethodSource("transports")
-    public void doTestRemoteCache(String transport) throws VerificationException, IOException {
+    void doTestRemoteCache(String transport) throws VerificationException, IOException {
         String url =
                 ("wagon".equals(transport) ? "dav:" : "") + "http://localhost:" + dav.getFirstMappedPort() + "/mbce";
         substitute(

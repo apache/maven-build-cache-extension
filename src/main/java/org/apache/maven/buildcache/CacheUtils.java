@@ -20,7 +20,6 @@ package org.apache.maven.buildcache;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -34,12 +33,13 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.function.Supplier;
+import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.handler.ArtifactHandler;
@@ -48,11 +48,8 @@ import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.project.MavenProject;
-import org.eclipse.aether.SessionData;
 import org.slf4j.Logger;
 
-import static org.apache.commons.lang3.StringUtils.removeStart;
-import static org.apache.commons.lang3.StringUtils.trim;
 import static org.apache.maven.artifact.Artifact.LATEST_VERSION;
 import static org.apache.maven.artifact.Artifact.SNAPSHOT_VERSION;
 
@@ -92,14 +89,14 @@ public class CacheUtils {
     }
 
     public static String mojoExecutionKey(MojoExecution mojo) {
-        return StringUtils.join(
+        return String.join(
+                ":",
                 Arrays.asList(
                         StringUtils.defaultIfEmpty(mojo.getExecutionId(), "emptyExecId"),
                         StringUtils.defaultIfEmpty(mojo.getGoal(), "emptyGoal"),
                         StringUtils.defaultIfEmpty(mojo.getLifecyclePhase(), "emptyLifecyclePhase"),
                         StringUtils.defaultIfEmpty(mojo.getArtifactId(), "emptyArtifactId"),
-                        StringUtils.defaultIfEmpty(mojo.getGroupId(), "emptyGroupId")),
-                ":");
+                        StringUtils.defaultIfEmpty(mojo.getGroupId(), "emptyGroupId")));
     }
 
     public static Path getMultimoduleRoot(MavenSession session) {
@@ -114,12 +111,12 @@ public class CacheUtils {
             if (Files.exists(headFile)) {
                 String headRef = readFirstLine(headFile, "<missing branch>");
                 if (headRef.startsWith("ref: ")) {
-                    String branch = trim(removeStart(headRef, "ref: "));
+                    String branch = Strings.CS.removeStart(headRef, "ref: ").trim();
                     scmCandidate.setSourceBranch(branch);
                     final Path refPath = gitDir.resolve(branch);
                     if (Files.exists(refPath)) {
                         String revision = readFirstLine(refPath, "<missing revision>");
-                        scmCandidate.setRevision(trim(revision));
+                        scmCandidate.setRevision(revision.trim());
                     }
                 } else {
                     scmCandidate.setSourceBranch(headRef);
@@ -131,7 +128,9 @@ public class CacheUtils {
     }
 
     private static String readFirstLine(Path path, String defaultValue) throws IOException {
-        return Files.lines(path, StandardCharsets.UTF_8).findFirst().orElse(defaultValue);
+        try (Stream<String> lines = Files.lines(path)) {
+            return lines.findFirst().orElse(defaultValue);
+        }
     }
 
     public static <T> T getLast(List<T> list) {
@@ -142,26 +141,12 @@ public class CacheUtils {
         throw new NoSuchElementException();
     }
 
-    public static <T> T getOrCreate(MavenSession session, Object key, Supplier<T> supplier) {
-        SessionData data = session.getRepositorySession().getData();
-        while (true) {
-            T t = (T) data.get(key);
-            if (t == null) {
-                t = supplier.get();
-                if (data.set(key, null, t)) {
-                    continue;
-                }
-            }
-            return t;
-        }
-    }
-
     public static boolean isArchive(File file) {
         String fileName = file.getName();
         if (!file.isFile() || file.isHidden()) {
             return false;
         }
-        return StringUtils.endsWithAny(fileName, ".jar", ".zip", ".war", ".ear");
+        return Strings.CS.endsWithAny(fileName, ".jar", ".zip", ".war", ".ear");
     }
 
     /**

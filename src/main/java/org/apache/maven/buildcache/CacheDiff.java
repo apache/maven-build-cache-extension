@@ -28,7 +28,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.apache.maven.buildcache.xml.CacheConfig;
 import org.apache.maven.buildcache.xml.build.Build;
 import org.apache.maven.buildcache.xml.build.CompletedExecution;
@@ -56,7 +56,7 @@ public class CacheDiff {
     }
 
     public Diff compare() {
-        if (!StringUtils.equals(current.getHashFunction(), baseline.getHashFunction())) {
+        if (!Strings.CS.equals(current.getHashFunction(), baseline.getHashFunction())) {
             addNewMismatch(
                     "hashFunction",
                     current.getHashFunction(),
@@ -82,7 +82,7 @@ public class CacheDiff {
         Optional<DigestItem> baseLinePom = findPom(baseline);
         String baselinePomHash = baseLinePom.map(DigestItem::getHash).orElse(null);
 
-        if (!StringUtils.equals(currentPomHash, baselinePomHash)) {
+        if (!Strings.CS.equals(currentPomHash, baselinePomHash)) {
             addNewMismatch(
                     "effectivePom",
                     currentPomHash,
@@ -131,17 +131,17 @@ public class CacheDiff {
             DigestItem currentFile = entry.getValue();
             // should be null safe because sets are compared above for differences
             final DigestItem baselineFile = baselineFiles.get(filePath);
-            if (!StringUtils.equals(currentFile.getHash(), baselineFile.getHash())) {
+            if (!Strings.CS.equals(currentFile.getHash(), baselineFile.getHash())) {
                 String reason = "File content is different.";
                 if (currentFile.getEol() != null
                         && baselineFile.getEol() != null
-                        && !StringUtils.equals(baselineFile.getEol(), currentFile.getEol())) {
+                        && !Strings.CS.equals(baselineFile.getEol(), currentFile.getEol())) {
                     reason += " Different line endings detected (text files relevant). " + "Remote: "
                             + baselineFile.getEol() + ", local: " + currentFile.getEol() + ".";
                 }
                 if (currentFile.getCharset() != null
                         && baselineFile.getCharset() != null
-                        && !StringUtils.equals(baselineFile.getCharset(), currentFile.getCharset())) {
+                        && !Strings.CS.equals(baselineFile.getCharset(), currentFile.getCharset())) {
                     reason += " Different charset detected (text files relevant). " + "Remote: " + baselineFile.getEol()
                             + ", local: " + currentFile.getEol() + ".";
                 }
@@ -205,7 +205,7 @@ public class CacheDiff {
             DigestItem currentDependency = entry.getValue();
             // null safe - sets compared for differences above
             final DigestItem baselineDependency = baselineDependencies.get(dependencyKey);
-            if (!StringUtils.equals(currentDependency.getHash(), baselineDependency.getHash())) {
+            if (!Strings.CS.equals(currentDependency.getHash(), baselineDependency.getHash())) {
                 addNewMismatch(
                         dependencyKey,
                         currentDependency.getHash(),
@@ -276,7 +276,7 @@ public class CacheDiff {
 
         for (PropertyValue p : trackedProperties) {
             final PropertyValue baselineValue = baselinePropertiesByName.get(p.getName());
-            if (baselineValue == null || !StringUtils.equals(baselineValue.getValue(), p.getValue())) {
+            if (baselineValue == null || !Strings.CS.equals(baselineValue.getValue(), p.getValue())) {
                 addNewMismatch(
                         p.getName(),
                         p.getValue(),
