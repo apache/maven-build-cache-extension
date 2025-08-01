@@ -31,49 +31,56 @@ public class CacheResult {
     private final RestoreStatus status;
     private final Build build;
     private final CacheContext context;
+    private final Zone inputZone;
 
-    private CacheResult(RestoreStatus status, Build build, CacheContext context) {
+    private CacheResult(RestoreStatus status, Build build, CacheContext context, Zone inputZone) {
         this.status = requireNonNull(status);
         this.build = build;
         this.context = context;
+        this.inputZone = inputZone;
     }
 
-    public static CacheResult empty(CacheContext context) {
+    public static CacheResult empty(CacheContext context, Zone inputZone) {
         requireNonNull(context);
-        return new CacheResult(RestoreStatus.EMPTY, null, context);
+        requireNonNull(inputZone);
+        return new CacheResult(RestoreStatus.EMPTY, null, context, inputZone);
     }
 
     public static CacheResult empty() {
-        return new CacheResult(RestoreStatus.EMPTY, null, null);
+        return new CacheResult(RestoreStatus.EMPTY, null, null, null);
     }
 
-    public static CacheResult failure(Build build, CacheContext context) {
+    public static CacheResult failure(Build build, CacheContext context, Zone inputZone) {
         requireNonNull(build);
         requireNonNull(context);
-        return new CacheResult(RestoreStatus.FAILURE, build, context);
+        requireNonNull(inputZone);
+        return new CacheResult(RestoreStatus.FAILURE, build, context, inputZone);
     }
 
-    public static CacheResult success(Build build, CacheContext context) {
+    public static CacheResult success(Build build, CacheContext context, Zone inputZone) {
         requireNonNull(build);
         requireNonNull(context);
-        return new CacheResult(RestoreStatus.SUCCESS, build, context);
+        requireNonNull(inputZone);
+        return new CacheResult(RestoreStatus.SUCCESS, build, context, inputZone);
     }
 
-    public static CacheResult partialSuccess(Build build, CacheContext context) {
+    public static CacheResult partialSuccess(Build build, CacheContext context, Zone inputZone) {
         requireNonNull(build);
         requireNonNull(context);
-        return new CacheResult(RestoreStatus.PARTIAL, build, context);
+        requireNonNull(inputZone);
+        return new CacheResult(RestoreStatus.PARTIAL, build, context, inputZone);
     }
 
-    public static CacheResult failure(CacheContext context) {
+    public static CacheResult failure(CacheContext context, Zone inputZone) {
         requireNonNull(context);
-        return new CacheResult(RestoreStatus.FAILURE, null, context);
+        requireNonNull(inputZone);
+        return new CacheResult(RestoreStatus.FAILURE, null, context, inputZone);
     }
 
     public static CacheResult rebuilded(CacheResult orig, Build build) {
         requireNonNull(orig);
         requireNonNull(build);
-        return new CacheResult(orig.status, build, orig.context);
+        return new CacheResult(orig.status, build, orig.context, orig.inputZone);
     }
 
     public boolean isSuccess() {
@@ -96,11 +103,19 @@ public class CacheResult {
         return status == RestoreStatus.PARTIAL;
     }
 
+    public boolean isRestorable() {
+        return isSuccess() || isPartialSuccess();
+    }
+
     public RestoreStatus getStatus() {
         return status;
     }
 
     public boolean isFinal() {
         return build != null && build.getDto().is_final();
+    }
+
+    public Zone getInputZone() {
+        return inputZone;
     }
 }
