@@ -33,7 +33,7 @@ import static org.apache.maven.buildcache.xml.CacheConfigImpl.CACHE_LOCATION_PRO
 import static org.apache.maven.buildcache.xml.CacheConfigImpl.SKIP_SAVE;
 
 @IntegrationTest("src/test/projects/build-extension")
-public class BuildExtensionTest {
+class BuildExtensionTest {
 
     private static final String PROJECT_NAME = "org.apache.maven.caching.test.simple:simple";
 

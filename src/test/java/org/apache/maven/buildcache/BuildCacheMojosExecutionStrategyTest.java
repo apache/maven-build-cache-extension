@@ -103,7 +103,7 @@ class BuildCacheMojosExecutionStrategyTest {
                             ? Paths.get("c:\\a\\b\\c").toFile()
                             : Paths.get("/a/b/c").toFile(),
                     Paths.get(windows ? "..\\d\\e" : "../d/e"),
-                    Arrays.<String>asList("a", "b", "c"),
+                    Arrays.asList("a", "b", "c"),
                     new String[] {"c", "d", "e"});
 
             assertTrue(strategy.isParamsMatched(projectMock, executionMock, testMojo, cacheRecordMock));

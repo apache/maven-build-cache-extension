@@ -41,10 +41,10 @@ import org.apache.maven.buildcache.xml.build.ProjectsInputInfo;
 import org.apache.maven.buildcache.xml.build.PropertyValue;
 import org.junit.jupiter.api.Test;
 
-public class BuildInfoTest {
+class BuildInfoTest {
 
     @Test
-    public void name() throws Exception {
+    void name() throws Exception {
 
         XmlService xmlService = new XmlService();
 

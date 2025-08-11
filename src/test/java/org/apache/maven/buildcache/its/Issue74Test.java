@@ -39,7 +39,7 @@ import org.slf4j.LoggerFactory;
  * which don't contain a package phase.
  */
 @IntegrationTest("src/test/projects/mbuildcache-74-clean-cache-any-artifact")
-public class Issue74Test {
+class Issue74Test {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Issue74Test.class);
 

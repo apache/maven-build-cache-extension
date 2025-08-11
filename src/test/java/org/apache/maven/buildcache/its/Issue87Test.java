@@ -35,7 +35,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @IntegrationTest("src/test/projects/mbuildcache-87")
-public class Issue87Test {
+class Issue87Test {
 
     private static final String MODULE1_PROJECT_ARTIFACT = "org.apache.maven.caching.test.mbuildcache-87:module1:jar";
     private static final String MODULE2_PROJECT_NAME = "org.apache.maven.caching.test.mbuildcache-87:module2";

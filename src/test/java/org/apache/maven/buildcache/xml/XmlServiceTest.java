@@ -26,11 +26,11 @@ import javax.xml.validation.SchemaFactory;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
-public class XmlServiceTest {
+class XmlServiceTest {
 
     @Test
     @Disabled("cache-build-1.0.0.xsd not found")
-    public void testConfig() throws Exception {
+    void testConfig() throws Exception {
         SchemaFactory sf = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
         Schema schema = sf.newSchema(getClass().getResource("/build-cache-config-1.0.0.xsd"));
         DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
@@ -40,7 +40,7 @@ public class XmlServiceTest {
 
     @Test
     @Disabled("cache-build-1.0.0.xsd not found")
-    public void testReport() throws Exception {
+    void testReport() throws Exception {
         SchemaFactory sf = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
         Schema schema = sf.newSchema(getClass().getResource("/build-cache-report-1.0.0.xsd"));
         DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
@@ -50,7 +50,7 @@ public class XmlServiceTest {
 
     @Test
     @Disabled("cache-build-1.0.0.xsd not found")
-    public void testBuild() throws Exception {
+    void testBuild() throws Exception {
         SchemaFactory sf = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
         Schema schema = sf.newSchema(getClass().getResource("/build-cache-build-1.0.0.xsd"));
         DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
@@ -60,7 +60,7 @@ public class XmlServiceTest {
 
     @Test
     @Disabled("cache-build-1.0.0.xsd not found")
-    public void testDiff() throws Exception {
+    void testDiff() throws Exception {
         SchemaFactory sf = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
         Schema schema = sf.newSchema(getClass().getResource("/build-cache-diff-1.0.0.xsd"));
         DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();

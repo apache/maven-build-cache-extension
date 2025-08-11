@@ -37,7 +37,7 @@ import static org.apache.maven.buildcache.util.LogFileUtils.findFirstLineContain
  * so that the cached executions are not run again for builds with a higher goal.
  */
 @IntegrationTest("src/test/projects/mbuildcache-incremental")
-public class IncrementalRestoreTest {
+class IncrementalRestoreTest {
 
     public static final String SAVED_BUILD_TO_LOCAL_FILE = "Saved Build to local file: ";
     public static final String GENERATED_JAR = "target/mbuildcache-incremental-final.jar";

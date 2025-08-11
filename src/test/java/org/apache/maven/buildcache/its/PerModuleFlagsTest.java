@@ -26,7 +26,7 @@ import org.apache.maven.it.Verifier;
 import org.junit.jupiter.api.Test;
 
 @IntegrationTest("src/test/projects/per-module-flags")
-public class PerModuleFlagsTest {
+class PerModuleFlagsTest {
     private static final String PROJECT_NAME_MODULE1 = "org.apache.maven.caching.test.multimodule:module1";
     private static final String PROJECT_NAME_MODULE2 = "org.apache.maven.caching.test.multimodule:module2";
     private static final String PROJECT_NAME_MODULE3 = "org.apache.maven.caching.test.multimodule:module3";

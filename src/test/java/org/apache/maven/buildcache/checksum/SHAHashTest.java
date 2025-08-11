@@ -45,7 +45,7 @@ import org.junit.jupiter.api.Test;
 import static org.apache.maven.buildcache.hash.HashFactory.SHA256;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class SHAHashTest {
+class SHAHashTest {
 
     private static final byte[] HELLO_ARRAY = "hello".getBytes(StandardCharsets.UTF_8);
     private static final byte[] WORLD_ARRAY = "world".getBytes(StandardCharsets.UTF_8);
@@ -60,14 +60,14 @@ public class SHAHashTest {
     private static final HashChecksum CHECKSUM = SHA256.createChecksum(0);
 
     @Test
-    public void testEmptyArray() {
+    void testEmptyArray() {
         byte[] emptyArray = new byte[0];
         String hash = ALGORITHM.hash(emptyArray);
         assertEquals(EMPTY_HASH, hash);
     }
 
     @Test
-    public void testSimpleHash() {
+    void testSimpleHash() {
         String helloHash = ALGORITHM.hash(HELLO_ARRAY);
         assertEquals(HELLO_HASH, helloHash);
 
@@ -76,7 +76,7 @@ public class SHAHashTest {
     }
 
     @Test
-    public void testSimpleChecksum() {
+    void testSimpleChecksum() {
         assertEquals(HELLO_HASH, CHECKSUM.update(HELLO_ARRAY));
         assertEquals(HELLO_CHECKSUM, CHECKSUM.digest());
 

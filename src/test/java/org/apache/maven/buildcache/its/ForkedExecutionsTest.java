@@ -49,9 +49,7 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
  * Verifies MBUILDCACHE-25 - build cache calculated and saved exactly once in presence of forked executions
  */
 @IntegrationTest("src/test/projects/forked-executions-core-extension-remote")
-public class ForkedExecutionsTest {
-
-    private static final String PROJECT_NAME = "org.apache.maven.caching.test.simple:forked-executions-core-extension";
+class ForkedExecutionsTest {
 
     @RegisterExtension
     static WireMockExtension wm = WireMockExtension.newInstance()

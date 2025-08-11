@@ -66,7 +66,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 @SuppressWarnings("unchecked")
-public class CacheConfigImplTest {
+class CacheConfigImplTest {
 
     @Mock
     private MavenSession mavenSession;

@@ -45,12 +45,12 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class MavenProjectInputTest {
+class MavenProjectInputTest {
 
     private static final String DEFAULT_GLOB = "*";
 
     @Test
-    public void testCollectFilteredFiles() {
+    void testCollectFilteredFiles() {
         List<Path> collectedFiles = new ArrayList<>();
         MavenProjectInput.walkDirectoryFiles(
                 Paths.get("src/test/resources/test-folder"), collectedFiles, DEFAULT_GLOB, it -> it.getFileName()
@@ -60,7 +60,7 @@ public class MavenProjectInputTest {
     }
 
     @Test
-    public void testCollectNonFilteredFiles() {
+    void testCollectNonFilteredFiles() {
         List<Path> collectedFiles = new ArrayList<>();
         MavenProjectInput.walkDirectoryFiles(
                 Paths.get("src/test/resources/test-folder"), collectedFiles, DEFAULT_GLOB, it -> false);

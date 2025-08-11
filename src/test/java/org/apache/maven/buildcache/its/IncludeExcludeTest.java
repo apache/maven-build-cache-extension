@@ -30,7 +30,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 @IntegrationTest("src/test/projects/include-exclude")
-public class IncludeExcludeTest {
+class IncludeExcludeTest {
 
     private static final Pattern NB_SRC_PATTERN = Pattern.compile("^(.*Found )([0-9]*)( input files.*)");
 

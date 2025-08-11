@@ -39,7 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * The test checks that extensions receives expected events for forked executions and completes build successfully
  */
 @IntegrationTest("src/test/projects/forked-executions-core-extension")
-public class ForkedExecutionCoreExtensionTest {
+class ForkedExecutionCoreExtensionTest {
 
     private static final String PROJECT_NAME = "org.apache.maven.caching.test.simple:forked-executions-core-extension";
     private Path tempDirectory;

@@ -39,7 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * Test the "mandatoryClean" parameter : saving in cache should be done only if a clean phase has been executed.
  */
 @IntegrationTest("src/test/projects/mandatory-clean")
-public class MandatoryCleanTest {
+class MandatoryCleanTest {
 
     private static final String MODULE_NAME_1 = "org.apache.maven.caching.test.simple:non-forked-module";
     private static final String MODULE_NAME_2 = "org.apache.maven.caching.test.simple:forked-module";
