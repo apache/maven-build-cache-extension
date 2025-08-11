@@ -26,7 +26,7 @@ import org.apache.maven.it.Verifier;
 import org.junit.jupiter.api.Test;
 
 @IntegrationTest("src/test/projects/mbuildcache-115")
-public class Issue115Test {
+class Issue115Test {
 
     private static final String PROJECT_NAME = "org.apache.maven.caching.test:mbuildcache-115";
     private static final String RESTORED_MESSAGE = "Found cached build, restoring " + PROJECT_NAME + " from cache";

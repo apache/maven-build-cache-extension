@@ -24,7 +24,7 @@ import org.apache.maven.it.Verifier;
 import org.junit.jupiter.api.Test;
 
 @IntegrationTest("src/test/projects/mbuildcache-76")
-public class Issue76Test {
+class Issue76Test {
 
     private static final String PROJECT_NAME = "org.apache.maven.caching.test:mbuildcache-76";
 

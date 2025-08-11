@@ -24,7 +24,7 @@ import org.apache.maven.it.Verifier;
 import org.junit.jupiter.api.Test;
 
 @IntegrationTest("src/test/projects/core-extension")
-public class CoreExtensionTest {
+class CoreExtensionTest {
 
     private static final String PROJECT_NAME = "org.apache.maven.caching.test.simple:simple";
 

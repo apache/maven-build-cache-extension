@@ -31,7 +31,7 @@ import org.junit.jupiter.api.Test;
 import static java.util.Arrays.asList;
 
 @IntegrationTest("src/test/projects/mbuildcache-99")
-public class Issue99Test {
+class Issue99Test {
 
     @Test
     void renamedFileInvalidatesCache(Verifier verifier) throws VerificationException, IOException {
