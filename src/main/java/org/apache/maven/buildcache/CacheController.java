@@ -33,14 +33,19 @@ import org.apache.maven.project.MavenProject;
 public interface CacheController {
 
     CacheResult findCachedBuild(
-            MavenSession session, MavenProject project, List<MojoExecution> mojoExecutions, boolean skipCache);
+            MavenSession session,
+            MavenProject project,
+            List<MojoExecution> mojoExecutions,
+            Zone inputZone,
+            boolean skipCache);
 
     ArtifactRestorationReport restoreProjectArtifacts(CacheResult cacheResult);
 
     void save(
             CacheResult cacheResult,
             List<MojoExecution> mojoExecutions,
-            Map<String, MojoExecutionEvent> executionEvents);
+            Map<String, MojoExecutionEvent> executionEvents,
+            Zone outputZone);
 
     boolean isForcedExecution(MavenProject project, MojoExecution execution);
 

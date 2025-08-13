@@ -38,34 +38,34 @@ public class RemoteCacheRepositoryNoOp implements RemoteCacheRepository {
 
     @Nonnull
     @Override
-    public Optional<Build> findBuild(CacheContext context) throws IOException {
+    public Optional<Build> findBuild(CacheContext context, Zone inputZone) throws IOException {
         return Optional.empty();
     }
 
     @Override
-    public void saveBuildInfo(CacheResult cacheResult, Build build) throws IOException {}
+    public void saveBuildInfo(CacheResult cacheResult, Zone outputZone, Build build) throws IOException {}
 
     @Override
-    public void saveArtifactFile(CacheResult cacheResult, Artifact artifact) throws IOException {}
+    public void saveArtifactFile(CacheResult cacheResult, Zone outputZone, Artifact artifact) throws IOException {}
 
     @Override
     public void saveCacheReport(String buildId, MavenSession session, CacheReport cacheReport) throws IOException {}
 
     @Override
     public boolean getArtifactContent(
-            CacheContext context, org.apache.maven.buildcache.xml.build.Artifact artifact, Path target)
+            CacheContext context, Zone zone, org.apache.maven.buildcache.xml.build.Artifact artifact, Path target)
             throws IOException {
         return false;
     }
 
     @Override
-    public String getResourceUrl(CacheContext context, String filename) {
+    public String getResourceUrl(CacheContext context, Zone zone, String filename) {
         return null;
     }
 
     @Nonnull
     @Override
-    public Optional<Build> findBaselineBuild(MavenProject project) {
+    public Optional<Build> findBaselineBuild(MavenProject project, Zone zone) {
         return Optional.empty();
     }
 }

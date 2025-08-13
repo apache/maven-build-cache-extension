@@ -107,20 +107,20 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
 
     @Nonnull
     @Override
-    public Optional<Build> findBuild(CacheContext context) throws IOException {
-        final String resourceUrl = getResourceUrl(context, BUILDINFO_XML);
+    public Optional<Build> findBuild(CacheContext context, Zone inputZone) throws IOException {
+        final String resourceUrl = getResourceUrl(context, inputZone, BUILDINFO_XML);
         return getResourceContent(resourceUrl)
                 .map(content -> new Build(xmlService.loadBuild(content), CacheSource.REMOTE));
     }
 
     @Override
-    public boolean getArtifactContent(CacheContext context, Artifact artifact, Path target) {
-        return getResourceContent(getResourceUrl(context, artifact.getFileName()), target);
+    public boolean getArtifactContent(CacheContext context, Zone zone, Artifact artifact, Path target) {
+        return getResourceContent(getResourceUrl(context, zone, artifact.getFileName()), target);
     }
 
     @Override
-    public void saveBuildInfo(CacheResult cacheResult, Build build) throws IOException {
-        final String resourceUrl = getResourceUrl(cacheResult.getContext(), BUILDINFO_XML);
+    public void saveBuildInfo(CacheResult cacheResult, Zone outputZone, Build build) throws IOException {
+        final String resourceUrl = getResourceUrl(cacheResult.getContext(), outputZone, BUILDINFO_XML);
         putToRemoteCache(xmlService.toBytes(build.getDto()), resourceUrl);
     }
 
@@ -136,9 +136,10 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
     }
 
     @Override
-    public void saveArtifactFile(CacheResult cacheResult, org.apache.maven.artifact.Artifact artifact)
+    public void saveArtifactFile(CacheResult cacheResult, Zone outputZone, org.apache.maven.artifact.Artifact artifact)
             throws IOException {
-        final String resourceUrl = getResourceUrl(cacheResult.getContext(), CacheUtils.normalizedName(artifact));
+        final String resourceUrl =
+                getResourceUrl(cacheResult.getContext(), outputZone, CacheUtils.normalizedName(artifact));
         putToRemoteCache(artifact.getFile(), resourceUrl);
     }
 
@@ -215,17 +216,18 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
 
     @Nonnull
     @Override
-    public String getResourceUrl(CacheContext context, String filename) {
+    public String getResourceUrl(CacheContext context, Zone zone, String filename) {
         return getResourceUrl(
                 filename,
                 context.getProject().getGroupId(),
                 context.getProject().getArtifactId(),
-                context.getInputInfo().getChecksum());
+                context.getInputInfo().getChecksum(),
+                zone);
     }
 
-    private String getResourceUrl(String filename, String groupId, String artifactId, String checksum) {
+    private String getResourceUrl(String filename, String groupId, String artifactId, String checksum, Zone zone) {
         return MavenProjectInput.CACHE_IMPLEMENTATION_VERSION + "/" + groupId + "/" + artifactId + "/" + checksum + "/"
-                + filename;
+                + zone + "/" + filename;
     }
 
     private void putToRemoteCache(byte[] bytes, String url) throws IOException {
@@ -258,7 +260,7 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
 
     @Nonnull
     @Override
-    public Optional<Build> findBaselineBuild(MavenProject project) {
+    public Optional<Build> findBaselineBuild(MavenProject project, Zone zone) {
         Optional<List<ProjectReport>> cachedProjectsHolder = findCacheInfo().map(CacheReport::getProjects);
 
         if (!cachedProjectsHolder.isPresent()) {
@@ -283,7 +285,7 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
             LOGGER.info("Retrieving baseline buildinfo: {}", url);
         } else {
             url = getResourceUrl(
-                    BUILDINFO_XML, project.getGroupId(), project.getArtifactId(), projectReport.getChecksum());
+                    BUILDINFO_XML, project.getGroupId(), project.getArtifactId(), projectReport.getChecksum(), zone);
             LOGGER.info("Baseline project record doesn't have url, trying default location {}", url);
         }
 
