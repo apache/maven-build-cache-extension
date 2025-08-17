@@ -18,6 +18,8 @@
  */
 package org.apache.maven.buildcache.xml;
 
+import javax.inject.Provider;
+
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
@@ -110,8 +112,9 @@ class CacheConfigImplTest {
         testCacheConfig = new XmlService().loadCacheConfig("<cache></cache>".getBytes());
         when(xmlService.loadCacheConfig(rootConfigFile)).thenReturn(testCacheConfig);
 
+        Provider<MavenSession> provider = (() -> mavenSession);
         // test object
-        testObject = new CacheConfigImpl(xmlService, mavenSession, rtInfo);
+        testObject = new CacheConfigImpl(xmlService, provider, rtInfo);
     }
 
     private static void deepMockConfigFile(File mockFile, boolean exists) throws IOException {
