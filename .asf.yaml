@@ -7,11 +7,14 @@ github:
     - build-management
     - apache-maven
     - maven
+  protected_branches:
+    master: { }
+  pull_requests:
+    del_branch_on_merge: true
   enabled_merge_buttons:
     squash: true
     merge: false
     rebase: true
-  del_branch_on_merge: true
   features:
     issues: true
 
