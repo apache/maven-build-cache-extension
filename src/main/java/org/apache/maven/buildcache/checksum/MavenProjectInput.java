@@ -818,6 +818,7 @@ public class MavenProjectInput {
                 dependency.getVersion(),
                 new DefaultArtifactType(dependency.getType()));
         ArtifactRequest artifactRequest = new ArtifactRequest().setArtifact(dependencyArtifact);
+        artifactRequest.setRepositories(project.getRemoteProjectRepositories());
 
         ArtifactResult result = repoSystem.resolveArtifact(session.getRepositorySession(), artifactRequest);
 
