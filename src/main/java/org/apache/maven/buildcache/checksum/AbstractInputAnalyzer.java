@@ -131,7 +131,8 @@ public abstract class AbstractInputAnalyzer {
         final long t1 = System.currentTimeMillis();
 
         // Create a hash with enough capacity for all files and dependencies
-        final int totalItems = inputFiles.size() + dependenciesChecksum.size();
+        // Each dependency contributes 2 items (key + value), each file contributes 1 item
+        final int totalItems = inputFiles.size() + (dependenciesChecksum.size() * 2);
         final HashChecksum checksum = config.getHashFactory().createChecksum(totalItems);
 
         // Add all input files to the hash
