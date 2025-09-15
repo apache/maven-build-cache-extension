@@ -130,13 +130,16 @@ public abstract class AbstractInputAnalyzer {
 
         final long t1 = System.currentTimeMillis();
 
-        final HashChecksum checksum = config.getHashFactory().createChecksum(2);
-        checksum.update(String.valueOf(inputFiles.size()).getBytes());
+        // Create a hash with enough capacity for all files and dependencies
+        final int totalItems = inputFiles.size() + dependenciesChecksum.size();
+        final HashChecksum checksum = config.getHashFactory().createChecksum(totalItems);
+
+        // Add all input files to the hash
         for (Path inputFile : inputFiles) {
             checksum.update(inputFile.toString().getBytes());
         }
 
-        checksum.update(String.valueOf(dependenciesChecksum.size()).getBytes());
+        // Add all dependencies to the hash
         for (Map.Entry<String, String> entry : dependenciesChecksum.entrySet()) {
             checksum.update(entry.getKey().getBytes());
             checksum.update(entry.getValue().getBytes());
