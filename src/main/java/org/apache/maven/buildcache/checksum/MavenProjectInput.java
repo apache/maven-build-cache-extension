@@ -33,7 +33,6 @@ import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -95,7 +94,6 @@ import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.replaceEachRepeatedly;
 import static org.apache.commons.lang3.StringUtils.stripToEmpty;
-import static org.apache.maven.buildcache.CacheUtils.isPom;
 import static org.apache.maven.buildcache.CacheUtils.isSnapshot;
 import static org.apache.maven.buildcache.xml.CacheConfigImpl.CACHE_ENABLED_PROPERTY_NAME;
 import static org.apache.maven.buildcache.xml.CacheConfigImpl.CACHE_SKIP;
@@ -110,7 +108,7 @@ public class MavenProjectInput {
     /**
      * Version of cache implementation. It is recommended to change to simplify remote cache maintenance
      */
-    public static final String CACHE_IMPLEMENTATION_VERSION = "v1.1";
+    public static final String CACHE_IMPLEMENTATION_VERSION = "v1.2";
 
     /**
      * property name to pass glob value. The glob to be used to list directory files in plugins scanning
@@ -185,22 +183,30 @@ public class MavenProjectInput {
     public ProjectsInputInfo calculateChecksum() throws IOException {
         final long t0 = System.currentTimeMillis();
 
+        // Use dual checksum calculator for enhanced incrementality
+        DualChecksumCalculator dualCalculator = new DualChecksumCalculator(
+                project,
+                normalizedModelProvider,
+                projectInputCalculator,
+                session,
+                config,
+                repoSystem,
+                remoteCache,
+                artifactHandlerManager,
+                projectGlob,
+                exclusionResolver,
+                processPlugins);
+
         final String effectivePom = getEffectivePom(normalizedModelProvider.normalizedModel(project));
-        final SortedSet<Path> inputFiles = isPom(project) ? Collections.emptySortedSet() : getInputFiles();
-        final SortedMap<String, String> dependenciesChecksum = getMutableDependencies();
-        final SortedMap<String, String> pluginDependenciesChecksum = getMutablePluginDependencies();
+        final String sourceChecksum = dualCalculator.calculateSourceChecksum();
+        final String testChecksum = dualCalculator.calculateTestChecksum();
+        final String combinedChecksum = dualCalculator.calculateDualChecksum();
 
         final long t1 = System.currentTimeMillis();
 
-        // hash items: effective pom + version + input files paths + input files contents + dependencies
-        final int count = 1
-                + (config.calculateProjectVersionChecksum() ? 1 : 0)
-                + 2 * inputFiles.size()
-                + dependenciesChecksum.size()
-                + pluginDependenciesChecksum.size();
-
-        final List<DigestItem> items = new ArrayList<>(count);
-        final HashChecksum checksum = config.getHashFactory().createChecksum(count);
+        // Create digest items for the new dual checksum approach
+        final List<DigestItem> items = new ArrayList<>();
+        final HashChecksum checksum = config.getHashFactory().createChecksum(3);
 
         Optional<ProjectsInputInfo> baselineHolder = Optional.empty();
         if (config.isBaselineDiffEnabled()) {
@@ -208,16 +214,7 @@ public class MavenProjectInput {
                     remoteCache.findBaselineBuild(project).map(b -> b.getDto().getProjectsInputInfo());
         }
 
-        if (config.calculateProjectVersionChecksum()) {
-            DigestItem projectVersion = new DigestItem();
-            projectVersion.setType("version");
-            projectVersion.setIsText("yes");
-            projectVersion.setValue(project.getVersion());
-            items.add(projectVersion);
-
-            checksum.update(project.getVersion().getBytes(StandardCharsets.UTF_8));
-        }
-
+        // Add effective POM
         DigestItem effectivePomChecksum = DigestUtils.pom(checksum, effectivePom);
         items.add(effectivePomChecksum);
         final boolean compareWithBaseline = config.isBaselineDiffEnabled() && baselineHolder.isPresent();
@@ -225,46 +222,33 @@ public class MavenProjectInput {
             checkEffectivePomMatch(baselineHolder.get(), effectivePomChecksum);
         }
 
-        boolean sourcesMatched = true;
-        for (Path file : inputFiles) {
-            DigestItem fileDigest = DigestUtils.file(checksum, baseDirPath, file);
-            items.add(fileDigest);
-            if (compareWithBaseline) {
-                sourcesMatched &= checkItemMatchesBaseline(baselineHolder.get(), fileDigest);
-            }
-        }
-        if (compareWithBaseline) {
-            LOGGER.info("Source code: {}", sourcesMatched ? "MATCHED" : "OUT OF DATE");
-        }
+        // Add source checksum
+        DigestItem sourceChecksumItem = new DigestItem();
+        sourceChecksumItem.setType("source");
+        sourceChecksumItem.setIsText("yes");
+        sourceChecksumItem.setValue(sourceChecksum);
+        sourceChecksumItem.setHash(sourceChecksum);
+        items.add(sourceChecksumItem);
+        checksum.update(sourceChecksum.getBytes(StandardCharsets.UTF_8));
 
-        boolean dependenciesMatched = true;
-        for (Map.Entry<String, String> entry : dependenciesChecksum.entrySet()) {
-            DigestItem dependencyDigest = DigestUtils.dependency(checksum, entry.getKey(), entry.getValue());
-            items.add(dependencyDigest);
-            if (compareWithBaseline) {
-                dependenciesMatched &= checkItemMatchesBaseline(baselineHolder.get(), dependencyDigest);
-            }
-        }
+        // Add test checksum
+        DigestItem testChecksumItem = new DigestItem();
+        testChecksumItem.setType("test");
+        testChecksumItem.setIsText("yes");
+        testChecksumItem.setValue(testChecksum);
+        testChecksumItem.setHash(testChecksum);
+        items.add(testChecksumItem);
+        checksum.update(testChecksum.getBytes(StandardCharsets.UTF_8));
 
         if (compareWithBaseline) {
-            LOGGER.info("Dependencies: {}", dependenciesMatched ? "MATCHED" : "OUT OF DATE");
-        }
-
-        boolean pluginDependenciesMatched = true;
-        for (Map.Entry<String, String> entry : pluginDependenciesChecksum.entrySet()) {
-            DigestItem dependencyDigest = DigestUtils.pluginDependency(checksum, entry.getKey(), entry.getValue());
-            items.add(dependencyDigest);
-            if (compareWithBaseline) {
-                pluginDependenciesMatched &= checkItemMatchesBaseline(baselineHolder.get(), dependencyDigest);
-            }
-        }
-
-        if (compareWithBaseline) {
-            LOGGER.info("Plugin dependencies: {}", pluginDependenciesMatched ? "MATCHED" : "OUT OF DATE");
+            boolean sourceMatched = checkItemMatchesBaseline(baselineHolder.get(), sourceChecksumItem);
+            boolean testMatched = checkItemMatchesBaseline(baselineHolder.get(), testChecksumItem);
+            LOGGER.info("Source code: {}", sourceMatched ? "MATCHED" : "OUT OF DATE");
+            LOGGER.info("Test code: {}", testMatched ? "MATCHED" : "OUT OF DATE");
         }
 
         final ProjectsInputInfo projectsInputInfoType = new ProjectsInputInfo();
-        projectsInputInfoType.setChecksum(checksum.digest());
+        projectsInputInfoType.setChecksum(combinedChecksum);
         projectsInputInfoType.getItems().addAll(items);
 
         final long t2 = System.currentTimeMillis();
@@ -276,7 +260,7 @@ public class MavenProjectInput {
         }
 
         LOGGER.info(
-                "Project inputs calculated in {} ms. {} checksum [{}] calculated in {} ms.",
+                "Project inputs calculated in {} ms. {} dual checksum [{}] calculated in {} ms.",
                 t1 - t0,
                 config.getHashFactory().getAlgorithm(),
                 projectsInputInfoType.getChecksum(),
