@@ -370,7 +370,7 @@ public class MavenProjectInput {
 
         Properties properties = project.getProperties();
         for (String name : properties.stringPropertyNames()) {
-            if (name.startsWith(CACHE_INPUT_NAME)) {
+            if (name.startsWith(CACHE_INPUT_NAME) && !CACHE_INPUT_GLOB_NAME.equals(name)) {
                 String path = properties.getProperty(name);
                 startWalk(Paths.get(path), projectGlob, recursive, collectedFiles, visitedDirs);
             }
