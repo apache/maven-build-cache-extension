@@ -271,7 +271,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     private List<GoalReconciliation> getDefaultReconciliationConfigs() {
         List<GoalReconciliation> defaults = new ArrayList<>();
 
-        // maven-compiler-plugin:compile - track source, target, release
+        // maven-compiler-plugin:compile - track source, target, release, compilerArgs
         GoalReconciliation compilerCompile = new GoalReconciliation();
         compilerCompile.setArtifactId("maven-compiler-plugin");
         compilerCompile.setGoal("compile");
@@ -288,9 +288,15 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
         release.setPropertyName("release");
         compilerCompile.addReconcile(release);
 
+        // Track compilerArgs but filter out --module-version to handle Maven 4 auto-injection (issue #375)
+        TrackedProperty compilerArgs = new TrackedProperty();
+        compilerArgs.setPropertyName("compilerArgs");
+        compilerArgs.setIgnorePattern("--module-version");
+        compilerCompile.addReconcile(compilerArgs);
+
         defaults.add(compilerCompile);
 
-        // maven-compiler-plugin:testCompile - track source, target, release
+        // maven-compiler-plugin:testCompile - track source, target, release, compilerArgs
         GoalReconciliation compilerTestCompile = new GoalReconciliation();
         compilerTestCompile.setArtifactId("maven-compiler-plugin");
         compilerTestCompile.setGoal("testCompile");
@@ -306,6 +312,12 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
         TrackedProperty testRelease = new TrackedProperty();
         testRelease.setPropertyName("release");
         compilerTestCompile.addReconcile(testRelease);
+
+        // Track compilerArgs but filter out --module-version to handle Maven 4 auto-injection (issue #375)
+        TrackedProperty testCompilerArgs = new TrackedProperty();
+        testCompilerArgs.setPropertyName("compilerArgs");
+        testCompilerArgs.setIgnorePattern("--module-version");
+        compilerTestCompile.addReconcile(testCompilerArgs);
 
         defaults.add(compilerTestCompile);
 

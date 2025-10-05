@@ -379,7 +379,7 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                     Path baseDirPath = project.getBasedir().toPath();
                     currentValue = normalizedPath(((Path) value), baseDirPath);
                 } else if (value != null && value.getClass().isArray()) {
-                    currentValue = ArrayUtils.toString(value);
+                    currentValue = filterAndStringifyArray(value, trackedProperty.getIgnorePattern());
                 } else {
                     currentValue = String.valueOf(value);
                 }
@@ -388,7 +388,13 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                 return false;
             }
 
-            if (!Strings.CS.equals(currentValue, expectedValue)) {
+            // Apply ignorePattern filtering to expected value if it's an array string representation
+            String filteredExpectedValue = expectedValue;
+            if (trackedProperty.getIgnorePattern() != null && expectedValue.startsWith("[") && expectedValue.endsWith("]")) {
+                filteredExpectedValue = filterArrayString(expectedValue, trackedProperty.getIgnorePattern());
+            }
+
+            if (!Strings.CS.equals(currentValue, filteredExpectedValue)) {
                 if (!Strings.CS.equals(currentValue, trackedProperty.getSkipValue())) {
                     LOGGER.info(
                             "Plugin parameter mismatch found. Parameter: {}, expected: {}, actual: {}",
@@ -432,6 +438,55 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
             LOGGER.debug("normalizedPath '{}' - {} return {}", path, baseDirPath, normalizedPath);
         }
         return normalizedPath;
+    }
+
+    /**
+     * Filters array values based on ignore pattern and converts to string representation.
+     */
+    private static String filterAndStringifyArray(Object array, String ignorePattern) {
+        if (ignorePattern == null) {
+            return ArrayUtils.toString(array);
+        }
+
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(ignorePattern);
+        java.util.List<Object> filtered = new java.util.ArrayList<>();
+
+        int length = java.lang.reflect.Array.getLength(array);
+        for (int i = 0; i < length; i++) {
+            Object element = java.lang.reflect.Array.get(array, i);
+            String elementStr = String.valueOf(element);
+            if (!pattern.matcher(elementStr).find()) {
+                filtered.add(element);
+            }
+        }
+
+        return filtered.toString();
+    }
+
+    /**
+     * Filters an array string representation (e.g., "[a, b, c]") based on ignore pattern.
+     */
+    private static String filterArrayString(String arrayStr, String ignorePattern) {
+        if (ignorePattern == null || !arrayStr.startsWith("[") || !arrayStr.endsWith("]")) {
+            return arrayStr;
+        }
+
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(ignorePattern);
+        String content = arrayStr.substring(1, arrayStr.length() - 1);
+        if (content.trim().isEmpty()) {
+            return "[]";
+        }
+
+        String[] elements = content.split(",\\s*");
+        java.util.List<String> filtered = new java.util.ArrayList<>();
+
+        for (String element : elements) {
+            if (!pattern.matcher(element.trim()).find()) {
+                filtered.add(element.trim());
+            }
+        }
+
+        return filtered.toString();
     }
 
     private enum CacheRestorationStatus {
