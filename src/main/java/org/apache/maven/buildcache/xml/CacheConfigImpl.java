@@ -575,7 +575,24 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     public List<DirName> getAttachedOutputs() {
         checkInitializedState();
         final AttachedOutputs attachedOutputs = getConfiguration().getAttachedOutputs();
-        return attachedOutputs == null ? Collections.emptyList() : attachedOutputs.getDirNames();
+        if (attachedOutputs == null) {
+            return getDefaultAttachedOutputs();
+        }
+        return attachedOutputs.getDirNames();
+    }
+
+    private List<DirName> getDefaultAttachedOutputs() {
+        List<DirName> defaults = new ArrayList<>();
+
+        DirName classes = new DirName();
+        classes.setValue("classes");
+        defaults.add(classes);
+
+        DirName testClasses = new DirName();
+        testClasses.setValue("test-classes");
+        defaults.add(testClasses);
+
+        return defaults;
     }
 
     @Override
