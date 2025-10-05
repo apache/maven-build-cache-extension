@@ -248,17 +248,14 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     }
 
     private GoalReconciliation findReconciliationConfig(MojoExecution mojoExecution) {
-        if (cacheConfig.getExecutionControl() == null) {
-            return null;
-        }
+        List<GoalReconciliation> reconciliation;
 
-        final ExecutionControl executionControl = cacheConfig.getExecutionControl();
-        if (executionControl.getReconcile() == null) {
-            return null;
+        if (cacheConfig.getExecutionControl() == null || cacheConfig.getExecutionControl().getReconcile() == null) {
+            // Use default reconciliation configs for common plugins
+            reconciliation = getDefaultReconciliationConfigs();
+        } else {
+            reconciliation = cacheConfig.getExecutionControl().getReconcile().getPlugins();
         }
-
-        final List<GoalReconciliation> reconciliation =
-                executionControl.getReconcile().getPlugins();
 
         for (GoalReconciliation goalReconciliationConfig : reconciliation) {
             final String goal = mojoExecution.getGoal();
@@ -269,6 +266,56 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
             }
         }
         return null;
+    }
+
+    private List<GoalReconciliation> getDefaultReconciliationConfigs() {
+        List<GoalReconciliation> defaults = new ArrayList<>();
+
+        // maven-compiler-plugin:compile - track source, target, release
+        GoalReconciliation compilerCompile = new GoalReconciliation();
+        compilerCompile.setArtifactId("maven-compiler-plugin");
+        compilerCompile.setGoal("compile");
+
+        TrackedProperty source = new TrackedProperty();
+        source.setPropertyName("source");
+        compilerCompile.addReconcile(source);
+
+        TrackedProperty target = new TrackedProperty();
+        target.setPropertyName("target");
+        compilerCompile.addReconcile(target);
+
+        TrackedProperty release = new TrackedProperty();
+        release.setPropertyName("release");
+        compilerCompile.addReconcile(release);
+
+        defaults.add(compilerCompile);
+
+        // maven-compiler-plugin:testCompile - track source, target, release
+        GoalReconciliation compilerTestCompile = new GoalReconciliation();
+        compilerTestCompile.setArtifactId("maven-compiler-plugin");
+        compilerTestCompile.setGoal("testCompile");
+
+        TrackedProperty testSource = new TrackedProperty();
+        testSource.setPropertyName("source");
+        compilerTestCompile.addReconcile(testSource);
+
+        TrackedProperty testTarget = new TrackedProperty();
+        testTarget.setPropertyName("target");
+        compilerTestCompile.addReconcile(testTarget);
+
+        TrackedProperty testRelease = new TrackedProperty();
+        testRelease.setPropertyName("release");
+        compilerTestCompile.addReconcile(testRelease);
+
+        defaults.add(compilerTestCompile);
+
+        // maven-install-plugin:install - always run (empty reconciliation means it's tracked)
+        GoalReconciliation install = new GoalReconciliation();
+        install.setArtifactId("maven-install-plugin");
+        install.setGoal("install");
+        defaults.add(install);
+
+        return defaults;
     }
 
     @Nonnull

@@ -160,6 +160,17 @@ Add `executionControl/runAlways` section:
     </executionControl>
 ```
 
+### Default Reconciliation Behavior
+
+The build cache extension automatically tracks certain critical plugin properties by default, even without explicit
+`executionControl` configuration:
+
+* **maven-compiler-plugin** (`compile` and `testCompile` goals): Tracks `source`, `target`, and `release` properties
+* **maven-install-plugin** (`install` goal): Tracked to ensure artifacts are installed when needed
+
+This default behavior prevents common cache invalidation issues, particularly in multi-module JPMS (Java Platform Module System)
+projects where compiler version changes can cause compilation failures.
+
 ### I occasionally cached build with `-DskipTests=true`, and tests do not run now
 
 If you add command line flags to your build, they do not participate in effective pom - Maven defers the final value
