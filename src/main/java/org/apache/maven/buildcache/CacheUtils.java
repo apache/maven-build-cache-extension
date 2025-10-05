@@ -32,8 +32,10 @@ import java.nio.file.attribute.FileTime;
 import java.nio.file.attribute.PosixFilePermission;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -180,12 +182,27 @@ public class CacheUtils {
             Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
 
                 @Override
+                public FileVisitResult preVisitDirectory(Path path, BasicFileAttributes attrs) throws IOException {
+                    if (!path.equals(dir)) {
+                        String relativePath = dir.relativize(path).toString() + "/";
+                        ZipArchiveEntry zipEntry = new ZipArchiveEntry(relativePath);
+                        zipEntry.setTime(attrs.lastModifiedTime().toMillis());
+                        zipOutputStream.putArchiveEntry(zipEntry);
+                        zipOutputStream.closeArchiveEntry();
+                    }
+                    return FileVisitResult.CONTINUE;
+                }
+
+                @Override
                 public FileVisitResult visitFile(Path path, BasicFileAttributes basicFileAttributes)
                         throws IOException {
 
                     if (matcher == null || matcher.matches(path.getFileName())) {
                         final ZipArchiveEntry zipEntry =
                                 new ZipArchiveEntry(dir.relativize(path).toString());
+
+                        // Preserve timestamp
+                        zipEntry.setTime(basicFileAttributes.lastModifiedTime().toMillis());
 
                         // Preserve Unix permissions if requested and filesystem supports it
                         if (supportsPosix) {
@@ -210,6 +227,7 @@ public class CacheUtils {
         final boolean supportsPosix = preservePermissions
                 && out.getFileSystem().supportedFileAttributeViews().contains("posix");
 
+        Map<Path, Long> directoryTimestamps = new HashMap<>();
         try (ZipArchiveInputStream zis = new ZipArchiveInputStream(Files.newInputStream(zip))) {
             ZipArchiveEntry entry = zis.getNextEntry();
             while (entry != null) {
@@ -218,25 +236,35 @@ public class CacheUtils {
                     throw new RuntimeException("Bad zip entry");
                 }
                 if (entry.isDirectory()) {
-                    Files.createDirectory(file);
+                    if (!Files.exists(file)) {
+                        Files.createDirectories(file);
+                    }
+                    directoryTimestamps.put(file, entry.getTime());
                 } else {
                     Path parent = file.getParent();
-                    Files.createDirectories(parent);
+                    if (!Files.exists(parent)) {
+                        Files.createDirectories(parent);
+                    }
                     Files.copy(zis, file, StandardCopyOption.REPLACE_EXISTING);
-                }
-                Files.setLastModifiedTime(file, FileTime.fromMillis(entry.getTime()));
+                    Files.setLastModifiedTime(file, FileTime.fromMillis(entry.getTime()));
 
-                // Restore Unix permissions if requested and filesystem supports it
-                if (supportsPosix) {
-                    int unixMode = entry.getUnixMode();
-                    if (unixMode != 0) {
-                        Set<PosixFilePermission> permissions = modeToPermissions(unixMode);
-                        Files.setPosixFilePermissions(file, permissions);
+                    // Restore Unix permissions if requested and filesystem supports it
+                    if (supportsPosix) {
+                        int unixMode = entry.getUnixMode();
+                        if (unixMode != 0) {
+                            Set<PosixFilePermission> permissions = modeToPermissions(unixMode);
+                            Files.setPosixFilePermissions(file, permissions);
+                        }
                     }
                 }
-
                 entry = zis.getNextEntry();
             }
+        }
+
+        // Set directory timestamps after all files have been extracted to avoid them being
+        // updated by file creation operations
+        for (Map.Entry<Path, Long> dirEntry : directoryTimestamps.entrySet()) {
+            Files.setLastModifiedTime(dirEntry.getKey(), FileTime.fromMillis(dirEntry.getValue()));
         }
     }
 
