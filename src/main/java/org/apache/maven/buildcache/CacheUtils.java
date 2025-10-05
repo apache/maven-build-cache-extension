@@ -31,7 +31,9 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
@@ -166,12 +168,25 @@ public class CacheUtils {
             Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
 
                 @Override
+                public FileVisitResult preVisitDirectory(Path path, BasicFileAttributes attrs) throws IOException {
+                    if (!path.equals(dir)) {
+                        String relativePath = dir.relativize(path).toString() + "/";
+                        ZipEntry zipEntry = new ZipEntry(relativePath);
+                        zipEntry.setTime(attrs.lastModifiedTime().toMillis());
+                        zipOutputStream.putNextEntry(zipEntry);
+                        zipOutputStream.closeEntry();
+                    }
+                    return FileVisitResult.CONTINUE;
+                }
+
+                @Override
                 public FileVisitResult visitFile(Path path, BasicFileAttributes basicFileAttributes)
                         throws IOException {
 
                     if (matcher == null || matcher.matches(path.getFileName())) {
                         final ZipEntry zipEntry =
                                 new ZipEntry(dir.relativize(path).toString());
+                        zipEntry.setTime(basicFileAttributes.lastModifiedTime().toMillis());
                         zipOutputStream.putNextEntry(zipEntry);
                         Files.copy(path, zipOutputStream);
                         hasFiles.setTrue();
@@ -185,6 +200,7 @@ public class CacheUtils {
     }
 
     public static void unzip(Path zip, Path out) throws IOException {
+        Map<Path, Long> directoryTimestamps = new HashMap<>();
         try (ZipInputStream zis = new ZipInputStream(Files.newInputStream(zip))) {
             ZipEntry entry = zis.getNextEntry();
             while (entry != null) {
@@ -193,15 +209,26 @@ public class CacheUtils {
                     throw new RuntimeException("Bad zip entry");
                 }
                 if (entry.isDirectory()) {
-                    Files.createDirectory(file);
+                    if (!Files.exists(file)) {
+                        Files.createDirectories(file);
+                    }
+                    directoryTimestamps.put(file, entry.getTime());
                 } else {
                     Path parent = file.getParent();
-                    Files.createDirectories(parent);
+                    if (!Files.exists(parent)) {
+                        Files.createDirectories(parent);
+                    }
                     Files.copy(zis, file, StandardCopyOption.REPLACE_EXISTING);
+                    Files.setLastModifiedTime(file, FileTime.fromMillis(entry.getTime()));
                 }
-                Files.setLastModifiedTime(file, FileTime.fromMillis(entry.getTime()));
                 entry = zis.getNextEntry();
             }
+        }
+
+        // Set directory timestamps after all files have been extracted to avoid them being
+        // updated by file creation operations
+        for (Map.Entry<Path, Long> dirEntry : directoryTimestamps.entrySet()) {
+            Files.setLastModifiedTime(dirEntry.getKey(), FileTime.fromMillis(dirEntry.getValue()));
         }
     }
 
