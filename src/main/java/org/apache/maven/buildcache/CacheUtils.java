@@ -31,10 +31,13 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -156,25 +159,31 @@ public class CacheUtils {
      * @param dir directory to zip
      * @param zip zip to populate
      * @param glob glob to apply to filenames
+     * @param preserveTimestamps whether to preserve file and directory timestamps in the zip
      * @return true if at least one file has been included in the zip.
      * @throws IOException
      */
-    public static boolean zip(final Path dir, final Path zip, final String glob) throws IOException {
+    public static boolean zip(final Path dir, final Path zip, final String glob, boolean preserveTimestamps)
+            throws IOException {
         final MutableBoolean hasFiles = new MutableBoolean();
         try (ZipOutputStream zipOutputStream = new ZipOutputStream(Files.newOutputStream(zip))) {
 
             PathMatcher matcher =
                     "*".equals(glob) ? null : FileSystems.getDefault().getPathMatcher("glob:" + glob);
+
+            // Track directories that contain matching files for glob filtering
+            final Set<Path> directoriesWithMatchingFiles = new HashSet<>();
+            // Track directory attributes for timestamp preservation
+            final Map<Path, BasicFileAttributes> directoryAttributes =
+                    preserveTimestamps ? new HashMap<>() : Collections.emptyMap();
+
             Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
 
                 @Override
                 public FileVisitResult preVisitDirectory(Path path, BasicFileAttributes attrs) throws IOException {
-                    if (!path.equals(dir)) {
-                        String relativePath = dir.relativize(path).toString() + "/";
-                        ZipEntry zipEntry = new ZipEntry(relativePath);
-                        zipEntry.setTime(attrs.lastModifiedTime().toMillis());
-                        zipOutputStream.putNextEntry(zipEntry);
-                        zipOutputStream.closeEntry();
+                    if (preserveTimestamps) {
+                        // Store attributes for use in postVisitDirectory
+                        directoryAttributes.put(path, attrs);
                     }
                     return FileVisitResult.CONTINUE;
                 }
@@ -184,13 +193,49 @@ public class CacheUtils {
                         throws IOException {
 
                     if (matcher == null || matcher.matches(path.getFileName())) {
+                        if (preserveTimestamps) {
+                            // Mark all parent directories as containing matching files
+                            Path parent = path.getParent();
+                            while (parent != null && !parent.equals(dir)) {
+                                directoriesWithMatchingFiles.add(parent);
+                                parent = parent.getParent();
+                            }
+                        }
+
                         final ZipEntry zipEntry =
                                 new ZipEntry(dir.relativize(path).toString());
-                        zipEntry.setTime(basicFileAttributes.lastModifiedTime().toMillis());
+                        if (preserveTimestamps) {
+                            zipEntry.setTime(basicFileAttributes.lastModifiedTime().toMillis());
+                        }
                         zipOutputStream.putNextEntry(zipEntry);
                         Files.copy(path, zipOutputStream);
                         hasFiles.setTrue();
                         zipOutputStream.closeEntry();
+                    }
+                    return FileVisitResult.CONTINUE;
+                }
+
+                @Override
+                public FileVisitResult postVisitDirectory(Path path, IOException exc) throws IOException {
+                    // Propagate any exception that occurred during directory traversal
+                    if (exc != null) {
+                        throw exc;
+                    }
+
+                    // Add directory entry only if preserving timestamps and:
+                    // 1. It's not the root directory, AND
+                    // 2. Either no glob filter (matcher is null) OR directory contains matching files
+                    if (preserveTimestamps
+                            && !path.equals(dir)
+                            && (matcher == null || directoriesWithMatchingFiles.contains(path))) {
+                        BasicFileAttributes attrs = directoryAttributes.get(path);
+                        if (attrs != null) {
+                            String relativePath = dir.relativize(path).toString() + "/";
+                            ZipEntry zipEntry = new ZipEntry(relativePath);
+                            zipEntry.setTime(attrs.lastModifiedTime().toMillis());
+                            zipOutputStream.putNextEntry(zipEntry);
+                            zipOutputStream.closeEntry();
+                        }
                     }
                     return FileVisitResult.CONTINUE;
                 }
@@ -199,8 +244,8 @@ public class CacheUtils {
         return hasFiles.booleanValue();
     }
 
-    public static void unzip(Path zip, Path out) throws IOException {
-        Map<Path, Long> directoryTimestamps = new HashMap<>();
+    public static void unzip(Path zip, Path out, boolean preserveTimestamps) throws IOException {
+        Map<Path, Long> directoryTimestamps = preserveTimestamps ? new HashMap<>() : Collections.emptyMap();
         try (ZipInputStream zis = new ZipInputStream(Files.newInputStream(zip))) {
             ZipEntry entry = zis.getNextEntry();
             while (entry != null) {
@@ -209,26 +254,42 @@ public class CacheUtils {
                     throw new RuntimeException("Bad zip entry");
                 }
                 if (entry.isDirectory()) {
-                    if (!Files.exists(file)) {
-                        Files.createDirectories(file);
+                    Files.createDirectories(file);
+                    if (preserveTimestamps) {
+                        directoryTimestamps.put(file, entry.getTime());
                     }
-                    directoryTimestamps.put(file, entry.getTime());
                 } else {
                     Path parent = file.getParent();
-                    if (!Files.exists(parent)) {
+                    if (parent != null) {
                         Files.createDirectories(parent);
                     }
                     Files.copy(zis, file, StandardCopyOption.REPLACE_EXISTING);
-                    Files.setLastModifiedTime(file, FileTime.fromMillis(entry.getTime()));
+
+                    if (preserveTimestamps) {
+                        // Set file timestamp with error handling
+                        try {
+                            Files.setLastModifiedTime(file, FileTime.fromMillis(entry.getTime()));
+                        } catch (IOException e) {
+                            // Timestamp setting is best-effort; log but don't fail extraction
+                            // This can happen on filesystems that don't support modification times
+                        }
+                    }
                 }
                 entry = zis.getNextEntry();
             }
         }
 
-        // Set directory timestamps after all files have been extracted to avoid them being
-        // updated by file creation operations
-        for (Map.Entry<Path, Long> dirEntry : directoryTimestamps.entrySet()) {
-            Files.setLastModifiedTime(dirEntry.getKey(), FileTime.fromMillis(dirEntry.getValue()));
+        if (preserveTimestamps) {
+            // Set directory timestamps after all files have been extracted to avoid them being
+            // updated by file creation operations
+            for (Map.Entry<Path, Long> dirEntry : directoryTimestamps.entrySet()) {
+                try {
+                    Files.setLastModifiedTime(dirEntry.getKey(), FileTime.fromMillis(dirEntry.getValue()));
+                } catch (IOException e) {
+                    // Timestamp setting is best-effort; log but don't fail extraction
+                    // This can happen on filesystems that don't support modification times
+                }
+            }
         }
     }
 

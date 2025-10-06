@@ -108,6 +108,8 @@ public interface CacheConfig {
 
     List<DirName> getAttachedOutputs();
 
+    boolean isPreserveTimestamps();
+
     boolean adjustMetaInfVersion();
 
     boolean calculateProjectVersionChecksum();
