@@ -35,6 +35,7 @@ import org.apache.maven.buildcache.xml.config.TrackedProperty;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.model.PluginExecution;
 import org.apache.maven.plugin.MojoExecution;
+import org.apache.maven.project.MavenProject;
 
 /**
  * A java interface to the information configured in the maven-build-cache-config.xml file
@@ -106,7 +107,7 @@ public interface CacheConfig {
 
     String getLocalRepositoryLocation();
 
-    List<DirName> getAttachedOutputs();
+    List<DirName> getAttachedOutputs(MavenProject project);
 
     boolean adjustMetaInfVersion();
 

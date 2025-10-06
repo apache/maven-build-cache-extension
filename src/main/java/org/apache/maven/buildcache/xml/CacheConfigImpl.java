@@ -67,6 +67,7 @@ import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.model.PluginExecution;
 import org.apache.maven.plugin.MojoExecution;
+import org.apache.maven.project.MavenProject;
 import org.apache.maven.rtinfo.RuntimeInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -95,6 +96,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     public static final String LAZY_RESTORE_PROPERTY_NAME = "maven.build.cache.lazyRestore";
     public static final String RESTORE_ON_DISK_ARTIFACTS_PROPERTY_NAME = "maven.build.cache.restoreOnDiskArtifacts";
     public static final String RESTORE_GENERATED_SOURCES_PROPERTY_NAME = "maven.build.cache.restoreGeneratedSources";
+    public static final String ATTACHED_OUTPUTS_ENABLED_PROPERTY_NAME = "maven.build.cache.attachedOutputs.enabled";
     public static final String ALWAYS_RUN_PLUGINS = "maven.build.cache.alwaysRunPlugins";
     public static final String MANDATORY_CLEAN = "maven.build.cache.mandatoryClean";
 
@@ -572,27 +574,49 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     }
 
     @Override
-    public List<DirName> getAttachedOutputs() {
+    public List<DirName> getAttachedOutputs(MavenProject project) {
         checkInitializedState();
         final AttachedOutputs attachedOutputs = getConfiguration().getAttachedOutputs();
         if (attachedOutputs == null) {
-            return getDefaultAttachedOutputs();
+            return getDefaultAttachedOutputs(project);
         }
         return attachedOutputs.getDirNames();
     }
 
-    private List<DirName> getDefaultAttachedOutputs() {
+    private List<DirName> getDefaultAttachedOutputs(MavenProject project) {
+        boolean enabled = getProperty(ATTACHED_OUTPUTS_ENABLED_PROPERTY_NAME, true);
+        if (!enabled) {
+            return Collections.emptyList();
+        }
+
         List<DirName> defaults = new ArrayList<>();
 
+        // Get output directories from project build configuration
+        String buildDirectory = project.getBuild().getDirectory();
+        String outputDirectory = project.getBuild().getOutputDirectory();
+        String testOutputDirectory = project.getBuild().getTestOutputDirectory();
+
+        // Compute relative paths from build directory
+        String classesRelative = getRelativePath(buildDirectory, outputDirectory);
+        String testClassesRelative = getRelativePath(buildDirectory, testOutputDirectory);
+
         DirName classes = new DirName();
-        classes.setValue("classes");
+        classes.setValue(classesRelative);
         defaults.add(classes);
 
         DirName testClasses = new DirName();
-        testClasses.setValue("test-classes");
+        testClasses.setValue(testClassesRelative);
         defaults.add(testClasses);
 
         return defaults;
+    }
+
+    private String getRelativePath(String basePath, String fullPath) {
+        // Convert to Path objects and compute relative path
+        Path base = Paths.get(basePath);
+        Path full = Paths.get(fullPath);
+        Path relative = base.relativize(full);
+        return relative.toString();
     }
 
     @Override
