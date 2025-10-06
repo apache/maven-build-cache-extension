@@ -29,14 +29,19 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.stream.Stream;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
-import java.util.zip.ZipOutputStream;
+
+import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
+import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream;
+import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
@@ -159,7 +164,7 @@ public class CacheUtils {
      */
     public static boolean zip(final Path dir, final Path zip, final String glob) throws IOException {
         final MutableBoolean hasFiles = new MutableBoolean();
-        try (ZipOutputStream zipOutputStream = new ZipOutputStream(Files.newOutputStream(zip))) {
+        try (ZipArchiveOutputStream zipOutputStream = new ZipArchiveOutputStream(Files.newOutputStream(zip))) {
 
             PathMatcher matcher =
                     "*".equals(glob) ? null : FileSystems.getDefault().getPathMatcher("glob:" + glob);
@@ -170,12 +175,21 @@ public class CacheUtils {
                         throws IOException {
 
                     if (matcher == null || matcher.matches(path.getFileName())) {
-                        final ZipEntry zipEntry =
-                                new ZipEntry(dir.relativize(path).toString());
-                        zipOutputStream.putNextEntry(zipEntry);
+                        final ZipArchiveEntry zipEntry =
+                                new ZipArchiveEntry(dir.relativize(path).toString());
+
+                        // Preserve Unix permissions if available
+                        try {
+                            Set<PosixFilePermission> permissions = Files.getPosixFilePermissions(path);
+                            zipEntry.setUnixMode(permissionsToMode(permissions));
+                        } catch (UnsupportedOperationException e) {
+                            // Not a POSIX filesystem, permissions not available
+                        }
+
+                        zipOutputStream.putArchiveEntry(zipEntry);
                         Files.copy(path, zipOutputStream);
                         hasFiles.setTrue();
-                        zipOutputStream.closeEntry();
+                        zipOutputStream.closeArchiveEntry();
                     }
                     return FileVisitResult.CONTINUE;
                 }
@@ -185,8 +199,8 @@ public class CacheUtils {
     }
 
     public static void unzip(Path zip, Path out) throws IOException {
-        try (ZipInputStream zis = new ZipInputStream(Files.newInputStream(zip))) {
-            ZipEntry entry = zis.getNextEntry();
+        try (ZipArchiveInputStream zis = new ZipArchiveInputStream(Files.newInputStream(zip))) {
+            ZipArchiveEntry entry = zis.getNextEntry();
             while (entry != null) {
                 Path file = out.resolve(entry.getName());
                 if (!file.normalize().startsWith(out.normalize())) {
@@ -200,6 +214,18 @@ public class CacheUtils {
                     Files.copy(zis, file, StandardCopyOption.REPLACE_EXISTING);
                 }
                 Files.setLastModifiedTime(file, FileTime.fromMillis(entry.getTime()));
+
+                // Restore Unix permissions if available
+                int unixMode = entry.getUnixMode();
+                if (unixMode != 0) {
+                    try {
+                        Set<PosixFilePermission> permissions = modeToPermissions(unixMode);
+                        Files.setPosixFilePermissions(file, permissions);
+                    } catch (UnsupportedOperationException e) {
+                        // Not a POSIX filesystem, cannot set permissions
+                    }
+                }
+
                 entry = zis.getNextEntry();
             }
         }
@@ -216,5 +242,81 @@ public class CacheUtils {
                 logger.debug("{} {} of {} : {}", elementCaption, i, size, value);
             }
         }
+    }
+
+    /**
+     * Convert POSIX file permissions to Unix mode integer.
+     *
+     * @param permissions POSIX file permissions
+     * @return Unix mode as integer (e.g., 0755)
+     */
+    private static int permissionsToMode(Set<PosixFilePermission> permissions) {
+        int mode = 0;
+        if (permissions.contains(PosixFilePermission.OWNER_READ)) {
+            mode |= 0400;
+        }
+        if (permissions.contains(PosixFilePermission.OWNER_WRITE)) {
+            mode |= 0200;
+        }
+        if (permissions.contains(PosixFilePermission.OWNER_EXECUTE)) {
+            mode |= 0100;
+        }
+        if (permissions.contains(PosixFilePermission.GROUP_READ)) {
+            mode |= 0040;
+        }
+        if (permissions.contains(PosixFilePermission.GROUP_WRITE)) {
+            mode |= 0020;
+        }
+        if (permissions.contains(PosixFilePermission.GROUP_EXECUTE)) {
+            mode |= 0010;
+        }
+        if (permissions.contains(PosixFilePermission.OTHERS_READ)) {
+            mode |= 0004;
+        }
+        if (permissions.contains(PosixFilePermission.OTHERS_WRITE)) {
+            mode |= 0002;
+        }
+        if (permissions.contains(PosixFilePermission.OTHERS_EXECUTE)) {
+            mode |= 0001;
+        }
+        return mode;
+    }
+
+    /**
+     * Convert Unix mode integer to POSIX file permissions.
+     *
+     * @param mode Unix mode (e.g., 0755)
+     * @return Set of POSIX file permissions
+     */
+    private static Set<PosixFilePermission> modeToPermissions(int mode) {
+        Set<PosixFilePermission> permissions = new HashSet<>();
+        if ((mode & 0400) != 0) {
+            permissions.add(PosixFilePermission.OWNER_READ);
+        }
+        if ((mode & 0200) != 0) {
+            permissions.add(PosixFilePermission.OWNER_WRITE);
+        }
+        if ((mode & 0100) != 0) {
+            permissions.add(PosixFilePermission.OWNER_EXECUTE);
+        }
+        if ((mode & 0040) != 0) {
+            permissions.add(PosixFilePermission.GROUP_READ);
+        }
+        if ((mode & 0020) != 0) {
+            permissions.add(PosixFilePermission.GROUP_WRITE);
+        }
+        if ((mode & 0010) != 0) {
+            permissions.add(PosixFilePermission.GROUP_EXECUTE);
+        }
+        if ((mode & 0004) != 0) {
+            permissions.add(PosixFilePermission.OTHERS_READ);
+        }
+        if ((mode & 0002) != 0) {
+            permissions.add(PosixFilePermission.OTHERS_WRITE);
+        }
+        if ((mode & 0001) != 0) {
+            permissions.add(PosixFilePermission.OTHERS_EXECUTE);
+        }
+        return permissions;
     }
 }
