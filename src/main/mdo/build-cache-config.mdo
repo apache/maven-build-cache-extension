@@ -383,6 +383,12 @@ under the License.
                     <description>Preserve Unix file permissions when saving/restoring attached outputs. When enabled, permissions are stored in ZIP entry headers and become part of the cache key, ensuring cache invalidation when permissions change. This is similar to how Git includes file mode in tree hashes. Disabling this may improve portability across different systems but will not preserve executable bits.</description>
                 </field>
                 <field>
+                    <name>preserveTimestamps</name>
+                    <type>boolean</type>
+                    <defaultValue>true</defaultValue>
+                    <description>Preserve file and directory timestamps when saving/restoring attached outputs. Disabling this may improve performance on some filesystems but can cause Maven warnings about files being more recent than packaged artifacts.</description>
+                </field>
+                <field>
                     <name>dirNames</name>
                     <association>
                         <type>DirName</type>

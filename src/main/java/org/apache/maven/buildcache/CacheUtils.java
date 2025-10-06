@@ -32,6 +32,7 @@ import java.nio.file.attribute.FileTime;
 import java.nio.file.attribute.PosixFilePermission;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -165,10 +166,11 @@ public class CacheUtils {
      *                           the ZIP file (e.g., for cache keys) will include permission information, ensuring
      *                           cache invalidation when file permissions change. This behavior is similar to how Git
      *                           includes file mode in tree hashes.</p>
+     * @param preserveTimestamps whether to preserve file and directory timestamps in the zip
      * @return true if at least one file has been included in the zip.
      * @throws IOException
      */
-    public static boolean zip(final Path dir, final Path zip, final String glob, boolean preservePermissions)
+    public static boolean zip(final Path dir, final Path zip, final String glob, boolean preservePermissions, boolean preserveTimestamps)
             throws IOException {
         final MutableBoolean hasFiles = new MutableBoolean();
         // Check once if filesystem supports POSIX permissions instead of catching exceptions for every file
@@ -179,16 +181,20 @@ public class CacheUtils {
 
             PathMatcher matcher =
                     "*".equals(glob) ? null : FileSystems.getDefault().getPathMatcher("glob:" + glob);
+
+            // Track directories that contain matching files for glob filtering
+            final Set<Path> directoriesWithMatchingFiles = new HashSet<>();
+            // Track directory attributes for timestamp preservation
+            final Map<Path, BasicFileAttributes> directoryAttributes =
+                    preserveTimestamps ? new HashMap<>() : Collections.emptyMap();
+
             Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
 
                 @Override
                 public FileVisitResult preVisitDirectory(Path path, BasicFileAttributes attrs) throws IOException {
-                    if (!path.equals(dir)) {
-                        String relativePath = dir.relativize(path).toString() + "/";
-                        ZipArchiveEntry zipEntry = new ZipArchiveEntry(relativePath);
-                        zipEntry.setTime(attrs.lastModifiedTime().toMillis());
-                        zipOutputStream.putArchiveEntry(zipEntry);
-                        zipOutputStream.closeArchiveEntry();
+                    if (preserveTimestamps) {
+                        // Store attributes for use in postVisitDirectory
+                        directoryAttributes.put(path, attrs);
                     }
                     return FileVisitResult.CONTINUE;
                 }
@@ -198,11 +204,22 @@ public class CacheUtils {
                         throws IOException {
 
                     if (matcher == null || matcher.matches(path.getFileName())) {
+                        if (preserveTimestamps) {
+                            // Mark all parent directories as containing matching files
+                            Path parent = path.getParent();
+                            while (parent != null && !parent.equals(dir)) {
+                                directoriesWithMatchingFiles.add(parent);
+                                parent = parent.getParent();
+                            }
+                        }
+
                         final ZipArchiveEntry zipEntry =
                                 new ZipArchiveEntry(dir.relativize(path).toString());
 
-                        // Preserve timestamp
-                        zipEntry.setTime(basicFileAttributes.lastModifiedTime().toMillis());
+                        // Preserve timestamp if requested
+                        if (preserveTimestamps) {
+                            zipEntry.setTime(basicFileAttributes.lastModifiedTime().toMillis());
+                        }
 
                         // Preserve Unix permissions if requested and filesystem supports it
                         if (supportsPosix) {
@@ -217,17 +234,42 @@ public class CacheUtils {
                     }
                     return FileVisitResult.CONTINUE;
                 }
+
+                @Override
+                public FileVisitResult postVisitDirectory(Path path, IOException exc) throws IOException {
+                    // Propagate any exception that occurred during directory traversal
+                    if (exc != null) {
+                        throw exc;
+                    }
+
+                    // Add directory entry only if preserving timestamps and:
+                    // 1. It's not the root directory, AND
+                    // 2. Either no glob filter (matcher is null) OR directory contains matching files
+                    if (preserveTimestamps
+                            && !path.equals(dir)
+                            && (matcher == null || directoriesWithMatchingFiles.contains(path))) {
+                        BasicFileAttributes attrs = directoryAttributes.get(path);
+                        if (attrs != null) {
+                            String relativePath = dir.relativize(path).toString() + "/";
+                            ZipArchiveEntry zipEntry = new ZipArchiveEntry(relativePath);
+                            zipEntry.setTime(attrs.lastModifiedTime().toMillis());
+                            zipOutputStream.putArchiveEntry(zipEntry);
+                            zipOutputStream.closeArchiveEntry();
+                        }
+                    }
+                    return FileVisitResult.CONTINUE;
+                }
             });
         }
         return hasFiles.booleanValue();
     }
 
-    public static void unzip(Path zip, Path out, boolean preservePermissions) throws IOException {
+    public static void unzip(Path zip, Path out, boolean preservePermissions, boolean preserveTimestamps) throws IOException {
         // Check once if filesystem supports POSIX permissions instead of catching exceptions for every file
         final boolean supportsPosix = preservePermissions
                 && out.getFileSystem().supportedFileAttributeViews().contains("posix");
 
-        Map<Path, Long> directoryTimestamps = new HashMap<>();
+        Map<Path, Long> directoryTimestamps = preserveTimestamps ? new HashMap<>() : Collections.emptyMap();
         try (ZipArchiveInputStream zis = new ZipArchiveInputStream(Files.newInputStream(zip))) {
             ZipArchiveEntry entry = zis.getNextEntry();
             while (entry != null) {
@@ -236,17 +278,26 @@ public class CacheUtils {
                     throw new RuntimeException("Bad zip entry");
                 }
                 if (entry.isDirectory()) {
-                    if (!Files.exists(file)) {
-                        Files.createDirectories(file);
+                    Files.createDirectories(file);
+                    if (preserveTimestamps) {
+                        directoryTimestamps.put(file, entry.getTime());
                     }
-                    directoryTimestamps.put(file, entry.getTime());
                 } else {
                     Path parent = file.getParent();
-                    if (!Files.exists(parent)) {
+                    if (parent != null) {
                         Files.createDirectories(parent);
                     }
                     Files.copy(zis, file, StandardCopyOption.REPLACE_EXISTING);
-                    Files.setLastModifiedTime(file, FileTime.fromMillis(entry.getTime()));
+
+                    if (preserveTimestamps) {
+                        // Set file timestamp with error handling
+                        try {
+                            Files.setLastModifiedTime(file, FileTime.fromMillis(entry.getTime()));
+                        } catch (IOException e) {
+                            // Timestamp setting is best-effort; log but don't fail extraction
+                            // This can happen on filesystems that don't support modification times
+                        }
+                    }
 
                     // Restore Unix permissions if requested and filesystem supports it
                     if (supportsPosix) {
@@ -261,10 +312,17 @@ public class CacheUtils {
             }
         }
 
-        // Set directory timestamps after all files have been extracted to avoid them being
-        // updated by file creation operations
-        for (Map.Entry<Path, Long> dirEntry : directoryTimestamps.entrySet()) {
-            Files.setLastModifiedTime(dirEntry.getKey(), FileTime.fromMillis(dirEntry.getValue()));
+        if (preserveTimestamps) {
+            // Set directory timestamps after all files have been extracted to avoid them being
+            // updated by file creation operations
+            for (Map.Entry<Path, Long> dirEntry : directoryTimestamps.entrySet()) {
+                try {
+                    Files.setLastModifiedTime(dirEntry.getKey(), FileTime.fromMillis(dirEntry.getValue()));
+                } catch (IOException e) {
+                    // Timestamp setting is best-effort; log but don't fail extraction
+                    // This can happen on filesystems that don't support modification times
+                }
+            }
         }
     }
 
