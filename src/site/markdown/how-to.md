@@ -163,13 +163,168 @@ Add `executionControl/runAlways` section:
 ### Default Reconciliation Behavior
 
 The build cache extension automatically tracks certain critical plugin properties by default, even without explicit
-`executionControl` configuration:
+`executionControl` configuration. These defaults are loaded from `default-reconciliation/defaults.xml`:
 
 * **maven-compiler-plugin** (`compile` and `testCompile` goals): Tracks `source`, `target`, and `release` properties
 * **maven-install-plugin** (`install` goal): Tracked to ensure artifacts are installed when needed
 
 This default behavior prevents common cache invalidation issues, particularly in multi-module JPMS (Java Platform Module System)
 projects where compiler version changes can cause compilation failures.
+
+**Overriding Defaults:** When you explicitly configure `executionControl` for a plugin, your explicit configuration completely
+overrides the defaults for that plugin. For example, to track only the `release` property for maven-compiler-plugin instead
+of the default `source`, `target`, and `release`:
+
+```xml
+<cache xmlns="http://maven.apache.org/BUILD-CACHE-CONFIG/1.2.0">
+    <configuration>
+        ...
+    </configuration>
+    <executionControl>
+        <reconcile>
+            <plugins>
+                <plugin artifactId="maven-compiler-plugin" goal="compile">
+                    <reconciles>
+                        <reconcile propertyName="release"/>
+                    </reconciles>
+                </plugin>
+            </plugins>
+        </reconcile>
+    </executionControl>
+</cache>
+```
+
+This configuration in your `.mvn/maven-build-cache-config.xml` file replaces the built-in defaults. You can also define
+reconciliation configurations for plugins that don't have built-in defaults using the same syntax.
+
+### Parameter Validation and Categorization
+
+The build cache extension includes a parameter validation system that categorizes plugin parameters and validates
+reconciliation configurations against known parameter definitions.
+
+#### Parameter Categories
+
+All plugin parameters are categorized into two types:
+
+* **Functional Parameters**: Affect the compiled output or build artifacts (e.g., `source`, `target`, `release`, `encoding`)
+* **Behavioral Parameters**: Affect how the build runs but not the output (e.g., `verbose`, `fork`, `maxmem`, `skip`)
+
+Only **functional** parameters should be tracked in reconciliation configurations, as behavioral parameters don't affect
+the build output and shouldn't invalidate the cache.
+
+#### Validation Features
+
+The extension automatically validates reconciliation configurations and logs warnings/errors for:
+
+* **Unknown parameters**: Parameters not defined in the plugin's parameter definition (ERROR level)
+  - May indicate a plugin version mismatch or renamed parameter
+  - Suggests updating parameter definitions or removing the parameter from reconciliation
+
+* **Behavioral parameters in reconciliation**: Parameters categorized as behavioral (WARN level)
+  - Suggests that the parameter likely shouldn't affect cache invalidation
+  - Consider removing if it doesn't actually affect build output
+
+#### Adding Parameter Definitions for New Plugins
+
+Parameter definitions are stored in `src/main/resources/plugin-parameters/{artifactId}.xml`. To add validation for a new plugin:
+
+1. Create an XML file following the schema in `plugin-parameters.xsd`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin xmlns="http://maven.apache.org/PLUGIN-PARAMETERS/1.0.0"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://maven.apache.org/PLUGIN-PARAMETERS/1.0.0 plugin-parameters.xsd">
+  <groupId>org.apache.maven.plugins</groupId>
+  <artifactId>maven-example-plugin</artifactId>
+
+  <goals>
+    <goal>
+      <name>example-goal</name>
+      <parameters>
+        <parameter>
+          <name>outputDirectory</name>
+          <type>functional</type>
+          <description>Directory where output is written</description>
+        </parameter>
+        <parameter>
+          <name>verbose</name>
+          <type>behavioral</type>
+          <description>Enable verbose logging</description>
+        </parameter>
+      </parameters>
+    </goal>
+  </goals>
+</plugin>
+```
+
+2. Place the file in the classpath at `plugin-parameters/{artifactId}.xml`
+
+3. The extension will automatically load and validate against this definition
+
+#### Version-Specific Parameter Definitions
+
+The parameter validation system supports version-specific definitions to handle plugins that change parameters across versions. This allows accurate validation even when plugin APIs evolve.
+
+**How Version Matching Works:**
+
+- Definitions include a `minVersion` element specifying the minimum plugin version they apply to
+- At runtime, the extension selects the definition with the highest `minVersion` that is ≤ the actual plugin version
+- Multiple version-specific definitions can exist in a single file
+
+**Example with version-specific parameters:**
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<plugins>
+  <!-- Parameters for versions 1.0.0 through 2.x -->
+  <plugin xmlns="http://maven.apache.org/PLUGIN-PARAMETERS/1.0.0">
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-example-plugin</artifactId>
+    <minVersion>1.0.0</minVersion>
+    <goals>
+      <goal>
+        <name>process</name>
+        <parameters>
+          <parameter>
+            <name>legacyParameter</name>
+            <type>functional</type>
+            <description>Deprecated in 3.0.0</description>
+          </parameter>
+        </parameters>
+      </goal>
+    </goals>
+  </plugin>
+
+  <!-- Parameters for versions 3.0.0+ (breaking change) -->
+  <plugin xmlns="http://maven.apache.org/PLUGIN-PARAMETERS/1.0.0">
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-example-plugin</artifactId>
+    <minVersion>3.0.0</minVersion>
+    <goals>
+      <goal>
+        <name>process</name>
+        <parameters>
+          <parameter>
+            <name>newParameter</name>
+            <type>functional</type>
+            <description>Added in 3.0.0</description>
+          </parameter>
+        </parameters>
+      </goal>
+    </goals>
+  </plugin>
+</plugins>
+```
+
+**Version Selection Examples:**
+
+- Plugin version `1.5.0` → Uses definition with `minVersion=1.0.0`
+- Plugin version `3.0.0` → Uses definition with `minVersion=3.0.0`
+- Plugin version `4.0.0` → Uses definition with `minVersion=3.0.0` (highest available)
+- SNAPSHOT versions are handled correctly (e.g., `3.0.0-SNAPSHOT` matches `minVersion=3.0.0`)
+
+**Current Coverage**: Parameter definitions are included for `maven-compiler-plugin` and `maven-install-plugin`.
 
 ### I occasionally cached build with `-DskipTests=true`, and tests do not run now
 

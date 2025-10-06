@@ -118,6 +118,8 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     private final XmlService xmlService;
     private final Provider<MavenSession> providerSession;
     private final RuntimeInformation rtInfo;
+    private final PluginParameterLoader parameterLoader;
+    private final DefaultReconciliationLoader defaultReconciliationLoader;
 
     private volatile CacheState state;
     private CacheConfig cacheConfig;
@@ -129,6 +131,8 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
         this.xmlService = xmlService;
         this.providerSession = providerSession;
         this.rtInfo = rtInfo;
+        this.parameterLoader = new PluginParameterLoader();
+        this.defaultReconciliationLoader = new DefaultReconciliationLoader();
     }
 
     @Nonnull
@@ -248,74 +252,190 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     }
 
     private GoalReconciliation findReconciliationConfig(MojoExecution mojoExecution) {
-        List<GoalReconciliation> reconciliation;
-
-        if (cacheConfig.getExecutionControl() == null || cacheConfig.getExecutionControl().getReconcile() == null) {
-            // Use default reconciliation configs for common plugins
-            reconciliation = getDefaultReconciliationConfigs();
-        } else {
-            reconciliation = cacheConfig.getExecutionControl().getReconcile().getPlugins();
+        if (mojoExecution == null) {
+            return null;
         }
 
-        for (GoalReconciliation goalReconciliationConfig : reconciliation) {
-            final String goal = mojoExecution.getGoal();
+        final String goal = mojoExecution.getGoal();
+        final Plugin plugin = mojoExecution.getPlugin();
 
-            if (isPluginMatch(mojoExecution.getPlugin(), goalReconciliationConfig)
-                    && Strings.CS.equals(goal, goalReconciliationConfig.getGoal())) {
-                return goalReconciliationConfig;
+        if (plugin == null) {
+            return null;
+        }
+
+        // First check explicit configuration
+        if (cacheConfig.getExecutionControl() != null && cacheConfig.getExecutionControl().getReconcile() != null) {
+            List<GoalReconciliation> explicitConfigs =
+                    cacheConfig.getExecutionControl().getReconcile().getPlugins();
+            for (GoalReconciliation config : explicitConfigs) {
+                if (isPluginMatch(plugin, config) && Strings.CS.equals(goal, config.getGoal())) {
+                    // Validate explicit config against parameter definitions (with version)
+                    validateReconciliationConfig(config, plugin);
+                    return config;
+                }
             }
         }
+
+        // Fall back to defaults if no explicit configuration found
+        List<GoalReconciliation> defaults = getDefaultReconciliationConfigs();
+        for (GoalReconciliation config : defaults) {
+            if (isPluginMatch(plugin, config) && Strings.CS.equals(goal, config.getGoal())) {
+                // Validate default config against parameter definitions (with version)
+                validateReconciliationConfig(config, plugin);
+                return config;
+            }
+        }
+
         return null;
     }
 
+    /**
+     * Validates a single reconciliation config against plugin parameter definitions.
+     * Uses plugin version to load the appropriate parameter definition.
+     */
+    private void validateReconciliationConfig(GoalReconciliation config, Plugin plugin) {
+        String artifactId = config.getArtifactId();
+        String goal = config.getGoal();
+        String pluginVersion = plugin.getVersion();
+
+        // Load parameter definition for this plugin with version
+        PluginParameterDefinition pluginDef = parameterLoader.load(artifactId, pluginVersion);
+
+        if (pluginDef == null) {
+            LOGGER.warn(
+                    "No parameter definition found for plugin {}:{} version {}. "
+                            + "Cannot validate reconciliation configuration. "
+                            + "Consider adding a parameter definition file to plugin-parameters/{}.xml",
+                    artifactId,
+                    goal,
+                    pluginVersion != null ? pluginVersion : "unknown",
+                    artifactId);
+            return;
+        }
+
+        // Get goal definition
+        PluginParameterDefinition.GoalParameterDefinition goalDef = pluginDef.getGoal(goal);
+        if (goalDef == null) {
+            LOGGER.warn(
+                    "Goal '{}' not found in parameter definition for plugin {} version {}. "
+                            + "Cannot validate reconciliation configuration.",
+                    goal,
+                    artifactId,
+                    pluginVersion != null ? pluginVersion : "unknown");
+            return;
+        }
+
+        // Validate each tracked property
+        List<TrackedProperty> properties = config.getReconciles();
+        if (properties == null) {
+            return;
+        }
+
+        for (TrackedProperty property : properties) {
+            String propertyName = property.getPropertyName();
+
+            if (!goalDef.hasParameter(propertyName)) {
+                LOGGER.error(
+                        "Unknown parameter '{}' in reconciliation config for {}:{} version {}. "
+                                + "This may indicate a plugin version mismatch or renamed parameter. "
+                                + "Consider updating parameter definition or removing from reconciliation.",
+                        propertyName,
+                        artifactId,
+                        goal,
+                        pluginVersion != null ? pluginVersion : "unknown");
+            } else {
+                PluginParameterDefinition.ParameterDefinition paramDef = goalDef.getParameter(propertyName);
+                if (paramDef.isBehavioral()) {
+                    LOGGER.warn(
+                            "Parameter '{}' in reconciliation config for {}:{} is categorized as BEHAVIORAL. "
+                                    + "Behavioral parameters affect how the build runs but not the output. "
+                                    + "Consider removing if it doesn't actually affect build artifacts.",
+                            propertyName,
+                            artifactId,
+                            goal);
+                }
+            }
+        }
+    }
+
+    /**
+     * Load default reconciliation configurations from XML.
+     * Defaults are loaded from classpath: default-reconciliation/defaults.xml
+     */
     private List<GoalReconciliation> getDefaultReconciliationConfigs() {
-        List<GoalReconciliation> defaults = new ArrayList<>();
+        List<GoalReconciliation> defaults = defaultReconciliationLoader.loadDefaults();
 
-        // maven-compiler-plugin:compile - track source, target, release
-        GoalReconciliation compilerCompile = new GoalReconciliation();
-        compilerCompile.setArtifactId("maven-compiler-plugin");
-        compilerCompile.setGoal("compile");
-
-        TrackedProperty source = new TrackedProperty();
-        source.setPropertyName("source");
-        compilerCompile.addReconcile(source);
-
-        TrackedProperty target = new TrackedProperty();
-        target.setPropertyName("target");
-        compilerCompile.addReconcile(target);
-
-        TrackedProperty release = new TrackedProperty();
-        release.setPropertyName("release");
-        compilerCompile.addReconcile(release);
-
-        defaults.add(compilerCompile);
-
-        // maven-compiler-plugin:testCompile - track source, target, release
-        GoalReconciliation compilerTestCompile = new GoalReconciliation();
-        compilerTestCompile.setArtifactId("maven-compiler-plugin");
-        compilerTestCompile.setGoal("testCompile");
-
-        TrackedProperty testSource = new TrackedProperty();
-        testSource.setPropertyName("source");
-        compilerTestCompile.addReconcile(testSource);
-
-        TrackedProperty testTarget = new TrackedProperty();
-        testTarget.setPropertyName("target");
-        compilerTestCompile.addReconcile(testTarget);
-
-        TrackedProperty testRelease = new TrackedProperty();
-        testRelease.setPropertyName("release");
-        compilerTestCompile.addReconcile(testRelease);
-
-        defaults.add(compilerTestCompile);
-
-        // maven-install-plugin:install - always run (empty reconciliation means it's tracked)
-        GoalReconciliation install = new GoalReconciliation();
-        install.setArtifactId("maven-install-plugin");
-        install.setGoal("install");
-        defaults.add(install);
+        // Validate all default configurations against parameter definitions
+        validateReconciliationConfigs(defaults);
 
         return defaults;
+    }
+
+    /**
+     * Validates reconciliation configs against plugin parameter definitions.
+     * Warns about unknown parameters that may indicate plugin changes or configuration errors.
+     */
+    private void validateReconciliationConfigs(List<GoalReconciliation> configs) {
+        for (GoalReconciliation config : configs) {
+            String artifactId = config.getArtifactId();
+            String goal = config.getGoal();
+
+            // Load parameter definition for this plugin
+            PluginParameterDefinition pluginDef = parameterLoader.load(artifactId);
+
+            if (pluginDef == null) {
+                LOGGER.warn(
+                        "No parameter definition found for plugin {}:{}. "
+                                + "Cannot validate reconciliation configuration. "
+                                + "Consider adding a parameter definition file to plugin-parameters/{}.xml",
+                        artifactId,
+                        goal,
+                        artifactId);
+                continue;
+            }
+
+            // Get goal definition
+            PluginParameterDefinition.GoalParameterDefinition goalDef = pluginDef.getGoal(goal);
+            if (goalDef == null) {
+                LOGGER.warn(
+                        "Goal '{}' not found in parameter definition for plugin {}. "
+                                + "Cannot validate reconciliation configuration.",
+                        goal,
+                        artifactId);
+                continue;
+            }
+
+            // Validate each tracked property
+            List<TrackedProperty> properties = config.getReconciles();
+            if (properties != null) {
+                for (TrackedProperty property : properties) {
+                    String propertyName = property.getPropertyName();
+
+                    if (!goalDef.hasParameter(propertyName)) {
+                        LOGGER.error(
+                                "Unknown parameter '{}' in default reconciliation config for {}:{}. "
+                                        + "This parameter is not defined in the plugin parameter definition. "
+                                        + "This may indicate a plugin version mismatch or renamed parameter. "
+                                        + "Please update the parameter definition or remove this property from reconciliation.",
+                                propertyName,
+                                artifactId,
+                                goal);
+                    } else {
+                        PluginParameterDefinition.ParameterDefinition paramDef =
+                                goalDef.getParameter(propertyName);
+                        if (paramDef.isBehavioral()) {
+                            LOGGER.warn(
+                                    "Parameter '{}' in reconciliation config for {}:{} is categorized as BEHAVIORAL. "
+                                            + "Behavioral parameters typically should not affect cache invalidation. "
+                                            + "Consider removing this parameter from reconciliation if it doesn't affect build output.",
+                                    propertyName,
+                                    artifactId,
+                                    goal);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     @Nonnull
