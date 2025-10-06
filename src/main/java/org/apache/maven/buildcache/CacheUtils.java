@@ -160,7 +160,12 @@ public class CacheUtils {
      * @param dir directory to zip
      * @param zip zip to populate
      * @param glob glob to apply to filenames
-     * @param preserveTimestamps whether to preserve file and directory timestamps in the zip
+     * @param preserveTimestamps whether to preserve file and directory timestamps in the zip.
+     *                          <p><b>Important:</b> When {@code true}, timestamps are stored in ZIP entry headers,
+     *                          which means they become part of the ZIP file's binary content. As a result, hashing
+     *                          the ZIP file (e.g., for cache keys) will include timestamp information, ensuring
+     *                          cache invalidation when file timestamps change. This behavior is similar to how Git
+     *                          includes file mode in tree hashes.</p>
      * @return true if at least one file has been included in the zip.
      * @throws IOException
      */

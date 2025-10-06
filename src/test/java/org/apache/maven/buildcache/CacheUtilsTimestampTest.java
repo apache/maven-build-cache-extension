@@ -427,6 +427,53 @@ class CacheUtilsTimestampTest {
     }
 
     /**
+     * Tests that ZIP file hash changes when timestamps change (when preserveTimestamps=true).
+     * This ensures that the cache invalidates when file timestamps change, maintaining
+     * cache correctness similar to how Git includes file mode in tree hashes.
+     */
+    @Test
+    void testTimestampsAffectFileHash() throws IOException {
+        // Given: Same directory content with different timestamps
+        Path sourceDir1 = tempDir.resolve("source1");
+        Files.createDirectories(sourceDir1);
+        Path file1 = sourceDir1.resolve("test.txt");
+        writeString(file1, "Same content");
+
+        Instant time1 = Instant.now().minus(2, ChronoUnit.HOURS);
+        Files.setLastModifiedTime(file1, FileTime.from(time1));
+
+        // Create second directory with identical content but different timestamp
+        Path sourceDir2 = tempDir.resolve("source2");
+        Files.createDirectories(sourceDir2);
+        Path file2 = sourceDir2.resolve("test.txt");
+        writeString(file2, "Same content");  // Identical content
+
+        Instant time2 = Instant.now().minus(1, ChronoUnit.HOURS);  // Different timestamp
+        Files.setLastModifiedTime(file2, FileTime.from(time2));
+
+        // When: Create ZIP files with preserveTimestamps=true
+        Path zip1 = tempDir.resolve("cache1.zip");
+        Path zip2 = tempDir.resolve("cache2.zip");
+        CacheUtils.zip(sourceDir1, zip1, "*", true);
+        CacheUtils.zip(sourceDir2, zip2, "*", true);
+
+        // Then: ZIP files should have different hashes despite identical content
+        byte[] hash1 = Files.readAllBytes(zip1);
+        byte[] hash2 = Files.readAllBytes(zip2);
+
+        boolean hashesAreDifferent = !Arrays.equals(hash1, hash2);
+        assertTrue(hashesAreDifferent,
+                "ZIP files with same content but different timestamps should have different hashes " +
+                "when preserveTimestamps=true. This ensures cache invalidation when timestamps change.");
+
+        // Note: When preserveTimestamps=false, ZIP entries use current system time during creation,
+        // which means ZIP files created at different times will still differ. However, the critical
+        // distinction is that with preserveTimestamps=true, the original file timestamps are
+        // deterministically stored in ZIP entries, ensuring consistent cache behavior and proper
+        // cache invalidation when file timestamps change in the source.
+    }
+
+    /**
      * Recursively deletes a directory and all its contents.
      */
     private void deleteRecursively(Path directory) throws IOException {
