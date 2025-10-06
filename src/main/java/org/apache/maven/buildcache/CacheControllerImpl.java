@@ -1059,7 +1059,7 @@ public class CacheControllerImpl implements CacheController {
             throws IOException {
         Path temp = Files.createTempFile("maven-incremental-", project.getArtifactId());
         temp.toFile().deleteOnExit();
-        boolean hasFile = CacheUtils.zip(dir, temp, glob, cacheConfig.isPreservePermissions());
+        boolean hasFile = CacheUtils.zip(dir, temp, glob, cacheConfig.isPreservePermissions(), cacheConfig.isPreserveTimestamps());
         if (hasFile) {
             projectHelper.attachArtifact(project, "zip", classifier, temp.toFile());
         }
@@ -1074,7 +1074,7 @@ public class CacheControllerImpl implements CacheController {
         if (!Files.exists(outputDir)) {
             Files.createDirectories(outputDir);
         }
-        CacheUtils.unzip(artifactFilePath, outputDir, cacheConfig.isPreservePermissions());
+        CacheUtils.unzip(artifactFilePath, outputDir, cacheConfig.isPreservePermissions(), cacheConfig.isPreserveTimestamps());
     }
 
     // TODO: move to config
