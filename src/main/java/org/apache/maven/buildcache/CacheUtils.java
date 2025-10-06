@@ -27,6 +27,7 @@ import java.nio.file.Path;
 import java.nio.file.PathMatcher;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.util.Arrays;
@@ -266,13 +267,7 @@ public class CacheUtils {
                     Files.copy(zis, file, StandardCopyOption.REPLACE_EXISTING);
 
                     if (preserveTimestamps) {
-                        // Set file timestamp with error handling
-                        try {
-                            Files.setLastModifiedTime(file, FileTime.fromMillis(entry.getTime()));
-                        } catch (IOException e) {
-                            // Timestamp setting is best-effort; log but don't fail extraction
-                            // This can happen on filesystems that don't support modification times
-                        }
+                        setAllTimestamps(file, entry.getTime());
                     }
                 }
                 entry = zis.getNextEntry();
@@ -283,13 +278,29 @@ public class CacheUtils {
             // Set directory timestamps after all files have been extracted to avoid them being
             // updated by file creation operations
             for (Map.Entry<Path, Long> dirEntry : directoryTimestamps.entrySet()) {
-                try {
-                    Files.setLastModifiedTime(dirEntry.getKey(), FileTime.fromMillis(dirEntry.getValue()));
-                } catch (IOException e) {
-                    // Timestamp setting is best-effort; log but don't fail extraction
-                    // This can happen on filesystems that don't support modification times
-                }
+                setAllTimestamps(dirEntry.getKey(), dirEntry.getValue());
             }
+        }
+    }
+
+    /**
+     * Sets all timestamps (lastModifiedTime, lastAccessTime, and creationTime) for a path
+     * to the same value to ensure consistency. This is a best-effort operation that silently
+     * ignores errors on filesystems that don't support timestamp modification.
+     *
+     * @param path the path to update
+     * @param timestampMillis the timestamp in milliseconds since epoch
+     */
+    private static void setAllTimestamps(Path path, long timestampMillis) {
+        try {
+            BasicFileAttributeView attributes = Files.getFileAttributeView(path, BasicFileAttributeView.class);
+            if (attributes != null) {
+                FileTime time = FileTime.fromMillis(timestampMillis);
+                attributes.setTimes(time, time, time);
+            }
+        } catch (IOException e) {
+            // Timestamp setting is best-effort; log but don't fail extraction
+            // This can happen on filesystems that don't support modification times
         }
     }
 
