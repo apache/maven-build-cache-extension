@@ -159,11 +159,21 @@ public class CacheUtils {
      * @param dir directory to zip
      * @param zip zip to populate
      * @param glob glob to apply to filenames
+     * @param preservePermissions whether to preserve Unix file permissions in the zip.
+     *                           <p><b>Important:</b> When {@code true}, permissions are stored in ZIP entry headers,
+     *                           which means they become part of the ZIP file's binary content. As a result, hashing
+     *                           the ZIP file (e.g., for cache keys) will include permission information, ensuring
+     *                           cache invalidation when file permissions change. This behavior is similar to how Git
+     *                           includes file mode in tree hashes.</p>
      * @return true if at least one file has been included in the zip.
      * @throws IOException
      */
-    public static boolean zip(final Path dir, final Path zip, final String glob) throws IOException {
+    public static boolean zip(final Path dir, final Path zip, final String glob, boolean preservePermissions) throws IOException {
         final MutableBoolean hasFiles = new MutableBoolean();
+        // Check once if filesystem supports POSIX permissions instead of catching exceptions for every file
+        final boolean supportsPosix = preservePermissions
+                && dir.getFileSystem().supportedFileAttributeViews().contains("posix");
+
         try (ZipArchiveOutputStream zipOutputStream = new ZipArchiveOutputStream(Files.newOutputStream(zip))) {
 
             PathMatcher matcher =
@@ -178,12 +188,10 @@ public class CacheUtils {
                         final ZipArchiveEntry zipEntry =
                                 new ZipArchiveEntry(dir.relativize(path).toString());
 
-                        // Preserve Unix permissions if available
-                        try {
+                        // Preserve Unix permissions if requested and filesystem supports it
+                        if (supportsPosix) {
                             Set<PosixFilePermission> permissions = Files.getPosixFilePermissions(path);
                             zipEntry.setUnixMode(permissionsToMode(permissions));
-                        } catch (UnsupportedOperationException e) {
-                            // Not a POSIX filesystem, permissions not available
                         }
 
                         zipOutputStream.putArchiveEntry(zipEntry);
@@ -198,7 +206,11 @@ public class CacheUtils {
         return hasFiles.booleanValue();
     }
 
-    public static void unzip(Path zip, Path out) throws IOException {
+    public static void unzip(Path zip, Path out, boolean preservePermissions) throws IOException {
+        // Check once if filesystem supports POSIX permissions instead of catching exceptions for every file
+        final boolean supportsPosix = preservePermissions
+                && out.getFileSystem().supportedFileAttributeViews().contains("posix");
+
         try (ZipArchiveInputStream zis = new ZipArchiveInputStream(Files.newInputStream(zip))) {
             ZipArchiveEntry entry = zis.getNextEntry();
             while (entry != null) {
@@ -215,14 +227,12 @@ public class CacheUtils {
                 }
                 Files.setLastModifiedTime(file, FileTime.fromMillis(entry.getTime()));
 
-                // Restore Unix permissions if available
-                int unixMode = entry.getUnixMode();
-                if (unixMode != 0) {
-                    try {
+                // Restore Unix permissions if requested and filesystem supports it
+                if (supportsPosix) {
+                    int unixMode = entry.getUnixMode();
+                    if (unixMode != 0) {
                         Set<PosixFilePermission> permissions = modeToPermissions(unixMode);
                         Files.setPosixFilePermissions(file, permissions);
-                    } catch (UnsupportedOperationException e) {
-                        // Not a POSIX filesystem, cannot set permissions
                     }
                 }
 
@@ -248,10 +258,12 @@ public class CacheUtils {
      * Convert POSIX file permissions to Unix mode integer.
      *
      * @param permissions POSIX file permissions
-     * @return Unix mode as integer (e.g., 0755)
+     * @return Unix mode as integer (e.g., {@code 0100755} for regular file with {@code rwxr-xr-x})
      */
     private static int permissionsToMode(Set<PosixFilePermission> permissions) {
-        int mode = 0;
+        // Start with regular file type (0100000 in octal)
+        int mode = 0100000;
+
         if (permissions.contains(PosixFilePermission.OWNER_READ)) {
             mode |= 0400;
         }
@@ -285,11 +297,12 @@ public class CacheUtils {
     /**
      * Convert Unix mode integer to POSIX file permissions.
      *
-     * @param mode Unix mode (e.g., 0755)
+     * @param mode Unix mode (e.g., {@code 0100755} for regular file with {@code rwxr-xr-x})
      * @return Set of POSIX file permissions
      */
     private static Set<PosixFilePermission> modeToPermissions(int mode) {
         Set<PosixFilePermission> permissions = new HashSet<>();
+        // Extract permission bits (lower 9 bits), ignoring file type bits
         if ((mode & 0400) != 0) {
             permissions.add(PosixFilePermission.OWNER_READ);
         }
