@@ -498,25 +498,23 @@ public class CacheControllerImpl implements CacheController {
         final MavenProject project = context.getProject();
         final MavenSession session = context.getSession();
         try {
+            attachedResourcesPathsById.clear();
+            attachedResourceCounter = 0;
+
             final HashFactory hashFactory = cacheConfig.getHashFactory();
+            final HashAlgorithm algorithm = hashFactory.createAlgorithm();
             final org.apache.maven.artifact.Artifact projectArtifact = project.getArtifact();
-            final List<org.apache.maven.artifact.Artifact> attachedArtifacts;
-            final List<Artifact> attachedArtifactDtos;
-            final Artifact projectArtifactDto;
-            if (project.hasLifecyclePhase("package")) {
-                final HashAlgorithm algorithm = hashFactory.createAlgorithm();
-                attachGeneratedSources(project);
-                attachOutputs(project);
-                attachedArtifacts = project.getAttachedArtifacts() != null
-                        ? project.getAttachedArtifacts()
-                        : Collections.emptyList();
-                attachedArtifactDtos = artifactDtos(attachedArtifacts, algorithm, project);
-                projectArtifactDto = artifactDto(project.getArtifact(), algorithm, project);
-            } else {
-                attachedArtifacts = Collections.emptyList();
-                attachedArtifactDtos = new ArrayList<>();
-                projectArtifactDto = null;
-            }
+            final boolean hasPackagePhase = project.hasLifecyclePhase("package");
+
+            attachGeneratedSources(project);
+            attachOutputs(project);
+
+            final List<org.apache.maven.artifact.Artifact> attachedArtifacts = project.getAttachedArtifacts() != null
+                    ? project.getAttachedArtifacts()
+                    : Collections.emptyList();
+            final List<Artifact> attachedArtifactDtos = artifactDtos(attachedArtifacts, algorithm, project);
+            final Artifact projectArtifactDto = hasPackagePhase ? artifactDto(project.getArtifact(), algorithm, project)
+                    : null;
 
             List<CompletedExecution> completedExecution = buildExecutionInfo(mojoExecutions, executionEvents);
 
@@ -534,22 +532,19 @@ public class CacheControllerImpl implements CacheController {
             localCache.beforeSave(context);
 
             // if package phase presence means new artifacts were packaged
-            if (project.hasLifecyclePhase("package")) {
-                if (projectArtifact.getFile() != null) {
-                    localCache.saveArtifactFile(cacheResult, projectArtifact);
-                }
-                for (org.apache.maven.artifact.Artifact attachedArtifact : attachedArtifacts) {
-                    if (attachedArtifact.getFile() != null) {
-                        boolean storeArtifact =
-                                isOutputArtifact(attachedArtifact.getFile().getName());
-                        if (storeArtifact) {
-                            localCache.saveArtifactFile(cacheResult, attachedArtifact);
-                        } else {
-                            LOGGER.debug(
-                                    "Skipping attached project artifact '{}' = "
-                                            + " it is marked for exclusion from caching",
-                                    attachedArtifact.getFile().getName());
-                        }
+            if (hasPackagePhase && projectArtifact.getFile() != null) {
+                localCache.saveArtifactFile(cacheResult, projectArtifact);
+            }
+            for (org.apache.maven.artifact.Artifact attachedArtifact : attachedArtifacts) {
+                if (attachedArtifact.getFile() != null) {
+                    boolean storeArtifact = isOutputArtifact(attachedArtifact.getFile().getName());
+                    if (storeArtifact) {
+                        localCache.saveArtifactFile(cacheResult, attachedArtifact);
+                    } else {
+                        LOGGER.debug(
+                                "Skipping attached project artifact '{}' = "
+                                        + " it is marked for exclusion from caching",
+                                attachedArtifact.getFile().getName());
                     }
                 }
             }
