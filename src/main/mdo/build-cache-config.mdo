@@ -374,7 +374,8 @@ under the License.
           -->
         <class>
             <name>AttachedOutputs</name>
-            <description>Section relative to outputs which are not artifacts but need to be saved/restored.</description>
+            <description>Section relative to outputs which are not artifacts but need to be saved/restored.
+            If not specified, defaults to caching 'classes' and 'test-classes' directories.</description>
             <fields>
                 <field>
                     <name>dirNames</name>
@@ -382,7 +383,8 @@ under the License.
                         <type>DirName</type>
                         <multiplicity>*</multiplicity>
                     </association>
-                    <description>Path to a directory containing files which needs to be saved/restored (relative to the build directory).</description>
+                    <description>Path to a directory containing files which needs to be saved/restored (relative to the build directory).
+                    When omitted, the cache defaults to saving and restoring the 'classes' and 'test-classes' directories.</description>
                 </field>
             </fields>
         </class>

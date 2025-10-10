@@ -72,8 +72,7 @@ When a configuration is disabled by default in the config, it can be enabled via
 
 Build cache extension is generally compatible with IDEs with one limitation:
 
-* The cache doesn't restore the entire project state. Compiled classes, unpacked artifacts, and similar ones typically
-  will not be restored in the build directory (aka `target`). Configure your IDE to not use Maven
-  build (`target`) directories for compilation and execution. In that case, IDE will provide fast compilation using
-  native caches, and
-  the build cache will supplement that with fast builds.
+* The cache restores `classes` and `test-classes` directories by default, but may not restore other artifacts like
+  unpacked dependencies or generated resources. Configure your IDE to not use Maven build (`target`) directories for
+  compilation and execution if you experience issues. In that case, IDE will provide fast compilation using
+  native caches, and the build cache will supplement that with fast builds.

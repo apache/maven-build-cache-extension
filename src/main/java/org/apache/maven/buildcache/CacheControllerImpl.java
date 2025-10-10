@@ -930,7 +930,7 @@ public class CacheControllerImpl implements CacheController {
     }
 
     private void attachOutputs(MavenProject project) throws IOException {
-        final List<DirName> attachedDirs = cacheConfig.getAttachedOutputs();
+        final List<DirName> attachedDirs = cacheConfig.getAttachedOutputs(project);
         for (DirName dir : attachedDirs) {
             final Path targetDir = Paths.get(project.getBuild().getDirectory());
             final Path outputDir = targetDir.resolve(dir.getValue());

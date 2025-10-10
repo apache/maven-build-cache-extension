@@ -31,6 +31,7 @@ import java.nio.file.spi.FileSystemProvider;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
@@ -39,13 +40,17 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.maven.buildcache.DefaultPluginScanConfig;
 import org.apache.maven.buildcache.hash.HashFactory;
+import org.apache.maven.buildcache.xml.config.AttachedOutputs;
 import org.apache.maven.buildcache.xml.config.Configuration;
+import org.apache.maven.buildcache.xml.config.DirName;
 import org.apache.maven.buildcache.xml.config.Remote;
 import org.apache.maven.execution.MavenExecutionRequest;
 import org.apache.maven.execution.MavenSession;
+import org.apache.maven.model.Build;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.model.PluginExecution;
 import org.apache.maven.plugin.MojoExecution;
+import org.apache.maven.project.MavenProject;
 import org.apache.maven.rtinfo.RuntimeInformation;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -169,7 +174,7 @@ class CacheConfigImplTest {
         asserts.put("calculateProjectVersionChecksum", () -> assertFalse(testObject.calculateProjectVersionChecksum()));
         asserts.put("canIgnore", () -> assertFalse(testObject.canIgnore(mock(MojoExecution.class))));
         asserts.put("getAlwaysRunPlugins", () -> assertNull(testObject.getAlwaysRunPlugins()));
-        asserts.put("getAttachedOutputs", () -> assertEquals(Collections.emptyList(), testObject.getAttachedOutputs()));
+        // getAttachedOutputs removed - requires MavenProject parameter, tested separately
         asserts.put("getBaselineCacheUrl", () -> assertNull(testObject.getBaselineCacheUrl()));
         asserts.put("getDefaultGlob", () -> assertEquals("*", testObject.getDefaultGlob()));
         asserts.put(
@@ -481,5 +486,112 @@ class CacheConfigImplTest {
         assertDefaults(
                 Pair.of("getUrl", () -> assertEquals("dummy.url.xyz", testObject.getUrl())),
                 Pair.of("isRemoteCacheEnabled", () -> assertTrue(testObject.isRemoteCacheEnabled())));
+    }
+
+    @Test
+    void testDefaultAttachedOutputsWhenNotConfigured() {
+        // When attachedOutputs is not configured in XML, should return default list
+        Configuration configuration = new Configuration();
+        // Deliberately not setting attachedOutputs
+        testCacheConfig.setConfiguration(configuration);
+
+        assertEquals(CacheState.INITIALIZED, testObject.initialize());
+
+        // Create mock project with default build configuration
+        MavenProject mockProject = mock(MavenProject.class);
+        Build mockBuild = mock(Build.class);
+        when(mockProject.getBuild()).thenReturn(mockBuild);
+        when(mockBuild.getDirectory()).thenReturn("/project/target");
+        when(mockBuild.getOutputDirectory()).thenReturn("/project/target/classes");
+        when(mockBuild.getTestOutputDirectory()).thenReturn("/project/target/test-classes");
+
+        List<DirName> attachedOutputs = testObject.getAttachedOutputs(mockProject);
+        assertEquals(2, attachedOutputs.size(), "Should have 2 default attached outputs");
+
+        List<String> dirNames = attachedOutputs.stream()
+                .map(DirName::getValue)
+                .collect(Collectors.toList());
+
+        assertTrue(dirNames.contains("classes"), "Should include 'classes' directory by default");
+        assertTrue(dirNames.contains("test-classes"), "Should include 'test-classes' directory by default");
+    }
+
+    @Test
+    void testExplicitAttachedOutputsOverridesDefaults() {
+        // When attachedOutputs is explicitly configured, should use those values instead of defaults
+        Configuration configuration = new Configuration();
+        AttachedOutputs attachedOutputs = new AttachedOutputs();
+
+        DirName customDir = new DirName();
+        customDir.setValue("custom-output");
+        attachedOutputs.addDirName(customDir);
+
+        configuration.setAttachedOutputs(attachedOutputs);
+        testCacheConfig.setConfiguration(configuration);
+
+        assertEquals(CacheState.INITIALIZED, testObject.initialize());
+
+        // Create mock project (not used when explicit config is set, but required by interface)
+        MavenProject mockProject = mock(MavenProject.class);
+        Build mockBuild = mock(Build.class);
+        when(mockProject.getBuild()).thenReturn(mockBuild);
+        when(mockBuild.getDirectory()).thenReturn("/project/target");
+        when(mockBuild.getOutputDirectory()).thenReturn("/project/target/classes");
+        when(mockBuild.getTestOutputDirectory()).thenReturn("/project/target/test-classes");
+
+        List<DirName> result = testObject.getAttachedOutputs(mockProject);
+        assertEquals(1, result.size(), "Should have 1 explicitly configured output");
+        assertEquals("custom-output", result.get(0).getValue(),
+                "Should use explicitly configured directory, not defaults");
+    }
+
+    @Test
+    void testDefaultAttachedOutputsDisabledViaProperty() {
+        // When attachedOutputs.enabled property is false, should return empty list
+        Configuration configuration = new Configuration();
+        testCacheConfig.setConfiguration(configuration);
+
+        when(mockProperties.getProperty(CacheConfigImpl.ATTACHED_OUTPUTS_ENABLED_PROPERTY_NAME))
+                .thenReturn("false");
+
+        assertEquals(CacheState.INITIALIZED, testObject.initialize());
+
+        // Create mock project
+        MavenProject mockProject = mock(MavenProject.class);
+        Build mockBuild = mock(Build.class);
+        when(mockProject.getBuild()).thenReturn(mockBuild);
+        when(mockBuild.getDirectory()).thenReturn("/project/target");
+        when(mockBuild.getOutputDirectory()).thenReturn("/project/target/classes");
+        when(mockBuild.getTestOutputDirectory()).thenReturn("/project/target/test-classes");
+
+        List<DirName> attachedOutputs = testObject.getAttachedOutputs(mockProject);
+        assertEquals(0, attachedOutputs.size(), "Should return empty list when disabled via property");
+    }
+
+    @Test
+    void testDefaultAttachedOutputsWithCustomDirectories() {
+        // When project has custom output directories, should use those
+        Configuration configuration = new Configuration();
+        testCacheConfig.setConfiguration(configuration);
+
+        assertEquals(CacheState.INITIALIZED, testObject.initialize());
+
+        // Create mock project with custom output directories
+        MavenProject mockProject = mock(MavenProject.class);
+        Build mockBuild = mock(Build.class);
+        when(mockProject.getBuild()).thenReturn(mockBuild);
+        when(mockBuild.getDirectory()).thenReturn("/project/build");
+        when(mockBuild.getOutputDirectory()).thenReturn("/project/build/custom-classes");
+        when(mockBuild.getTestOutputDirectory()).thenReturn("/project/build/custom-test-classes");
+
+        List<DirName> attachedOutputs = testObject.getAttachedOutputs(mockProject);
+        assertEquals(2, attachedOutputs.size(), "Should have 2 default attached outputs");
+
+        List<String> dirNames = attachedOutputs.stream()
+                .map(DirName::getValue)
+                .collect(Collectors.toList());
+
+        assertTrue(dirNames.contains("custom-classes"), "Should include custom output directory");
+        assertTrue(dirNames.contains("custom-test-classes"), "Should include custom test output directory");
     }
 }
