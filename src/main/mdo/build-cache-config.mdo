@@ -1459,6 +1459,11 @@ under the License.
                     <name>defaultValue</name>
                     <type>String</type>
                 </field>
+                <field xml.attribute="true">
+                    <name>ignorePattern</name>
+                    <type>String</type>
+                    <description>Regular expression pattern to filter out matching values from array/list properties before comparison. Useful for filtering auto-injected values like Maven 4's --module-version</description>
+                </field>
             </fields>
         </class>
     </classes>

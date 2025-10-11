@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.Strings;
 import org.apache.maven.SessionScoped;
 import org.apache.maven.buildcache.artifact.ArtifactRestorationReport;
@@ -379,7 +378,7 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                     Path baseDirPath = project.getBasedir().toPath();
                     currentValue = normalizedPath(((Path) value), baseDirPath);
                 } else if (value != null && value.getClass().isArray()) {
-                    currentValue = ArrayUtils.toString(value);
+                    currentValue = ArrayFilterUtils.filterAndStringifyArray(value, trackedProperty.getIgnorePattern());
                 } else {
                     currentValue = String.valueOf(value);
                 }
