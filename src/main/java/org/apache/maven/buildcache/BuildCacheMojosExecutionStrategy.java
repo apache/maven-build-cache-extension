@@ -136,6 +136,19 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                 }
                 if (cacheState == INITIALIZED || skipCache) {
                     result = cacheController.findCachedBuild(session, project, mojoExecutions, skipCache);
+
+                    // Capture validation-time properties for all mojos to ensure consistent property reading
+                    // at the same lifecycle point for all builds (eliminates Maven 4 injection timing issues)
+                    // Always capture when cacheState is INITIALIZED since we may need to save
+                    if (cacheState == INITIALIZED) {
+                        Map<String, MojoExecutionEvent> validationTimeEvents =
+                                captureValidationTimeProperties(session, project, mojoExecutions);
+                        result = CacheResult.rebuilded(result, validationTimeEvents);
+                        LOGGER.debug(
+                                "Captured validation-time properties for {} mojos in project {}",
+                                validationTimeEvents.size(),
+                                projectName);
+                    }
                 }
             } else {
                 LOGGER.info("Cache is disabled on project level for {}", projectName);
@@ -184,9 +197,16 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                                     .isEmpty()) {
                         LOGGER.debug("Cache storing is skipped since there was no \"clean\" phase.");
                     } else {
-                        final Map<String, MojoExecutionEvent> executionEvents =
-                                mojoListener.getProjectExecutions(project);
-                        cacheController.save(result, mojoExecutions, executionEvents);
+                        // Validation-time events must exist for cache storage
+                        // If they don't exist, this indicates a bug in the capture logic
+                        if (result.getValidationTimeEvents() == null || result.getValidationTimeEvents().isEmpty()) {
+                            throw new AssertionError(
+                                    "Validation-time properties not captured for project " + projectName
+                                            + ". This is a bug - validation-time capture should always succeed when saving to cache.");
+                        }
+                        LOGGER.debug(
+                                "Using validation-time properties for cache storage (consistent lifecycle point)");
+                        cacheController.save(result, mojoExecutions, result.getValidationTimeEvents());
                     }
                 }
             } finally {
@@ -470,6 +490,63 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
             LOGGER.debug("normalizedPath '{}' - {} return {}", path, baseDirPath, normalizedPath);
         }
         return normalizedPath;
+    }
+
+    /**
+     * Captures plugin properties at validation time for all mojo executions.
+     * This ensures properties are read at the same lifecycle point for all builds,
+     * eliminating timing mismatches caused by Maven 4's auto-injection of properties
+     * like --module-version during execution.
+     *
+     * @param session Maven session
+     * @param project Current project
+     * @param mojoExecutions List of mojo executions to capture properties for
+     * @return Map of execution key to MojoExecutionEvent captured at validation time
+     */
+    private Map<String, MojoExecutionEvent> captureValidationTimeProperties(
+            MavenSession session, MavenProject project, List<MojoExecution> mojoExecutions) {
+        Map<String, MojoExecutionEvent> validationTimeEvents = new java.util.HashMap<>();
+
+        for (MojoExecution mojoExecution : mojoExecutions) {
+            // Skip mojos that don't execute or are in clean phase
+            if (mojoExecution.getLifecyclePhase() == null
+                    || !lifecyclePhasesHelper.isLaterPhaseThanClean(mojoExecution.getLifecyclePhase())) {
+                continue;
+            }
+
+            Mojo mojo = null;
+            try {
+                mojoExecutionScope.enter();
+                mojoExecutionScope.seed(MavenProject.class, project);
+                mojoExecutionScope.seed(MojoExecution.class, mojoExecution);
+
+                mojo = mavenPluginManager.getConfiguredMojo(Mojo.class, session, mojoExecution);
+                MojoExecutionEvent event = new MojoExecutionEvent(session, project, mojoExecution, mojo);
+                validationTimeEvents.put(mojoExecutionKey(mojoExecution), event);
+
+                LOGGER.debug(
+                        "Captured validation-time properties for {}",
+                        mojoExecution.getMojoDescriptor().getFullGoalName());
+
+            } catch (PluginConfigurationException | PluginContainerException e) {
+                LOGGER.warn(
+                        "Cannot capture validation-time properties for {}: {}",
+                        mojoExecution.getMojoDescriptor().getFullGoalName(),
+                        e.getMessage());
+            } finally {
+                try {
+                    mojoExecutionScope.exit();
+                } catch (MojoExecutionException e) {
+                    LOGGER.debug("Error exiting mojo execution scope: {}", e.getMessage());
+                }
+                if (mojo != null) {
+                    mavenPluginManager.releaseMojo(mojo, mojoExecution);
+                }
+            }
+        }
+
+        LOGGER.debug("Captured validation-time properties for {} mojos", validationTimeEvents.size());
+        return validationTimeEvents;
     }
 
     private enum CacheRestorationStatus {
