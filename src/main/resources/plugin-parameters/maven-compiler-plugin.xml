@@ -121,13 +121,13 @@
         </parameter>
         <parameter>
           <name>skip</name>
-          <type>behavioral</type>
-          <description>Skip compilation entirely</description>
+          <type>functional</type>
+          <description>Skip compilation entirely (no bytecode produced when true)</description>
         </parameter>
         <parameter>
           <name>skipMain</name>
-          <type>behavioral</type>
-          <description>Skip compiling main sources</description>
+          <type>functional</type>
+          <description>Skip compiling main sources (no main bytecode produced when true)</description>
         </parameter>
         <parameter>
           <name>failOnError</name>
@@ -273,8 +273,8 @@
         </parameter>
         <parameter>
           <name>skip</name>
-          <type>behavioral</type>
-          <description>Skip test compilation</description>
+          <type>functional</type>
+          <description>Skip test compilation (no test bytecode produced when true)</description>
         </parameter>
         <parameter>
           <name>failOnError</name>
