@@ -40,6 +40,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -135,13 +136,24 @@ public class CacheControllerImpl implements CacheController {
     private volatile Scm scm;
 
     /**
-     * A map dedicated to store the base path of resources stored to the cache which are not original artifacts
-     * (ex : generated source basedir).
-     * Used to link the resource to its path on disk
+     * Per-project cache state to ensure thread safety in multi-threaded builds.
+     * Each project gets isolated state for resource tracking, counters, and restored output tracking.
      */
-    private final Map<String, Path> attachedResourcesPathsById = new HashMap<>();
+    private static class ProjectCacheState {
+        final Map<String, Path> attachedResourcesPathsById = new HashMap<>();
+        int attachedResourceCounter = 0;
+        final Set<String> restoredOutputClassifiers = new HashSet<>();
+    }
 
-    private int attachedResourceCounter = 0;
+    private final ConcurrentMap<String, ProjectCacheState> projectStates = new ConcurrentHashMap<>();
+
+    /**
+     * Get or create cache state for the given project (thread-safe).
+     */
+    private ProjectCacheState getProjectState(MavenProject project) {
+        String key = getVersionlessProjectKey(project);
+        return projectStates.computeIfAbsent(key, k -> new ProjectCacheState());
+    }
     // CHECKSTYLE_OFF: ParameterNumber
     @Inject
     public CacheControllerImpl(
@@ -356,6 +368,7 @@ public class CacheControllerImpl implements CacheController {
         final Build build = cacheResult.getBuildInfo();
         final CacheContext context = cacheResult.getContext();
         final MavenProject project = context.getProject();
+        final ProjectCacheState state = getProjectState(project);
         ArtifactRestorationReport restorationReport = new ArtifactRestorationReport();
 
         try {
@@ -397,6 +410,8 @@ public class CacheControllerImpl implements CacheController {
                             final Path attachedArtifactFile =
                                     localCache.getArtifactFile(context, cacheResult.getSource(), attachedArtifactInfo);
                             restoreGeneratedSources(attachedArtifactInfo, attachedArtifactFile, project);
+                            // Track this classifier as restored so save() includes it even with old timestamp
+                            state.restoredOutputClassifiers.add(attachedArtifactInfo.getClassifier());
                         }
                     } else {
                         Future<File> downloadTask = createDownloadTask(
@@ -497,25 +512,47 @@ public class CacheControllerImpl implements CacheController {
 
         final MavenProject project = context.getProject();
         final MavenSession session = context.getSession();
+        final ProjectCacheState state = getProjectState(project);
         try {
+            state.attachedResourcesPathsById.clear();
+            state.attachedResourceCounter = 0;
+
+            // Get build start time to filter out stale artifacts from previous builds
+            final long buildStartTime = session.getRequest().getStartTime().getTime();
+
             final HashFactory hashFactory = cacheConfig.getHashFactory();
+            final HashAlgorithm algorithm = hashFactory.createAlgorithm();
             final org.apache.maven.artifact.Artifact projectArtifact = project.getArtifact();
-            final List<org.apache.maven.artifact.Artifact> attachedArtifacts;
-            final List<Artifact> attachedArtifactDtos;
-            final Artifact projectArtifactDto;
-            if (project.hasLifecyclePhase("package")) {
-                final HashAlgorithm algorithm = hashFactory.createAlgorithm();
-                attachGeneratedSources(project);
-                attachOutputs(project);
-                attachedArtifacts = project.getAttachedArtifacts() != null
-                        ? project.getAttachedArtifacts()
-                        : Collections.emptyList();
-                attachedArtifactDtos = artifactDtos(attachedArtifacts, algorithm, project);
-                projectArtifactDto = artifactDto(project.getArtifact(), algorithm, project);
-            } else {
-                attachedArtifacts = Collections.emptyList();
-                attachedArtifactDtos = new ArrayList<>();
-                projectArtifactDto = null;
+            final boolean hasPackagePhase = project.hasLifecyclePhase("package");
+
+            // Cache compile outputs (classes, test-classes, generated sources) if enabled
+            // This allows compile-only builds to create restorable cache entries
+            // Can be disabled with -Dmaven.build.cache.cacheCompile=false to reduce IO overhead
+            final boolean cacheCompile = cacheConfig.isCacheCompile();
+            if (cacheCompile) {
+                attachGeneratedSources(project, state, buildStartTime);
+                attachOutputs(project, state, buildStartTime);
+            }
+
+            final List<org.apache.maven.artifact.Artifact> attachedArtifacts = project.getAttachedArtifacts() != null
+                    ? project.getAttachedArtifacts()
+                    : Collections.emptyList();
+            final List<Artifact> attachedArtifactDtos = artifactDtos(attachedArtifacts, algorithm, project, state);
+            final Artifact projectArtifactDto = hasPackagePhase ? artifactDto(project.getArtifact(), algorithm, project, state)
+                    : null;
+
+            // CRITICAL: Don't create incomplete cache entries!
+            // Only save cache entry if we have SOMETHING useful to restore.
+            // Exclude consumer POMs (Maven metadata) from the "useful artifacts" check.
+            // This prevents the bug where:
+            //   1. mvn compile (cacheCompile=false) creates cache entry with only metadata
+            //   2. mvn compile (cacheCompile=true) tries to restore incomplete cache and fails
+            boolean hasUsefulArtifacts = projectArtifactDto != null
+                    || attachedArtifactDtos.stream()
+                            .anyMatch(a -> !"consumer".equals(a.getClassifier()) || !"pom".equals(a.getType()));
+            if (!hasUsefulArtifacts) {
+                LOGGER.info("Skipping cache save: no artifacts to save (only metadata present)");
+                return;
             }
 
             List<CompletedExecution> completedExecution = buildExecutionInfo(mojoExecutions, executionEvents);
@@ -534,22 +571,19 @@ public class CacheControllerImpl implements CacheController {
             localCache.beforeSave(context);
 
             // if package phase presence means new artifacts were packaged
-            if (project.hasLifecyclePhase("package")) {
-                if (projectArtifact.getFile() != null) {
-                    localCache.saveArtifactFile(cacheResult, projectArtifact);
-                }
-                for (org.apache.maven.artifact.Artifact attachedArtifact : attachedArtifacts) {
-                    if (attachedArtifact.getFile() != null) {
-                        boolean storeArtifact =
-                                isOutputArtifact(attachedArtifact.getFile().getName());
-                        if (storeArtifact) {
-                            localCache.saveArtifactFile(cacheResult, attachedArtifact);
-                        } else {
-                            LOGGER.debug(
-                                    "Skipping attached project artifact '{}' = "
-                                            + " it is marked for exclusion from caching",
-                                    attachedArtifact.getFile().getName());
-                        }
+            if (hasPackagePhase && projectArtifact.getFile() != null) {
+                localCache.saveArtifactFile(cacheResult, projectArtifact);
+            }
+            for (org.apache.maven.artifact.Artifact attachedArtifact : attachedArtifacts) {
+                if (attachedArtifact.getFile() != null) {
+                    boolean storeArtifact = isOutputArtifact(attachedArtifact.getFile().getName());
+                    if (storeArtifact) {
+                        localCache.saveArtifactFile(cacheResult, attachedArtifact);
+                    } else {
+                        LOGGER.debug(
+                                "Skipping attached project artifact '{}' = "
+                                        + " it is marked for exclusion from caching",
+                                attachedArtifact.getFile().getName());
                     }
                 }
             }
@@ -567,6 +601,10 @@ public class CacheControllerImpl implements CacheController {
             } catch (Exception ex) {
                 LOGGER.error("Failed to clean cache due to unexpected error:", ex);
             }
+        } finally {
+            // Cleanup project state to free memory (thread-safe removal)
+            String key = getVersionlessProjectKey(project);
+            projectStates.remove(key);
         }
     }
 
@@ -624,20 +662,22 @@ public class CacheControllerImpl implements CacheController {
     }
 
     private List<Artifact> artifactDtos(
-            List<org.apache.maven.artifact.Artifact> attachedArtifacts, HashAlgorithm digest, MavenProject project)
+            List<org.apache.maven.artifact.Artifact> attachedArtifacts, HashAlgorithm digest, MavenProject project,
+            ProjectCacheState state)
             throws IOException {
         List<Artifact> result = new ArrayList<>();
         for (org.apache.maven.artifact.Artifact attachedArtifact : attachedArtifacts) {
             if (attachedArtifact.getFile() != null
                     && isOutputArtifact(attachedArtifact.getFile().getName())) {
-                result.add(artifactDto(attachedArtifact, digest, project));
+                result.add(artifactDto(attachedArtifact, digest, project, state));
             }
         }
         return result;
     }
 
     private Artifact artifactDto(
-            org.apache.maven.artifact.Artifact projectArtifact, HashAlgorithm algorithm, MavenProject project)
+            org.apache.maven.artifact.Artifact projectArtifact, HashAlgorithm algorithm, MavenProject project,
+            ProjectCacheState state)
             throws IOException {
         final Artifact dto = DtoUtils.createDto(projectArtifact);
         if (projectArtifact.getFile() != null && projectArtifact.getFile().isFile()) {
@@ -646,7 +686,7 @@ public class CacheControllerImpl implements CacheController {
             dto.setFileSize(Files.size(file));
 
             // Get the relative path of any extra zip directory added to the cache
-            Path relativePath = attachedResourcesPathsById.get(projectArtifact.getClassifier());
+            Path relativePath = state.attachedResourcesPathsById.get(projectArtifact.getClassifier());
             if (relativePath == null) {
                 // If the path was not a member of this map, we are in presence of an original artifact.
                 // we get its location on the disk
@@ -900,15 +940,15 @@ public class CacheControllerImpl implements CacheController {
     }
 
     // TODO: move to config
-    public void attachGeneratedSources(MavenProject project) throws IOException {
+    public void attachGeneratedSources(MavenProject project, ProjectCacheState state, long buildStartTime) throws IOException {
         final Path targetDir = Paths.get(project.getBuild().getDirectory());
 
         final Path generatedSourcesDir = targetDir.resolve("generated-sources");
-        attachDirIfNotEmpty(generatedSourcesDir, targetDir, project, OutputType.GENERATED_SOURCE, DEFAULT_FILE_GLOB);
+        attachDirIfNotEmpty(generatedSourcesDir, targetDir, project, state, OutputType.GENERATED_SOURCE, DEFAULT_FILE_GLOB, buildStartTime);
 
         final Path generatedTestSourcesDir = targetDir.resolve("generated-test-sources");
         attachDirIfNotEmpty(
-                generatedTestSourcesDir, targetDir, project, OutputType.GENERATED_SOURCE, DEFAULT_FILE_GLOB);
+                generatedTestSourcesDir, targetDir, project, state, OutputType.GENERATED_SOURCE, DEFAULT_FILE_GLOB, buildStartTime);
 
         Set<String> sourceRoots = new TreeSet<>();
         if (project.getCompileSourceRoots() != null) {
@@ -924,18 +964,18 @@ public class CacheControllerImpl implements CacheController {
                     && sourceRootPath.startsWith(targetDir)
                     && !(sourceRootPath.startsWith(generatedSourcesDir)
                             || sourceRootPath.startsWith(generatedTestSourcesDir))) { // dir within target
-                attachDirIfNotEmpty(sourceRootPath, targetDir, project, OutputType.GENERATED_SOURCE, DEFAULT_FILE_GLOB);
+                attachDirIfNotEmpty(sourceRootPath, targetDir, project, state, OutputType.GENERATED_SOURCE, DEFAULT_FILE_GLOB, buildStartTime);
             }
         }
     }
 
-    private void attachOutputs(MavenProject project) throws IOException {
+    private void attachOutputs(MavenProject project, ProjectCacheState state, long buildStartTime) throws IOException {
         final List<DirName> attachedDirs = cacheConfig.getAttachedOutputs();
         for (DirName dir : attachedDirs) {
             final Path targetDir = Paths.get(project.getBuild().getDirectory());
             final Path outputDir = targetDir.resolve(dir.getValue());
             if (isPathInsideProject(project, outputDir)) {
-                attachDirIfNotEmpty(outputDir, targetDir, project, OutputType.EXTRA_OUTPUT, dir.getGlob());
+                attachDirIfNotEmpty(outputDir, targetDir, project, state, OutputType.EXTRA_OUTPUT, dir.getGlob(), buildStartTime);
             } else {
                 LOGGER.warn("Outside project output candidate directory discarded ({})", outputDir.normalize());
             }
@@ -946,16 +986,32 @@ public class CacheControllerImpl implements CacheController {
             Path candidateSubDir,
             Path parentDir,
             MavenProject project,
+            ProjectCacheState state,
             final OutputType attachedOutputType,
-            final String glob)
+            final String glob,
+            final long buildStartTime)
             throws IOException {
         if (Files.isDirectory(candidateSubDir) && hasFiles(candidateSubDir)) {
             final Path relativePath = project.getBasedir().toPath().relativize(candidateSubDir);
-            attachedResourceCounter++;
-            final String classifier = attachedOutputType.getClassifierPrefix() + attachedResourceCounter;
+            state.attachedResourceCounter++;
+            final String classifier = attachedOutputType.getClassifierPrefix() + state.attachedResourceCounter;
+
+            // Check if directory was modified during this build OR was restored from cache
+            long lastModified = Files.getLastModifiedTime(candidateSubDir).toMillis();
+            boolean isRestoredThisBuild = state.restoredOutputClassifiers.contains(classifier);
+
+            if (lastModified < buildStartTime && !isRestoredThisBuild) {
+                LOGGER.debug(
+                        "Skipping stale directory: {} (modified at {}, build started at {}, not restored)",
+                        candidateSubDir,
+                        lastModified,
+                        buildStartTime);
+                return;
+            }
+
             boolean success = zipAndAttachArtifact(project, candidateSubDir, classifier, glob);
             if (success) {
-                attachedResourcesPathsById.put(classifier, relativePath);
+                state.attachedResourcesPathsById.put(classifier, relativePath);
                 LOGGER.debug("Attached directory: {}", candidateSubDir);
             }
         }
