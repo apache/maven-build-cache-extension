@@ -525,8 +525,14 @@ public class CacheControllerImpl implements CacheController {
             final org.apache.maven.artifact.Artifact projectArtifact = project.getArtifact();
             final boolean hasPackagePhase = project.hasLifecyclePhase("package");
 
-            attachGeneratedSources(project, state, buildStartTime);
-            attachOutputs(project, state, buildStartTime);
+            // Cache compile outputs (classes, test-classes, generated sources) if enabled
+            // This allows compile-only builds to create restorable cache entries
+            // Can be disabled with -Dmaven.build.cache.cacheCompile=false to reduce IO overhead
+            final boolean cacheCompile = cacheConfig.isCacheCompile();
+            if (cacheCompile) {
+                attachGeneratedSources(project, state, buildStartTime);
+                attachOutputs(project, state, buildStartTime);
+            }
 
             final List<org.apache.maven.artifact.Artifact> attachedArtifacts = project.getAttachedArtifacts() != null
                     ? project.getAttachedArtifacts()
@@ -534,6 +540,20 @@ public class CacheControllerImpl implements CacheController {
             final List<Artifact> attachedArtifactDtos = artifactDtos(attachedArtifacts, algorithm, project, state);
             final Artifact projectArtifactDto = hasPackagePhase ? artifactDto(project.getArtifact(), algorithm, project, state)
                     : null;
+
+            // CRITICAL: Don't create incomplete cache entries!
+            // Only save cache entry if we have SOMETHING useful to restore.
+            // Exclude consumer POMs (Maven metadata) from the "useful artifacts" check.
+            // This prevents the bug where:
+            //   1. mvn compile (cacheCompile=false) creates cache entry with only metadata
+            //   2. mvn compile (cacheCompile=true) tries to restore incomplete cache and fails
+            boolean hasUsefulArtifacts = projectArtifactDto != null
+                    || attachedArtifactDtos.stream()
+                            .anyMatch(a -> !"consumer".equals(a.getClassifier()) || !"pom".equals(a.getType()));
+            if (!hasUsefulArtifacts) {
+                LOGGER.info("Skipping cache save: no artifacts to save (only metadata present)");
+                return;
+            }
 
             List<CompletedExecution> completedExecution = buildExecutionInfo(mojoExecutions, executionEvents);
 
