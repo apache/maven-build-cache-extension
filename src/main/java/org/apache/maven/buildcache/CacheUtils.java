@@ -255,80 +255,61 @@ public class CacheUtils {
     }
 
     /**
-     * Convert POSIX file permissions to Unix mode integer.
+     * Convert POSIX file permissions to Unix mode integer, following Git's approach of only
+     * preserving the owner executable bit.
+     *
+     * <p>Git stores file permissions as either {@code 100644} (non-executable) or {@code 100755}
+     * (executable). This simplified approach focuses on the functional aspect (executability)
+     * while ignoring platform-specific permission details that are generally irrelevant for
+     * cross-platform builds.</p>
      *
      * @param permissions POSIX file permissions
-     * @return Unix mode as integer (e.g., {@code 0100755} for regular file with {@code rwxr-xr-x})
+     * @return Unix mode: {@code 0100755} if owner-executable, {@code 0100644} otherwise
      */
     private static int permissionsToMode(Set<PosixFilePermission> permissions) {
-        // Start with regular file type (0100000 in octal)
-        int mode = 0100000;
-
-        if (permissions.contains(PosixFilePermission.OWNER_READ)) {
-            mode |= 0400;
-        }
-        if (permissions.contains(PosixFilePermission.OWNER_WRITE)) {
-            mode |= 0200;
-        }
+        // Following Git's approach: preserve only the owner executable bit
+        // Git uses 100644 (rw-r--r--) for regular files and 100755 (rwxr-xr-x) for executables
         if (permissions.contains(PosixFilePermission.OWNER_EXECUTE)) {
-            mode |= 0100;
+            return 0100755; // Regular file, executable
+        } else {
+            return 0100644; // Regular file, non-executable
         }
-        if (permissions.contains(PosixFilePermission.GROUP_READ)) {
-            mode |= 0040;
-        }
-        if (permissions.contains(PosixFilePermission.GROUP_WRITE)) {
-            mode |= 0020;
-        }
-        if (permissions.contains(PosixFilePermission.GROUP_EXECUTE)) {
-            mode |= 0010;
-        }
-        if (permissions.contains(PosixFilePermission.OTHERS_READ)) {
-            mode |= 0004;
-        }
-        if (permissions.contains(PosixFilePermission.OTHERS_WRITE)) {
-            mode |= 0002;
-        }
-        if (permissions.contains(PosixFilePermission.OTHERS_EXECUTE)) {
-            mode |= 0001;
-        }
-        return mode;
     }
 
     /**
-     * Convert Unix mode integer to POSIX file permissions.
+     * Convert Unix mode integer to POSIX file permissions, following Git's simplified approach.
      *
-     * @param mode Unix mode (e.g., {@code 0100755} for regular file with {@code rwxr-xr-x})
+     * <p>This method interprets the two Git-standard modes:</p>
+     * <ul>
+     *   <li>{@code 0100755} - Executable file: sets owner+group+others read/execute, owner write</li>
+     *   <li>{@code 0100644} - Regular file: sets owner+group+others read, owner write</li>
+     * </ul>
+     *
+     * <p>The key distinction is the presence of the execute bit. Other permission variations
+     * are normalized to these two standard patterns for portability.</p>
+     *
+     * @param mode Unix mode (should be either {@code 0100755} or {@code 0100644})
      * @return Set of POSIX file permissions
      */
     private static Set<PosixFilePermission> modeToPermissions(int mode) {
         Set<PosixFilePermission> permissions = new HashSet<>();
-        // Extract permission bits (lower 9 bits), ignoring file type bits
-        if ((mode & 0400) != 0) {
-            permissions.add(PosixFilePermission.OWNER_READ);
-        }
-        if ((mode & 0200) != 0) {
-            permissions.add(PosixFilePermission.OWNER_WRITE);
-        }
+
+        // Check owner executable bit (following Git's approach)
         if ((mode & 0100) != 0) {
+            // Mode 100755: rwxr-xr-x (executable file)
+            permissions.add(PosixFilePermission.OWNER_READ);
+            permissions.add(PosixFilePermission.OWNER_WRITE);
             permissions.add(PosixFilePermission.OWNER_EXECUTE);
-        }
-        if ((mode & 0040) != 0) {
             permissions.add(PosixFilePermission.GROUP_READ);
-        }
-        if ((mode & 0020) != 0) {
-            permissions.add(PosixFilePermission.GROUP_WRITE);
-        }
-        if ((mode & 0010) != 0) {
             permissions.add(PosixFilePermission.GROUP_EXECUTE);
-        }
-        if ((mode & 0004) != 0) {
             permissions.add(PosixFilePermission.OTHERS_READ);
-        }
-        if ((mode & 0002) != 0) {
-            permissions.add(PosixFilePermission.OTHERS_WRITE);
-        }
-        if ((mode & 0001) != 0) {
             permissions.add(PosixFilePermission.OTHERS_EXECUTE);
+        } else {
+            // Mode 100644: rw-r--r-- (regular file)
+            permissions.add(PosixFilePermission.OWNER_READ);
+            permissions.add(PosixFilePermission.OWNER_WRITE);
+            permissions.add(PosixFilePermission.GROUP_READ);
+            permissions.add(PosixFilePermission.OTHERS_READ);
         }
         return permissions;
     }
