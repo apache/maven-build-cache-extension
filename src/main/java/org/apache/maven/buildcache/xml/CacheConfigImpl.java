@@ -579,6 +579,13 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     }
 
     @Override
+    public boolean isPreservePermissions() {
+        checkInitializedState();
+        final AttachedOutputs attachedOutputs = getConfiguration().getAttachedOutputs();
+        return attachedOutputs == null || attachedOutputs.isPreservePermissions();
+    }
+
+    @Override
     public boolean adjustMetaInfVersion() {
         if (isEnabled()) {
             return Optional.ofNullable(getConfiguration().getProjectVersioning())
