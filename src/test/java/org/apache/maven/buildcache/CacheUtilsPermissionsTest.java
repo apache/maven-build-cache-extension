@@ -18,9 +18,6 @@
  */
 package org.apache.maven.buildcache;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
@@ -30,6 +27,9 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Arrays;
 import java.util.Set;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -70,7 +70,7 @@ class CacheUtilsPermissionsTest {
         Path sourceDir2 = tempDir.resolve("source2");
         Files.createDirectories(sourceDir2);
         Path file2 = sourceDir2.resolve("script.sh");
-        writeString(file2, "#!/bin/bash\necho hello");  // Identical content
+        writeString(file2, "#!/bin/bash\necho hello"); // Identical content
 
         // Set non-executable permissions (644)
         Set<PosixFilePermission> normalPermissions = PosixFilePermissions.fromString("rw-r--r--");
@@ -87,10 +87,11 @@ class CacheUtilsPermissionsTest {
         byte[] hash2 = Files.readAllBytes(zip2);
 
         boolean hashesAreDifferent = !Arrays.equals(hash1, hash2);
-        assertTrue(hashesAreDifferent,
-                "ZIP files with same content but different permissions should have different hashes " +
-                "when preservePermissions=true. This ensures cache invalidation when permissions change " +
-                "(executable vs non-executable files).");
+        assertTrue(
+                hashesAreDifferent,
+                "ZIP files with same content but different permissions should have different hashes "
+                        + "when preservePermissions=true. This ensures cache invalidation when permissions change "
+                        + "(executable vs non-executable files).");
     }
 
     /**
@@ -119,7 +120,7 @@ class CacheUtilsPermissionsTest {
         Path sourceDir2 = tempDir.resolve("source2");
         Files.createDirectories(sourceDir2);
         Path file2 = sourceDir2.resolve("script.sh");
-        writeString(file2, "#!/bin/bash\necho hello");  // Identical content
+        writeString(file2, "#!/bin/bash\necho hello"); // Identical content
 
         // Set non-executable permissions (644)
         Set<PosixFilePermission> normalPermissions = PosixFilePermissions.fromString("rw-r--r--");
@@ -147,11 +148,11 @@ class CacheUtilsPermissionsTest {
 
         // Files should NOT retain their original different permissions
         // Both should have default permissions determined by umask
-        assertFalse(perms1.equals(execPermissions) && perms2.equals(normalPermissions),
-                "When preservePermissions=false, original permissions should NOT be preserved. " +
-                "Files should use system default permissions (umask).");
+        assertFalse(
+                perms1.equals(execPermissions) && perms2.equals(normalPermissions),
+                "When preservePermissions=false, original permissions should NOT be preserved. "
+                        + "Files should use system default permissions (umask).");
     }
-
 
     /**
      * Java 8 compatible version of Files.writeString().

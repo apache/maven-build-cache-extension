@@ -30,7 +30,6 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.nio.file.attribute.PosixFilePermission;
-import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
@@ -42,7 +41,6 @@ import java.util.stream.Stream;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
 import org.apache.commons.lang3.mutable.MutableBoolean;
@@ -168,7 +166,8 @@ public class CacheUtils {
      * @return true if at least one file has been included in the zip.
      * @throws IOException
      */
-    public static boolean zip(final Path dir, final Path zip, final String glob, boolean preservePermissions) throws IOException {
+    public static boolean zip(final Path dir, final Path zip, final String glob, boolean preservePermissions)
+            throws IOException {
         final MutableBoolean hasFiles = new MutableBoolean();
         // Check once if filesystem supports POSIX permissions instead of catching exceptions for every file
         final boolean supportsPosix = preservePermissions
