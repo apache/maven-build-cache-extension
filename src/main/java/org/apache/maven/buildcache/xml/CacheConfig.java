@@ -154,4 +154,15 @@ public interface CacheConfig {
      * Flag to save in cache only if a build went through the clean lifecycle
      */
     boolean isMandatoryClean();
+
+    /**
+     * Flag to cache compile phase outputs (classes, test-classes, generated sources).
+     * When enabled (default), compile-only builds create cache entries that can be restored
+     * by subsequent builds. When disabled, caching only occurs during package phase or later.
+     * <p>
+     * Use: -Dmaven.build.cache.cacheCompile=(true|false)
+     * <p>
+     * Default: true
+     */
+    boolean isCacheCompile();
 }
