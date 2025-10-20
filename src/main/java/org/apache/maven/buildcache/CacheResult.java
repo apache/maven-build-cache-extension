@@ -18,8 +18,11 @@
  */
 package org.apache.maven.buildcache;
 
+import java.util.Map;
+
 import org.apache.maven.buildcache.xml.Build;
 import org.apache.maven.buildcache.xml.CacheSource;
+import org.apache.maven.execution.MojoExecutionEvent;
 
 import static java.util.Objects.requireNonNull;
 
@@ -31,49 +34,84 @@ public class CacheResult {
     private final RestoreStatus status;
     private final Build build;
     private final CacheContext context;
+    private final Map<String, MojoExecutionEvent> validationTimeEvents;
 
-    private CacheResult(RestoreStatus status, Build build, CacheContext context) {
+    private CacheResult(RestoreStatus status, Build build, CacheContext context, Map<String, MojoExecutionEvent> validationTimeEvents) {
         this.status = requireNonNull(status);
         this.build = build;
         this.context = context;
+        this.validationTimeEvents = validationTimeEvents;
     }
 
     public static CacheResult empty(CacheContext context) {
         requireNonNull(context);
-        return new CacheResult(RestoreStatus.EMPTY, null, context);
+        return new CacheResult(RestoreStatus.EMPTY, null, context, null);
+    }
+
+    public static CacheResult empty(CacheContext context, Map<String, MojoExecutionEvent> validationTimeEvents) {
+        requireNonNull(context);
+        return new CacheResult(RestoreStatus.EMPTY, null, context, validationTimeEvents);
     }
 
     public static CacheResult empty() {
-        return new CacheResult(RestoreStatus.EMPTY, null, null);
+        return new CacheResult(RestoreStatus.EMPTY, null, null, null);
     }
 
     public static CacheResult failure(Build build, CacheContext context) {
         requireNonNull(build);
         requireNonNull(context);
-        return new CacheResult(RestoreStatus.FAILURE, build, context);
+        return new CacheResult(RestoreStatus.FAILURE, build, context, null);
+    }
+
+    public static CacheResult failure(Build build, CacheContext context, Map<String, MojoExecutionEvent> validationTimeEvents) {
+        requireNonNull(build);
+        requireNonNull(context);
+        return new CacheResult(RestoreStatus.FAILURE, build, context, validationTimeEvents);
     }
 
     public static CacheResult success(Build build, CacheContext context) {
         requireNonNull(build);
         requireNonNull(context);
-        return new CacheResult(RestoreStatus.SUCCESS, build, context);
+        return new CacheResult(RestoreStatus.SUCCESS, build, context, null);
+    }
+
+    public static CacheResult success(Build build, CacheContext context, Map<String, MojoExecutionEvent> validationTimeEvents) {
+        requireNonNull(build);
+        requireNonNull(context);
+        return new CacheResult(RestoreStatus.SUCCESS, build, context, validationTimeEvents);
     }
 
     public static CacheResult partialSuccess(Build build, CacheContext context) {
         requireNonNull(build);
         requireNonNull(context);
-        return new CacheResult(RestoreStatus.PARTIAL, build, context);
+        return new CacheResult(RestoreStatus.PARTIAL, build, context, null);
+    }
+
+    public static CacheResult partialSuccess(Build build, CacheContext context, Map<String, MojoExecutionEvent> validationTimeEvents) {
+        requireNonNull(build);
+        requireNonNull(context);
+        return new CacheResult(RestoreStatus.PARTIAL, build, context, validationTimeEvents);
     }
 
     public static CacheResult failure(CacheContext context) {
         requireNonNull(context);
-        return new CacheResult(RestoreStatus.FAILURE, null, context);
+        return new CacheResult(RestoreStatus.FAILURE, null, context, null);
+    }
+
+    public static CacheResult failure(CacheContext context, Map<String, MojoExecutionEvent> validationTimeEvents) {
+        requireNonNull(context);
+        return new CacheResult(RestoreStatus.FAILURE, null, context, validationTimeEvents);
     }
 
     public static CacheResult rebuilded(CacheResult orig, Build build) {
         requireNonNull(orig);
         requireNonNull(build);
-        return new CacheResult(orig.status, build, orig.context);
+        return new CacheResult(orig.status, build, orig.context, orig.validationTimeEvents);
+    }
+
+    public static CacheResult rebuilded(CacheResult orig, Map<String, MojoExecutionEvent> validationTimeEvents) {
+        requireNonNull(orig);
+        return new CacheResult(orig.status, orig.build, orig.context, validationTimeEvents);
     }
 
     public boolean isSuccess() {
@@ -102,5 +140,9 @@ public class CacheResult {
 
     public boolean isFinal() {
         return build != null && build.getDto().is_final();
+    }
+
+    public Map<String, MojoExecutionEvent> getValidationTimeEvents() {
+        return validationTimeEvents;
     }
 }
