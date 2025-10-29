@@ -59,8 +59,7 @@ class NonJpmsProjectTest {
         verifier.verifyErrorFreeLog();
 
         // Verify compilation succeeded
-        verifier.verifyFilePresent(
-                "target/classes/org/apache/maven/caching/test/nonjpms/RegularJavaClass.class");
+        verifier.verifyFilePresent("target/classes/org/apache/maven/caching/test/nonjpms/RegularJavaClass.class");
 
         // Second build - should restore from cache
         verifier.setLogFileName("../log-build-2.txt");
@@ -76,7 +75,6 @@ class NonJpmsProjectTest {
         verifier.verifyTextInLog("Skipping plugin execution (cached): compiler:compile");
 
         // Verify output files were restored from cache
-        verifier.verifyFilePresent(
-                "target/classes/org/apache/maven/caching/test/nonjpms/RegularJavaClass.class");
+        verifier.verifyFilePresent("target/classes/org/apache/maven/caching/test/nonjpms/RegularJavaClass.class");
     }
 }

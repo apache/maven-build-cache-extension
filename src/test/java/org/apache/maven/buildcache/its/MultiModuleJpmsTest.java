@@ -59,12 +59,10 @@ class MultiModuleJpmsTest {
 
         // Verify compilation succeeded for module-a (JPMS)
         verifier.verifyFilePresent("module-a/target/classes/module-info.class");
-        verifier.verifyFilePresent(
-                "module-a/target/classes/org/apache/maven/caching/test/multi/modulea/ModuleA.class");
+        verifier.verifyFilePresent("module-a/target/classes/org/apache/maven/caching/test/multi/modulea/ModuleA.class");
 
         // Verify compilation succeeded for module-b (non-JPMS)
-        verifier.verifyFilePresent(
-                "module-b/target/classes/org/apache/maven/caching/test/multi/moduleb/ModuleB.class");
+        verifier.verifyFilePresent("module-b/target/classes/org/apache/maven/caching/test/multi/moduleb/ModuleB.class");
 
         // Second build - should restore all modules from cache
         verifier.setLogFileName("../log-build-2.txt");
@@ -83,11 +81,9 @@ class MultiModuleJpmsTest {
 
         // Verify output files were restored from cache for module-a
         verifier.verifyFilePresent("module-a/target/classes/module-info.class");
-        verifier.verifyFilePresent(
-                "module-a/target/classes/org/apache/maven/caching/test/multi/modulea/ModuleA.class");
+        verifier.verifyFilePresent("module-a/target/classes/org/apache/maven/caching/test/multi/modulea/ModuleA.class");
 
         // Verify output files were restored from cache for module-b
-        verifier.verifyFilePresent(
-                "module-b/target/classes/org/apache/maven/caching/test/multi/moduleb/ModuleB.class");
+        verifier.verifyFilePresent("module-b/target/classes/org/apache/maven/caching/test/multi/moduleb/ModuleB.class");
     }
 }

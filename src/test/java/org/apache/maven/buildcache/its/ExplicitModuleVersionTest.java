@@ -61,8 +61,7 @@ class ExplicitModuleVersionTest {
 
         // Verify compilation succeeded
         verifier.verifyFilePresent("target/classes/module-info.class");
-        verifier.verifyFilePresent(
-                "target/classes/org/apache/maven/caching/test/explicit/ExplicitVersionModule.class");
+        verifier.verifyFilePresent("target/classes/org/apache/maven/caching/test/explicit/ExplicitVersionModule.class");
 
         // Second build - should restore from cache
         verifier.setLogFileName("../log-build-2.txt");
@@ -79,7 +78,6 @@ class ExplicitModuleVersionTest {
 
         // Verify output files were restored from cache
         verifier.verifyFilePresent("target/classes/module-info.class");
-        verifier.verifyFilePresent(
-                "target/classes/org/apache/maven/caching/test/explicit/ExplicitVersionModule.class");
+        verifier.verifyFilePresent("target/classes/org/apache/maven/caching/test/explicit/ExplicitVersionModule.class");
     }
 }
