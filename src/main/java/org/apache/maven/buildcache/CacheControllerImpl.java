@@ -534,12 +534,11 @@ public class CacheControllerImpl implements CacheController {
                 attachOutputs(project, state, buildStartTime);
             }
 
-            final List<org.apache.maven.artifact.Artifact> attachedArtifacts = project.getAttachedArtifacts() != null
-                    ? project.getAttachedArtifacts()
-                    : Collections.emptyList();
+            final List<org.apache.maven.artifact.Artifact> attachedArtifacts =
+                    project.getAttachedArtifacts() != null ? project.getAttachedArtifacts() : Collections.emptyList();
             final List<Artifact> attachedArtifactDtos = artifactDtos(attachedArtifacts, algorithm, project, state);
-            final Artifact projectArtifactDto = hasPackagePhase ? artifactDto(project.getArtifact(), algorithm, project, state)
-                    : null;
+            final Artifact projectArtifactDto =
+                    hasPackagePhase ? artifactDto(project.getArtifact(), algorithm, project, state) : null;
 
             // CRITICAL: Don't create incomplete cache entries!
             // Only save cache entry if we have SOMETHING useful to restore.
@@ -576,7 +575,8 @@ public class CacheControllerImpl implements CacheController {
             }
             for (org.apache.maven.artifact.Artifact attachedArtifact : attachedArtifacts) {
                 if (attachedArtifact.getFile() != null) {
-                    boolean storeArtifact = isOutputArtifact(attachedArtifact.getFile().getName());
+                    boolean storeArtifact =
+                            isOutputArtifact(attachedArtifact.getFile().getName());
                     if (storeArtifact) {
                         localCache.saveArtifactFile(cacheResult, attachedArtifact);
                     } else {
@@ -662,7 +662,9 @@ public class CacheControllerImpl implements CacheController {
     }
 
     private List<Artifact> artifactDtos(
-            List<org.apache.maven.artifact.Artifact> attachedArtifacts, HashAlgorithm digest, MavenProject project,
+            List<org.apache.maven.artifact.Artifact> attachedArtifacts,
+            HashAlgorithm digest,
+            MavenProject project,
             ProjectCacheState state)
             throws IOException {
         List<Artifact> result = new ArrayList<>();
@@ -676,7 +678,9 @@ public class CacheControllerImpl implements CacheController {
     }
 
     private Artifact artifactDto(
-            org.apache.maven.artifact.Artifact projectArtifact, HashAlgorithm algorithm, MavenProject project,
+            org.apache.maven.artifact.Artifact projectArtifact,
+            HashAlgorithm algorithm,
+            MavenProject project,
             ProjectCacheState state)
             throws IOException {
         final Artifact dto = DtoUtils.createDto(projectArtifact);
@@ -940,15 +944,29 @@ public class CacheControllerImpl implements CacheController {
     }
 
     // TODO: move to config
-    public void attachGeneratedSources(MavenProject project, ProjectCacheState state, long buildStartTime) throws IOException {
+    public void attachGeneratedSources(MavenProject project, ProjectCacheState state, long buildStartTime)
+            throws IOException {
         final Path targetDir = Paths.get(project.getBuild().getDirectory());
 
         final Path generatedSourcesDir = targetDir.resolve("generated-sources");
-        attachDirIfNotEmpty(generatedSourcesDir, targetDir, project, state, OutputType.GENERATED_SOURCE, DEFAULT_FILE_GLOB, buildStartTime);
+        attachDirIfNotEmpty(
+                generatedSourcesDir,
+                targetDir,
+                project,
+                state,
+                OutputType.GENERATED_SOURCE,
+                DEFAULT_FILE_GLOB,
+                buildStartTime);
 
         final Path generatedTestSourcesDir = targetDir.resolve("generated-test-sources");
         attachDirIfNotEmpty(
-                generatedTestSourcesDir, targetDir, project, state, OutputType.GENERATED_SOURCE, DEFAULT_FILE_GLOB, buildStartTime);
+                generatedTestSourcesDir,
+                targetDir,
+                project,
+                state,
+                OutputType.GENERATED_SOURCE,
+                DEFAULT_FILE_GLOB,
+                buildStartTime);
 
         Set<String> sourceRoots = new TreeSet<>();
         if (project.getCompileSourceRoots() != null) {
@@ -964,7 +982,14 @@ public class CacheControllerImpl implements CacheController {
                     && sourceRootPath.startsWith(targetDir)
                     && !(sourceRootPath.startsWith(generatedSourcesDir)
                             || sourceRootPath.startsWith(generatedTestSourcesDir))) { // dir within target
-                attachDirIfNotEmpty(sourceRootPath, targetDir, project, state, OutputType.GENERATED_SOURCE, DEFAULT_FILE_GLOB, buildStartTime);
+                attachDirIfNotEmpty(
+                        sourceRootPath,
+                        targetDir,
+                        project,
+                        state,
+                        OutputType.GENERATED_SOURCE,
+                        DEFAULT_FILE_GLOB,
+                        buildStartTime);
             }
         }
     }
@@ -975,7 +1000,8 @@ public class CacheControllerImpl implements CacheController {
             final Path targetDir = Paths.get(project.getBuild().getDirectory());
             final Path outputDir = targetDir.resolve(dir.getValue());
             if (isPathInsideProject(project, outputDir)) {
-                attachDirIfNotEmpty(outputDir, targetDir, project, state, OutputType.EXTRA_OUTPUT, dir.getGlob(), buildStartTime);
+                attachDirIfNotEmpty(
+                        outputDir, targetDir, project, state, OutputType.EXTRA_OUTPUT, dir.getGlob(), buildStartTime);
             } else {
                 LOGGER.warn("Outside project output candidate directory discarded ({})", outputDir.normalize());
             }
