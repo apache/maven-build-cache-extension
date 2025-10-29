@@ -411,10 +411,6 @@ class CacheUtilsTimestampTest {
 
             fail(errorMessage);
         }
-
-        // For debugging: log when timestamps are correctly preserved
-        assertEquals(expectedMs, actualMs, TIMESTAMP_TOLERANCE_MS,
-                String.format("%s (diff: %.2f seconds)", message, diffMs / 1000.0));
     }
 
     /**
