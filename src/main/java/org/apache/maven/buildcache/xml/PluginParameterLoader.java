@@ -79,7 +79,8 @@ public class PluginParameterLoader {
 
             if (bestMatch != null) {
                 definitions.put(cacheKey, bestMatch);
-                LOGGER.info("Loaded parameter definition for {}:{} (minVersion: {}): {} goals, {} total parameters",
+                LOGGER.info(
+                        "Loaded parameter definition for {}:{} (minVersion: {}): {} goals, {} total parameters",
                         artifactId,
                         pluginVersion != null ? pluginVersion : "any",
                         bestMatch.getMinVersion() != null ? bestMatch.getMinVersion() : "none",
