@@ -104,8 +104,7 @@ class PluginParameterValidationTest {
 
             ParameterDefinition param = compileGoal.getParameter(paramName);
             assertTrue(
-                    param.isFunctional(),
-                    "Default parameter '" + paramName + "' should be FUNCTIONAL, not BEHAVIORAL");
+                    param.isFunctional(), "Default parameter '" + paramName + "' should be FUNCTIONAL, not BEHAVIORAL");
         }
 
         // Verify testCompile goal has same parameters
