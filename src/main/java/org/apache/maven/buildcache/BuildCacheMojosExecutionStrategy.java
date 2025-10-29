@@ -199,13 +199,13 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                     } else {
                         // Validation-time events must exist for cache storage
                         // If they don't exist, this indicates a bug in the capture logic
-                        if (result.getValidationTimeEvents() == null || result.getValidationTimeEvents().isEmpty()) {
+                        if (result.getValidationTimeEvents() == null
+                                || result.getValidationTimeEvents().isEmpty()) {
                             throw new AssertionError(
                                     "Validation-time properties not captured for project " + projectName
                                             + ". This is a bug - validation-time capture should always succeed when saving to cache.");
                         }
-                        LOGGER.debug(
-                                "Using validation-time properties for cache storage (consistent lifecycle point)");
+                        LOGGER.debug("Using validation-time properties for cache storage (consistent lifecycle point)");
                         cacheController.save(result, mojoExecutions, result.getValidationTimeEvents());
                     }
                 }

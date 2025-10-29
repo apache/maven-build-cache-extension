@@ -66,8 +66,7 @@ class Maven4JpmsModuleTest {
 
         // Verify compilation succeeded
         verifier.verifyFilePresent("target/classes/module-info.class");
-        verifier.verifyFilePresent(
-                "target/classes/org/apache/maven/caching/test/maven4/HelloMaven4.class");
+        verifier.verifyFilePresent("target/classes/org/apache/maven/caching/test/maven4/HelloMaven4.class");
 
         // Second build - should restore from cache WITHOUT invalidation
         // This is the critical test: validation-time properties should match stored properties
@@ -85,7 +84,6 @@ class Maven4JpmsModuleTest {
 
         // Verify output files were restored from cache
         verifier.verifyFilePresent("target/classes/module-info.class");
-        verifier.verifyFilePresent(
-                "target/classes/org/apache/maven/caching/test/maven4/HelloMaven4.class");
+        verifier.verifyFilePresent("target/classes/org/apache/maven/caching/test/maven4/HelloMaven4.class");
     }
 }
