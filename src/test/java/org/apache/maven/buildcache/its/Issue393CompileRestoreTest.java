@@ -41,11 +41,13 @@ class Issue393CompileRestoreTest {
         verifier.setLogFileName("../log-verify.txt");
         verifier.executeGoals(Arrays.asList("clean", "verify"));
         verifier.verifyErrorFreeLog();
-        verifier.verifyTextInLog("Found cached build, restoring org.apache.maven.caching.test.jpms:issue-393-app from cache");
+        verifier.verifyTextInLog(
+                "Found cached build, restoring org.apache.maven.caching.test.jpms:issue-393-app from cache");
         verifier.verifyTextInLog("Skipping plugin execution (cached): compiler:compile");
 
         verifier.verifyFilePresent("app/target/classes/module-info.class");
         verifier.verifyFilePresent("consumer/target/classes/module-info.class");
-        verifier.verifyFilePresent("consumer/target/test-classes/org/apache/maven/caching/test/jpms/consumer/ConsumerTest.class");
+        verifier.verifyFilePresent(
+                "consumer/target/test-classes/org/apache/maven/caching/test/jpms/consumer/ConsumerTest.class");
     }
 }

@@ -62,10 +62,9 @@ class CacheCompileDisabledTest {
         verifier.verifyErrorFreeLog();
 
         // Verify NO cache entry was created (no buildinfo.xml in local cache)
-        boolean hasCacheEntry = Files.walk(localCache)
-                .anyMatch(p -> p.getFileName().toString().equals("buildinfo.xml"));
-        assertFalse(hasCacheEntry,
-                "Cache entry should NOT be created when maven.build.cache.cacheCompile=false");
+        boolean hasCacheEntry =
+                Files.walk(localCache).anyMatch(p -> p.getFileName().toString().equals("buildinfo.xml"));
+        assertFalse(hasCacheEntry, "Cache entry should NOT be created when maven.build.cache.cacheCompile=false");
 
         // Clean project and run compile again
         verifier.setLogFileName("../log-compile-disabled-2.txt");
@@ -78,7 +77,8 @@ class CacheCompileDisabledTest {
         // Verify cache miss (should NOT restore from cache)
         Path logFile = Paths.get(verifier.getBasedir()).getParent().resolve("log-compile-disabled-2.txt");
         String logContent = new String(Files.readAllBytes(logFile));
-        assertFalse(logContent.contains("Found cached build, restoring"),
+        assertFalse(
+                logContent.contains("Found cached build, restoring"),
                 "Should NOT restore from cache when cacheCompile was disabled");
     }
 
@@ -103,10 +103,9 @@ class CacheCompileDisabledTest {
         verifier.verifyErrorFreeLog();
 
         // Verify cache entry WAS created
-        boolean hasCacheEntry = Files.walk(localCache)
-                .anyMatch(p -> p.getFileName().toString().equals("buildinfo.xml"));
-        assertTrue(hasCacheEntry,
-                "Cache entry should be created when maven.build.cache.cacheCompile=true (default)");
+        boolean hasCacheEntry =
+                Files.walk(localCache).anyMatch(p -> p.getFileName().toString().equals("buildinfo.xml"));
+        assertTrue(hasCacheEntry, "Cache entry should be created when maven.build.cache.cacheCompile=true (default)");
 
         // Clean project and run compile again
         verifier.setLogFileName("../log-compile-enabled-2.txt");
@@ -123,14 +122,13 @@ class CacheCompileDisabledTest {
     private void deleteDirectory(Path directory) throws IOException {
         if (Files.exists(directory)) {
             try (Stream<Path> walk = Files.walk(directory)) {
-                walk.sorted((a, b) -> b.compareTo(a))
-                        .forEach(path -> {
-                            try {
-                                Files.delete(path);
-                            } catch (IOException e) {
-                                // Ignore
-                            }
-                        });
+                walk.sorted((a, b) -> b.compareTo(a)).forEach(path -> {
+                    try {
+                        Files.delete(path);
+                    } catch (IOException e) {
+                        // Ignore
+                    }
+                });
             }
         }
     }
