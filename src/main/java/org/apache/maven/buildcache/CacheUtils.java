@@ -294,7 +294,7 @@ public class CacheUtils {
                         try {
                             Files.setLastModifiedTime(file, FileTime.fromMillis(entry.getTime()));
                         } catch (IOException e) {
-                            // Timestamp setting is best-effort; log but don't fail extraction
+                            // Timestamp setting is best-effort; silently ignore failures
                             // This can happen on filesystems that don't support modification times
                         }
                     }
@@ -319,7 +319,7 @@ public class CacheUtils {
                 try {
                     Files.setLastModifiedTime(dirEntry.getKey(), FileTime.fromMillis(dirEntry.getValue()));
                 } catch (IOException e) {
-                    // Timestamp setting is best-effort; log but don't fail extraction
+                    // Timestamp setting is best-effort; silently ignore failures
                     // This can happen on filesystems that don't support modification times
                 }
             }
