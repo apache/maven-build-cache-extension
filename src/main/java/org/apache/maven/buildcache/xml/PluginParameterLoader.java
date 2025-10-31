@@ -22,8 +22,8 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
 import java.io.InputStream;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.maven.buildcache.xml.PluginParameterDefinition.GoalParameterDefinition;
 import org.apache.maven.buildcache.xml.PluginParameterDefinition.ParameterDefinition;
@@ -43,7 +43,7 @@ public class PluginParameterLoader {
     private static final Logger LOGGER = LoggerFactory.getLogger(PluginParameterLoader.class);
     private static final String PARAMETER_DIR = "plugin-parameters/";
 
-    private final Map<String, PluginParameterDefinition> definitions = new HashMap<>();
+    private final Map<String, PluginParameterDefinition> definitions = new ConcurrentHashMap<>();
 
     /**
      * Load parameter definitions for a plugin by artifact ID only (no version matching)

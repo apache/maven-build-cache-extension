@@ -334,7 +334,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
             String propertyName = property.getPropertyName();
 
             if (!goalDef.hasParameter(propertyName)) {
-                LOGGER.error(
+                LOGGER.warn(
                         "Unknown parameter '{}' in reconciliation config for {}:{} version {}. "
                                 + "This may indicate a plugin version mismatch or renamed parameter. "
                                 + "Consider updating parameter definition or removing from reconciliation.",
