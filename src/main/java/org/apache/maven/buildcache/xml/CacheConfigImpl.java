@@ -370,23 +370,38 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
         String artifactId = plugin.getArtifactId();
         String pluginVersion = plugin.getVersion();
 
+        LOGGER.debug(
+                "Attempting to auto-generate reconciliation config for {}:{} version {}",
+                artifactId,
+                goal,
+                pluginVersion);
+
         // Load parameter definition for this plugin
         PluginParameterDefinition pluginDef = parameterLoader.load(artifactId, pluginVersion);
         if (pluginDef == null) {
+            LOGGER.debug("No parameter definition found for {}:{}", artifactId, pluginVersion);
             return null;
         }
 
         // Get goal definition
         PluginParameterDefinition.GoalParameterDefinition goalDef = pluginDef.getGoal(goal);
         if (goalDef == null) {
+            LOGGER.debug("No goal definition found for goal '{}' in plugin {}", goal, artifactId);
             return null;
         }
+
+        LOGGER.debug(
+                "Found goal definition for {}:{} with {} total parameters",
+                artifactId,
+                goal,
+                goalDef.getParameters().size());
 
         // Collect all functional parameters
         List<TrackedProperty> functionalProperties = new ArrayList<>();
         for (PluginParameterDefinition.ParameterDefinition param :
                 goalDef.getParameters().values()) {
             if (param.isFunctional()) {
+                LOGGER.debug("Adding functional parameter '{}' to auto-generated config", param.getName());
                 TrackedProperty property = new TrackedProperty();
                 property.setPropertyName(param.getName());
                 functionalProperties.add(property);
@@ -395,8 +410,11 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
 
         // Only create config if there are functional parameters to track
         if (functionalProperties.isEmpty()) {
+            LOGGER.debug("No functional parameters found for {}:{}", artifactId, goal);
             return null;
         }
+
+        LOGGER.debug("Created auto-generated config with {} functional parameters", functionalProperties.size());
 
         // Create auto-generated reconciliation config
         GoalReconciliation config = new GoalReconciliation();
