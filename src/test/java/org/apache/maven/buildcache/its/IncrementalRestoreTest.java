@@ -27,10 +27,12 @@ import java.nio.file.Paths;
 import org.apache.maven.buildcache.its.junit.IntegrationTest;
 import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import static org.apache.maven.buildcache.util.LogFileUtils.findFirstLineContainingTextsInLogs;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Check if a restoration restores build incrementally,i.e. package -> verify -> install -> deploy,
@@ -101,7 +103,7 @@ class IncrementalRestoreTest {
     private Path jarJavadocCacheFile;
 
     @Test
-    void simple(Verifier verifier) throws VerificationException, IOException {
+    void simple(Verifier verifier) throws Exception {
         verifier.setAutoclean(false);
         verifier.setMavenDebug(true);
 
@@ -135,10 +137,10 @@ class IncrementalRestoreTest {
         jarCacheFile = buildInfoPath.getParent().resolve(MBUILDCACHE_INCREMENTAL_JAR);
         jarSourcesCacheFile = buildInfoPath.getParent().resolve(MBUILDCACHE_INCREMENTAL_SOURCES_JAR);
         jarJavadocCacheFile = buildInfoPath.getParent().resolve(MBUILDCACHE_INCREMENTAL_JAVADOC_JAR);
-        Assertions.assertTrue(Files.exists(jarCacheFile), "Expected artifact saved in build cache.");
-        Assertions.assertFalse(
+        assertTrue(Files.exists(jarCacheFile), "Expected artifact saved in build cache.");
+        assertFalse(
                 Files.exists(jarSourcesCacheFile), "Not expected sources artifact saved in build cache.");
-        Assertions.assertFalse(
+        assertFalse(
                 Files.exists(jarJavadocCacheFile), "Not expected javadoc artifact saved in build cache.");
     }
 
@@ -156,7 +158,7 @@ class IncrementalRestoreTest {
         verifySkippedPluginExecutions(verifier);
         verifier.verifyFilePresent(GENERATED_JAR);
         verifyCachedExtraOutputs(verifier);
-        Assertions.assertTrue(Files.exists(jarCacheFile), "Expected artifact saved in build cache.");
+        assertTrue(Files.exists(jarCacheFile), "Expected artifact saved in build cache.");
     }
 
     private void verifyWithCache(Verifier verifier) throws VerificationException {
@@ -176,7 +178,7 @@ class IncrementalRestoreTest {
         verifier.verifyTextInLog(SAVED_BUILD_TO_LOCAL_FILE);
         verifier.verifyFilePresent(GENERATED_JAR);
         verifyCachedExtraOutputs(verifier);
-        Assertions.assertTrue(Files.exists(jarCacheFile), "Expected artifact saved in build cache.");
+        assertTrue(Files.exists(jarCacheFile), "Expected artifact saved in build cache.");
     }
 
     private void installWithCache(Verifier verifier) throws VerificationException {
@@ -199,7 +201,7 @@ class IncrementalRestoreTest {
         verifier.verifyTextInLog(SAVED_BUILD_TO_LOCAL_FILE);
         verifier.verifyFilePresent(GENERATED_JAR);
         verifyCachedExtraOutputs(verifier);
-        Assertions.assertTrue(Files.exists(jarCacheFile), "Expected artifact saved in build cache.");
+        assertTrue(Files.exists(jarCacheFile), "Expected artifact saved in build cache.");
     }
 
     private void deployWithCache(Verifier verifier) throws VerificationException {
@@ -224,9 +226,9 @@ class IncrementalRestoreTest {
         verifier.verifyFilePresent(GENERATED_SOURCES_JAR);
         verifier.verifyFilePresent(GENERATED_JAVADOC_JAR);
         verifyCachedExtraOutputs(verifier);
-        Assertions.assertTrue(Files.exists(jarCacheFile), "Expected artifact saved in build cache.");
-        Assertions.assertTrue(Files.exists(jarSourcesCacheFile), "Expected sources artifact saved in build cache.");
-        Assertions.assertTrue(Files.exists(jarJavadocCacheFile), "Expected javadoc artifact saved in build cache.");
+        assertTrue(Files.exists(jarCacheFile), "Expected artifact saved in build cache.");
+        assertTrue(Files.exists(jarSourcesCacheFile), "Expected sources artifact saved in build cache.");
+        assertTrue(Files.exists(jarJavadocCacheFile), "Expected javadoc artifact saved in build cache.");
     }
 
     private void replayInstallWithCache(Verifier verifier) throws VerificationException {
@@ -247,9 +249,9 @@ class IncrementalRestoreTest {
         verifier.verifyFilePresent(GENERATED_SOURCES_JAR);
         verifier.verifyFilePresent(GENERATED_JAVADOC_JAR);
         verifyCachedExtraOutputs(verifier);
-        Assertions.assertTrue(Files.exists(jarCacheFile), "Expected artifact saved in build cache.");
-        Assertions.assertTrue(Files.exists(jarSourcesCacheFile), "Expected sources artifact saved in build cache.");
-        Assertions.assertTrue(Files.exists(jarJavadocCacheFile), "Expected javadoc artifact saved in build cache.");
+        assertTrue(Files.exists(jarCacheFile), "Expected artifact saved in build cache.");
+        assertTrue(Files.exists(jarSourcesCacheFile), "Expected sources artifact saved in build cache.");
+        assertTrue(Files.exists(jarJavadocCacheFile), "Expected javadoc artifact saved in build cache.");
     }
 
     private void cleanBuild(Verifier verifier) throws VerificationException {
@@ -299,11 +301,11 @@ class IncrementalRestoreTest {
     }
 
     private static void verifyNoTextInLog(Verifier verifier, String text, String message) throws VerificationException {
-        Assertions.assertNull(findFirstLineContainingTextsInLogs(verifier, text), message);
+        assertNull(findFirstLineContainingTextsInLogs(verifier, text), message);
     }
 
     private static void verifyNoTextInLog(Verifier verifier, String text) throws VerificationException {
-        Assertions.assertNull(findFirstLineContainingTextsInLogs(verifier, text));
+        assertNull(findFirstLineContainingTextsInLogs(verifier, text));
     }
 
     private static Path getSavedBuildInfoPath(Verifier verifier) throws VerificationException {

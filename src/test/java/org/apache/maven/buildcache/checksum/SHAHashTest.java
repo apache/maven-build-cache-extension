@@ -60,14 +60,14 @@ class SHAHashTest {
     private static final HashChecksum CHECKSUM = SHA256.createChecksum(0);
 
     @Test
-    void testEmptyArray() {
+    void emptyArray() {
         byte[] emptyArray = new byte[0];
         String hash = ALGORITHM.hash(emptyArray);
         assertEquals(EMPTY_HASH, hash);
     }
 
     @Test
-    void testSimpleHash() {
+    void simpleHash() {
         String helloHash = ALGORITHM.hash(HELLO_ARRAY);
         assertEquals(HELLO_HASH, helloHash);
 
@@ -76,7 +76,7 @@ class SHAHashTest {
     }
 
     @Test
-    void testSimpleChecksum() {
+    void simpleChecksum() {
         assertEquals(HELLO_HASH, CHECKSUM.update(HELLO_ARRAY));
         assertEquals(HELLO_CHECKSUM, CHECKSUM.digest());
 

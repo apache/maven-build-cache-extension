@@ -18,7 +18,6 @@
  */
 package org.apache.maven.buildcache.its;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -43,7 +42,7 @@ class Issue87Test {
             "Found cached build, restoring " + MODULE2_PROJECT_NAME + " from cache";
 
     @Test
-    void simple(Verifier verifier) throws VerificationException, IOException {
+    void simple(Verifier verifier) throws Exception {
         verifier.setLogFileName("../log-0.txt");
         verifier.executeGoals(Arrays.asList("-f", "external", "install"));
         verifier.verifyErrorFreeLog();

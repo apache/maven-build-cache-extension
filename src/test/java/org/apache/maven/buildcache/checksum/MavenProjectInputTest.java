@@ -50,7 +50,7 @@ class MavenProjectInputTest {
     private static final String DEFAULT_GLOB = "*";
 
     @Test
-    void testCollectFilteredFiles() {
+    void collectFilteredFiles() {
         List<Path> collectedFiles = new ArrayList<>();
         MavenProjectInput.walkDirectoryFiles(
                 Paths.get("src/test/resources/test-folder"), collectedFiles, DEFAULT_GLOB, it -> it.getFileName()
@@ -60,7 +60,7 @@ class MavenProjectInputTest {
     }
 
     @Test
-    void testCollectNonFilteredFiles() {
+    void collectNonFilteredFiles() {
         List<Path> collectedFiles = new ArrayList<>();
         MavenProjectInput.walkDirectoryFiles(
                 Paths.get("src/test/resources/test-folder"), collectedFiles, DEFAULT_GLOB, it -> false);

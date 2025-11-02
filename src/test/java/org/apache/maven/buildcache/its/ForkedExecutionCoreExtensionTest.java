@@ -55,7 +55,7 @@ class ForkedExecutionCoreExtensionTest {
     }
 
     @Test
-    void testForkedExecution(Verifier verifier) throws VerificationException {
+    void forkedExecution(Verifier verifier) throws Exception {
         verifier.setAutoclean(false);
 
         verifier.setLogFileName("../log-1.txt");

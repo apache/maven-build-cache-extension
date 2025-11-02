@@ -30,7 +30,7 @@ class XmlServiceTest {
 
     @Test
     @Disabled("cache-build-1.0.0.xsd not found")
-    void testConfig() throws Exception {
+    void config() throws Exception {
         SchemaFactory sf = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
         Schema schema = sf.newSchema(getClass().getResource("/build-cache-config-1.0.0.xsd"));
         DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
@@ -40,7 +40,7 @@ class XmlServiceTest {
 
     @Test
     @Disabled("cache-build-1.0.0.xsd not found")
-    void testReport() throws Exception {
+    void report() throws Exception {
         SchemaFactory sf = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
         Schema schema = sf.newSchema(getClass().getResource("/build-cache-report-1.0.0.xsd"));
         DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
@@ -50,7 +50,7 @@ class XmlServiceTest {
 
     @Test
     @Disabled("cache-build-1.0.0.xsd not found")
-    void testBuild() throws Exception {
+    void build() throws Exception {
         SchemaFactory sf = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
         Schema schema = sf.newSchema(getClass().getResource("/build-cache-build-1.0.0.xsd"));
         DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
@@ -60,7 +60,7 @@ class XmlServiceTest {
 
     @Test
     @Disabled("cache-build-1.0.0.xsd not found")
-    void testDiff() throws Exception {
+    void diff() throws Exception {
         SchemaFactory sf = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
         Schema schema = sf.newSchema(getClass().getResource("/build-cache-diff-1.0.0.xsd"));
         DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();

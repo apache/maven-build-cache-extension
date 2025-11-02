@@ -34,7 +34,6 @@ import org.apache.maven.buildcache.its.junit.BeforeEach;
 import org.apache.maven.buildcache.its.junit.Inject;
 import org.apache.maven.buildcache.its.junit.IntegrationTest;
 import org.apache.maven.buildcache.its.junit.IntegrationTestExtension;
-import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterEach;
@@ -119,7 +118,7 @@ class RemoteCacheDavTest {
 
     @ParameterizedTest
     @MethodSource("transports")
-    void doTestRemoteCache(String transport) throws VerificationException, IOException {
+    void doTestRemoteCache(String transport) throws Exception {
         String url =
                 ("wagon".equals(transport) ? "dav:" : "") + "http://localhost:" + dav.getFirstMappedPort() + "/mbce";
         substitute(

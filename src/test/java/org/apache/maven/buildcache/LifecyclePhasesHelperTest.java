@@ -158,17 +158,14 @@ class LifecyclePhasesHelperTest {
         assertFalse(lifecyclePhasesHelper.isLaterPhase("test", "site"));
         assertFalse(lifecyclePhasesHelper.isLaterPhase("clean", "site"));
 
-        assertThrows(IllegalArgumentException.class, () -> {
-            lifecyclePhasesHelper.isLaterPhase("install", null);
-        });
+        assertThrows(IllegalArgumentException.class, () ->
+            lifecyclePhasesHelper.isLaterPhase("install", null));
 
-        assertThrows(IllegalArgumentException.class, () -> {
-            lifecyclePhasesHelper.isLaterPhase("install", "unknown phase");
-        });
+        assertThrows(IllegalArgumentException.class, () ->
+            lifecyclePhasesHelper.isLaterPhase("install", "unknown phase"));
 
-        assertThrows(IllegalArgumentException.class, () -> {
-            lifecyclePhasesHelper.isLaterPhase("unknown phase", "install");
-        });
+        assertThrows(IllegalArgumentException.class, () ->
+            lifecyclePhasesHelper.isLaterPhase("unknown phase", "install"));
     }
 
     @Test
@@ -225,7 +222,7 @@ class LifecyclePhasesHelperTest {
     }
 
     @Test
-    void testCachedSegment() {
+    void cachedSegment() {
         MojoExecution compile = mockedMojoExecution("compile");
         MojoExecution test = mockedMojoExecution("test");
         List<MojoExecution> mojoExecutions = Arrays.asList(compile, test, mockedMojoExecution("install"));
@@ -239,7 +236,7 @@ class LifecyclePhasesHelperTest {
     }
 
     @Test
-    void testEmptyCachedSegment() {
+    void emptyCachedSegment() {
         MojoExecution compile = mockedMojoExecution("compile");
         MojoExecution test = mockedMojoExecution("test");
         MojoExecution install = mockedMojoExecution("install");
@@ -254,7 +251,7 @@ class LifecyclePhasesHelperTest {
     }
 
     @Test
-    void testCachedSegmentForked() {
+    void cachedSegmentForked() {
         MojoExecution me1 = mockedMojoExecution(null);
         MojoExecution me2 = mockedMojoExecution(null);
 
@@ -273,7 +270,7 @@ class LifecyclePhasesHelperTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"install", "site"})
-    void testAllInCachedSegment() {
+    void allInCachedSegment() {
         MojoExecution compile = mockedMojoExecution("compile");
         MojoExecution test = mockedMojoExecution("test");
         MojoExecution install = mockedMojoExecution("install");
@@ -288,7 +285,7 @@ class LifecyclePhasesHelperTest {
     }
 
     @Test
-    void testPostCachedSegment() {
+    void postCachedSegment() {
         MojoExecution compile = mockedMojoExecution("compile");
         MojoExecution test = mockedMojoExecution("test");
         MojoExecution install = mockedMojoExecution("install");
@@ -304,7 +301,7 @@ class LifecyclePhasesHelperTest {
     }
 
     @Test
-    void testAllPostCachedSegment() {
+    void allPostCachedSegment() {
         MojoExecution compile = mockedMojoExecution("compile");
         MojoExecution test = mockedMojoExecution("test");
         MojoExecution install = mockedMojoExecution("install");
@@ -320,7 +317,7 @@ class LifecyclePhasesHelperTest {
     }
 
     @Test
-    void testPostCachedSegmentForked() {
+    void postCachedSegmentForked() {
         MojoExecution me1 = mockedMojoExecution(null);
         MojoExecution me2 = mockedMojoExecution(null);
 
@@ -340,7 +337,7 @@ class LifecyclePhasesHelperTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"install", "site"})
-    void testEmptyPostCachedSegmentInclusive() {
+    void emptyPostCachedSegmentInclusive() {
         MojoExecution compile = mockedMojoExecution("compile");
         MojoExecution test = mockedMojoExecution("test");
         MojoExecution install = mockedMojoExecution("install");

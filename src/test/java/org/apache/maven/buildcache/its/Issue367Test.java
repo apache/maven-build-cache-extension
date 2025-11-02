@@ -18,7 +18,6 @@
  */
 package org.apache.maven.buildcache.its;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
@@ -39,7 +38,7 @@ class Issue367Test {
 
     @Test
     void fileOutsideInputDirectoryMatchingProjectLevelGlobPatternShouldNotInvalidateCache(Verifier verifier)
-            throws VerificationException, IOException {
+            throws Exception {
         assumeFalse(SystemUtils.IS_OS_WINDOWS);
 
         verifier.setAutoclean(false);

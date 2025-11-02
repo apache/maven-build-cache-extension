@@ -60,6 +60,7 @@ import org.mockito.quality.Strictness;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -179,9 +180,7 @@ class CacheConfigImplTest {
         asserts.put("getExcludePatterns", () -> assertEquals(Collections.emptyList(), testObject.getExcludePatterns()));
         asserts.put(
                 "getExecutionDirScanConfig",
-                () -> assertTrue(
-                        testObject.getExecutionDirScanConfig(mock(Plugin.class), mock(PluginExecution.class))
-                                instanceof DefaultPluginScanConfig));
+                () -> assertInstanceOf(DefaultPluginScanConfig.class, testObject.getExecutionDirScanConfig(mock(Plugin.class), mock(PluginExecution.class))));
         asserts.put(
                 "getGlobalExcludePaths",
                 () -> assertEquals(Collections.emptyList(), testObject.getGlobalExcludePaths()));
@@ -201,8 +200,7 @@ class CacheConfigImplTest {
                 () -> assertEquals(Collections.emptyList(), testObject.getNologProperties(mock(MojoExecution.class))));
         asserts.put(
                 "getPluginDirScanConfig",
-                () -> assertTrue(
-                        testObject.getPluginDirScanConfig(mock(Plugin.class)) instanceof DefaultPluginScanConfig));
+                () -> assertInstanceOf(DefaultPluginScanConfig.class, testObject.getPluginDirScanConfig(mock(Plugin.class))));
         asserts.put(
                 "getTrackedProperties",
                 () -> assertEquals(
@@ -228,14 +226,14 @@ class CacheConfigImplTest {
     }
 
     @Test
-    void testInitializationInvalidMavenVersion() {
+    void initializationInvalidMavenVersion() {
         when(rtInfo.isMavenVersion(ArgumentMatchers.anyString())).thenReturn(false);
 
         assertEquals(CacheState.DISABLED, testObject.initialize());
     }
 
     @Test
-    void testInitializationDisabledUserProperty() {
+    void initializationDisabledUserProperty() {
         when(mockProperties.getProperty(CacheConfigImpl.CACHE_ENABLED_PROPERTY_NAME))
                 .thenReturn("false");
 
@@ -243,7 +241,7 @@ class CacheConfigImplTest {
     }
 
     @Test
-    void testInitializationDisabledSystemProperty() {
+    void initializationDisabledSystemProperty() {
         when(mockProperties.getProperty(CacheConfigImpl.CACHE_ENABLED_PROPERTY_NAME))
                 .thenReturn(null)
                 .thenReturn("false");
@@ -252,7 +250,7 @@ class CacheConfigImplTest {
     }
 
     @Test
-    void testInitializationDisabledInXML() {
+    void initializationDisabledInXML() {
         Configuration configuration = new Configuration();
         configuration.setEnabled(false);
         testCacheConfig.setConfiguration(configuration);
@@ -261,7 +259,7 @@ class CacheConfigImplTest {
     }
 
     @Test
-    void testInitializationNonExistantXMLFromProperty() {
+    void initializationNonExistantXMLFromProperty() {
         when(mockProperties.getProperty(CacheConfigImpl.CONFIG_PATH_PROPERTY_NAME))
                 .thenReturn("does-not-exist");
 
@@ -270,7 +268,7 @@ class CacheConfigImplTest {
     }
 
     @Test
-    void testInitializationNonExistantXMLFromRoot() throws IOException {
+    void initializationNonExistantXMLFromRoot() throws Exception {
         deepMockConfigFile(rootConfigFile, false);
 
         assertEquals(CacheState.INITIALIZED, testObject.initialize());
@@ -278,7 +276,7 @@ class CacheConfigImplTest {
     }
 
     @Test
-    void testInitializationExplicitlyEnabledUserPropertyOverridesXML() {
+    void initializationExplicitlyEnabledUserPropertyOverridesXML() {
         Configuration configuration = new Configuration();
         configuration.setEnabled(false);
         testCacheConfig.setConfiguration(configuration);
@@ -290,7 +288,7 @@ class CacheConfigImplTest {
     }
 
     @Test
-    void testRemoteEnableInXMLButNoURL() {
+    void remoteEnableInXMLButNoURL() {
         Configuration configuration = new Configuration();
         Remote remote = new Remote();
         remote.setEnabled(true);
@@ -302,7 +300,7 @@ class CacheConfigImplTest {
     }
 
     @Test
-    void testRemoteEnableInXMLWithURL() {
+    void remoteEnableInXMLWithURL() {
         Configuration configuration = new Configuration();
         Remote remote = new Remote();
         remote.setEnabled(true);
@@ -317,7 +315,7 @@ class CacheConfigImplTest {
     }
 
     @Test
-    void testRemoteEnableByUserPropertyOverrideNoURL() {
+    void remoteEnableByUserPropertyOverrideNoURL() {
         when(mockProperties.getProperty(CacheConfigImpl.REMOTE_ENABLED_PROPERTY_NAME))
                 .thenReturn("true");
 
@@ -326,7 +324,7 @@ class CacheConfigImplTest {
     }
 
     @Test
-    void testRemoteEnableByUserPropertyOverrideWithURL() {
+    void remoteEnableByUserPropertyOverrideWithURL() {
         Configuration configuration = new Configuration();
         Remote remote = new Remote();
         remote.setUrl("dummy.url.xyz");
@@ -342,7 +340,7 @@ class CacheConfigImplTest {
     }
 
     @Test
-    void testRemoteDisableByUserPropertyOverride() {
+    void remoteDisableByUserPropertyOverride() {
         Configuration configuration = new Configuration();
         Remote remote = new Remote();
         remote.setUrl("dummy.url.xyz");
@@ -357,7 +355,7 @@ class CacheConfigImplTest {
     }
 
     @Test
-    void testRemoveSaveEnabledInXML() {
+    void removeSaveEnabledInXML() {
         Configuration configuration = new Configuration();
         Remote remote = new Remote();
         remote.setUrl("dummy.url.xyz");
@@ -374,7 +372,7 @@ class CacheConfigImplTest {
     }
 
     @Test
-    void testRemoveSaveEnabledByUserProperty() {
+    void removeSaveEnabledByUserProperty() {
         Configuration configuration = new Configuration();
         Remote remote = new Remote();
         remote.setUrl("dummy.url.xyz");
@@ -392,7 +390,7 @@ class CacheConfigImplTest {
     }
 
     @Test
-    void testRemoveSaveDisabledByUserProperty() {
+    void removeSaveDisabledByUserProperty() {
         Configuration configuration = new Configuration();
         Remote remote = new Remote();
         remote.setUrl("dummy.url.xyz");
@@ -410,7 +408,7 @@ class CacheConfigImplTest {
     }
 
     @Test
-    void testRemoteSaveIgnoredWhenRemoteDisabledInXML() {
+    void remoteSaveIgnoredWhenRemoteDisabledInXML() {
         Configuration configuration = new Configuration();
         Remote remote = new Remote();
         remote.setSaveToRemote(true);
@@ -422,7 +420,7 @@ class CacheConfigImplTest {
     }
 
     @Test
-    void testRemoteSaveIgnoredWhenRemoteDisabledUserProperty() {
+    void remoteSaveIgnoredWhenRemoteDisabledUserProperty() {
         when(mockProperties.getProperty(CacheConfigImpl.SAVE_TO_REMOTE_PROPERTY_NAME))
                 .thenReturn("true");
 
@@ -431,7 +429,7 @@ class CacheConfigImplTest {
     }
 
     @Test
-    void testRemoteSaveIgnoredWhenRemoteDisabledByUserPropertyOverride() {
+    void remoteSaveIgnoredWhenRemoteDisabledByUserPropertyOverride() {
         Configuration configuration = new Configuration();
         Remote remote = new Remote();
         remote.setUrl("dummy.url.xyz");
@@ -447,7 +445,7 @@ class CacheConfigImplTest {
     }
 
     @Test
-    void testRemoveSaveFinalEnabledByUserProperty() {
+    void removeSaveFinalEnabledByUserProperty() {
         Configuration configuration = new Configuration();
         Remote remote = new Remote();
         remote.setUrl("dummy.url.xyz");
@@ -467,7 +465,7 @@ class CacheConfigImplTest {
     }
 
     @Test
-    void testRemoveSaveFinalIgnoredWhenRemoteSaveDisabled() {
+    void removeSaveFinalIgnoredWhenRemoteSaveDisabled() {
         Configuration configuration = new Configuration();
         Remote remote = new Remote();
         remote.setUrl("dummy.url.xyz");

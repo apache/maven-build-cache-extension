@@ -18,19 +18,18 @@
  */
 package org.apache.maven.buildcache.its;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
 import org.apache.maven.buildcache.its.junit.IntegrationTest;
 import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import static org.apache.maven.buildcache.util.LogFileUtils.findFirstLineContainingTextsInLogs;
 import static org.apache.maven.buildcache.xml.CacheConfigImpl.CACHE_LOCATION_PROPERTY_NAME;
 import static org.apache.maven.buildcache.xml.CacheConfigImpl.SKIP_SAVE;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 @IntegrationTest("src/test/projects/build-extension")
 class BuildExtensionTest {
@@ -38,7 +37,7 @@ class BuildExtensionTest {
     private static final String PROJECT_NAME = "org.apache.maven.caching.test.simple:simple";
 
     @Test
-    void simple(Verifier verifier) throws VerificationException {
+    void simple(Verifier verifier) throws Exception {
         verifier.setAutoclean(false);
 
         verifier.setLogFileName("../log-1.txt");
@@ -52,7 +51,7 @@ class BuildExtensionTest {
     }
 
     @Test
-    void skipSaving(Verifier verifier) throws VerificationException, IOException {
+    void skipSaving(Verifier verifier) throws Exception {
         verifier.setAutoclean(false);
         Path tempDirectory = Files.createTempDirectory("skip-saving-test");
         verifier.getCliOptions().clear();
@@ -72,6 +71,6 @@ class BuildExtensionTest {
     }
 
     private static void verifyNoTextInLog(Verifier verifier, String text) throws VerificationException {
-        Assertions.assertNull(findFirstLineContainingTextsInLogs(verifier, text));
+        assertNull(findFirstLineContainingTextsInLogs(verifier, text));
     }
 }

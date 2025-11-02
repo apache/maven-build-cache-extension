@@ -26,8 +26,11 @@ import org.apache.maven.buildcache.its.junit.IntegrationTest;
 import org.apache.maven.buildcache.util.LogFileUtils;
 import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @IntegrationTest("src/test/projects/include-exclude")
 class IncludeExcludeTest {
@@ -42,7 +45,7 @@ class IncludeExcludeTest {
      * @throws VerificationException
      */
     @Test
-    void includeExclude(Verifier verifier) throws VerificationException {
+    void includeExclude(Verifier verifier) throws Exception {
         verifier.setAutoclean(false);
         verifier.setMavenDebug(true);
 
@@ -67,10 +70,10 @@ class IncludeExcludeTest {
         String foundXFiles = LogFileUtils.findFirstLineContainingTextsInLogs(verifier, "Found ", " input files.");
 
         Matcher m = NB_SRC_PATTERN.matcher(foundXFiles);
-        Assertions.assertTrue(
+        assertTrue(
                 m.find(), "Found XX input files string not found in log. This test might need an update?");
 
-        Assertions.assertEquals(nbFilesToFind, m.group(2), "Expected " + nbFilesToFind + " as source.");
+        assertEquals(nbFilesToFind, m.group(2), "Expected " + nbFilesToFind + " as source.");
 
         // Verify and inspect the line describing precisely which input files were chosen
         String srcInputLine = LogFileUtils.findFirstLineContainingTextsInLogs(verifier, "Src input: [");
@@ -91,7 +94,7 @@ class IncludeExcludeTest {
         // Verify that excluded directories are "cut" from inspection as soon as possible
         String blacklistedLine = LogFileUtils.findFirstLineContainingTextsInLogs(
                 verifier, "Skipping subtree (blacklisted)", "buildcache" + File.separator + "not");
-        Assertions.assertNotNull(
+        assertNotNull(
                 blacklistedLine,
                 "Expecting a debug line saying that \"src/main/java/org/apache/maven/buildcache/not\" is excluded from tree walking.");
     }

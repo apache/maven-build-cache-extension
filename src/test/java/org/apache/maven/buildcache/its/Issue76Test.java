@@ -19,7 +19,6 @@
 package org.apache.maven.buildcache.its;
 
 import org.apache.maven.buildcache.its.junit.IntegrationTest;
-import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
 import org.junit.jupiter.api.Test;
 
@@ -29,7 +28,7 @@ class Issue76Test {
     private static final String PROJECT_NAME = "org.apache.maven.caching.test:mbuildcache-76";
 
     @Test
-    void simpleBuildChangeVersionBuildInstallAgain(Verifier verifier) throws VerificationException {
+    void simpleBuildChangeVersionBuildInstallAgain(Verifier verifier) throws Exception {
         verifier.setAutoclean(false);
 
         verifier.setLogFileName("../log-1.txt");

@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class HexUtilsTest {
 
     @Test
-    void testEncodeToHex() {
+    void encodeToHex() {
         // array length = 8 left padded with zeroes
         assertEquals("0000000000000000", HexUtils.encode(new byte[8]));
         assertEquals("00", HexUtils.encode(new byte[1]));
@@ -39,7 +39,7 @@ class HexUtilsTest {
     }
 
     @Test
-    void testDecodeHex() {
+    void decodeHex() {
         assertArrayEquals(new byte[] {0}, HexUtils.decode("00"));
         assertArrayEquals(new byte[] {10}, HexUtils.decode("0a"));
         assertArrayEquals(new byte[] {10}, HexUtils.decode("0A"));

@@ -18,7 +18,6 @@
  */
 package org.apache.maven.buildcache.its;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
@@ -34,7 +33,7 @@ import static java.util.Arrays.asList;
 class Issue99Test {
 
     @Test
-    void renamedFileInvalidatesCache(Verifier verifier) throws VerificationException, IOException {
+    void renamedFileInvalidatesCache(Verifier verifier) throws Exception {
         verifier.setAutoclean(false);
 
         verifier.setLogFileName("../log-0.txt");

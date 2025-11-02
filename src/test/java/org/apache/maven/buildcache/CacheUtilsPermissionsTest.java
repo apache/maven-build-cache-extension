@@ -50,7 +50,7 @@ class CacheUtilsPermissionsTest {
      * cache correctness similar to how Git includes file mode in tree hashes.
      */
     @Test
-    void testPermissionsAffectFileHashWhenEnabled() throws IOException {
+    void permissionsAffectFileHashWhenEnabled() throws Exception {
         // Skip test on non-POSIX filesystems (e.g., Windows)
         if (!tempDir.getFileSystem().supportedFileAttributeViews().contains("posix")) {
             return;
@@ -100,7 +100,7 @@ class CacheUtilsPermissionsTest {
      * the key point is that permission information is NOT deterministically stored.
      */
     @Test
-    void testPermissionsDoNotAffectHashWhenDisabled() throws IOException {
+    void permissionsDoNotAffectHashWhenDisabled() throws Exception {
         // Skip test on non-POSIX filesystems (e.g., Windows)
         if (!tempDir.getFileSystem().supportedFileAttributeViews().contains("posix")) {
             return;

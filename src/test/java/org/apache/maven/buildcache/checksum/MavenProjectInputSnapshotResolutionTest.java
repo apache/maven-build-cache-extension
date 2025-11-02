@@ -143,7 +143,7 @@ class MavenProjectInputSnapshotResolutionTest {
     }
 
     @Test
-    void testArtifactRequestWithRepositoriesSet() throws Exception {
+    void artifactRequestWithRepositoriesSet() throws Exception {
         // Given: A snapshot dependency and configured repositories
         Dependency dependency = new Dependency();
         dependency.setGroupId("com.example");
@@ -212,7 +212,7 @@ class MavenProjectInputSnapshotResolutionTest {
     }
 
     @Test
-    void testArtifactRequestWithoutRepositories() throws Exception {
+    void artifactRequestWithoutRepositories() throws Exception {
         // Given: A snapshot dependency with no remote repositories configured
         Dependency dependency = new Dependency();
         dependency.setGroupId("com.example");
@@ -270,7 +270,7 @@ class MavenProjectInputSnapshotResolutionTest {
     }
 
     @Test
-    void testArtifactRequestWithMultipleRepositories() throws Exception {
+    void artifactRequestWithMultipleRepositories() throws Exception {
         // Given: A snapshot dependency with multiple repositories configured
         Dependency dependency = new Dependency();
         dependency.setGroupId("com.example");

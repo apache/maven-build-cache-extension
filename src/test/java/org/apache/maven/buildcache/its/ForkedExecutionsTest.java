@@ -28,7 +28,6 @@ import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
 import org.apache.commons.io.FileUtils;
 import org.apache.maven.buildcache.its.junit.IntegrationTest;
-import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -69,7 +68,7 @@ class ForkedExecutionsTest {
     }
 
     @Test
-    void testForkedExecution(Verifier verifier) throws VerificationException {
+    void forkedExecution(Verifier verifier) throws Exception {
 
         UrlPathPattern buildInfoPath = urlPathMatching(".*/buildinfo.xml");
         wm.stubFor(get(buildInfoPath).willReturn(notFound()));

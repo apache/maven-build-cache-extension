@@ -63,14 +63,14 @@ class XXHashTest {
     private static final HashAlgorithm ALGORITHM = XX.createAlgorithm();
 
     @Test
-    void testEmptyArray() {
+    void emptyArray() {
         byte[] emptyArray = new byte[0];
         String hash = ALGORITHM.hash(emptyArray);
         assertEquals(EMPTY_HASH, hash);
     }
 
     @Test
-    void testSimpleHash() {
+    void simpleHash() {
         String helloHash = ALGORITHM.hash(HELLO_ARRAY);
         assertEquals(HELLO_HASH, helloHash);
 
@@ -79,7 +79,7 @@ class XXHashTest {
     }
 
     @Test
-    void testSimpleChecksum() {
+    void simpleChecksum() {
         String helloChecksum = ALGORITHM.hash(longToBytes(1, HELLO_LONG));
         assertEquals(HELLO_CHECKSUM, helloChecksum);
 
@@ -91,31 +91,31 @@ class XXHashTest {
     }
 
     @Test
-    void testEmptyBuffer() {
+    void emptyBuffer() {
         assertEmptyBuffer(XX.createChecksum(0));
         assertEmptyBuffer(XXMM.createChecksum(0));
     }
 
     @Test
-    void testSingleHash() {
+    void singleHash() {
         assertSingleHash(XX.createChecksum(1));
         assertSingleHash(XXMM.createChecksum(1));
     }
 
     @Test
-    void testSingleChecksum() {
+    void singleChecksum() {
         assertSingleChecksum(XX.createChecksum(1));
         assertSingleChecksum(XXMM.createChecksum(1));
     }
 
     @Test
-    void testNotFullChecksum() {
+    void notFullChecksum() {
         assertSingleChecksum(XX.createChecksum(2));
         assertSingleChecksum(XXMM.createChecksum(2));
     }
 
     @Test
-    void testFullChecksum() {
+    void fullChecksum() {
         assertFullChecksum(XX.createChecksum(2));
         assertFullChecksum(XXMM.createChecksum(2));
     }

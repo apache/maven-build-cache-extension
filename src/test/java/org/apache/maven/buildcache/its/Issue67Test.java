@@ -18,7 +18,6 @@
  */
 package org.apache.maven.buildcache.its;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -28,8 +27,10 @@ import java.util.List;
 import org.apache.maven.buildcache.its.junit.IntegrationTest;
 import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Check if a restoration error is handled properly = the build should be executed "normally", like if there is no cache.
@@ -41,7 +42,7 @@ class Issue67Test {
     private static final String GENERATED_JAR = "target/mbuildcache-67-0.0.1-SNAPSHOT.jar";
 
     @Test
-    void simple(Verifier verifier) throws VerificationException, IOException {
+    void simple(Verifier verifier) throws Exception {
         verifier.setAutoclean(false);
         verifier.setMavenDebug(true);
 
@@ -53,12 +54,12 @@ class Issue67Test {
         verifier.verifyFilePresent(GENERATED_JAR);
 
         String savedPathLogLine = findFirstLineContainingTextsInLogs(verifier, SAVED_BUILD_TO_LOCAL_FILE);
-        Assertions.assertNotNull(savedPathLogLine, "We expect a debug log line with the path to the saved cache file");
+        assertNotNull(savedPathLogLine, "We expect a debug log line with the path to the saved cache file");
         String[] array = savedPathLogLine.split(SAVED_BUILD_TO_LOCAL_FILE);
         String jarCachePath = array[array.length - 1].replace("buildinfo.xml", "mbuildcache-67.jar");
 
         // We remove from the local cache repository the jar artifact. In order to launch a restoration error.
-        Assertions.assertTrue(
+        assertTrue(
                 Files.deleteIfExists(Paths.get(jarCachePath)), "mbuildcache-67.jar was expected in the local cache");
 
         // Second build, with a corrupted cache

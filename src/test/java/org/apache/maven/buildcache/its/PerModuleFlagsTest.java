@@ -18,10 +18,7 @@
  */
 package org.apache.maven.buildcache.its;
 
-import java.io.IOException;
-
 import org.apache.maven.buildcache.its.junit.IntegrationTest;
-import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
 import org.junit.jupiter.api.Test;
 
@@ -32,7 +29,7 @@ class PerModuleFlagsTest {
     private static final String PROJECT_NAME_MODULE3 = "org.apache.maven.caching.test.multimodule:module3";
 
     @Test
-    void simple(Verifier verifier) throws VerificationException, IOException {
+    void simple(Verifier verifier) throws Exception {
         verifier.setAutoclean(false);
 
         // 1st build

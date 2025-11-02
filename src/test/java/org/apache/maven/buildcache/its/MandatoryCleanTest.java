@@ -18,7 +18,6 @@
  */
 package org.apache.maven.buildcache.its;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -29,10 +28,10 @@ import org.apache.maven.buildcache.util.LogFileUtils;
 import org.apache.maven.buildcache.xml.CacheConfigImpl;
 import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import static org.apache.maven.buildcache.xml.CacheConfigImpl.CACHE_LOCATION_PROPERTY_NAME;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
@@ -46,7 +45,7 @@ class MandatoryCleanTest {
     private static final String CACHE_BUILD_LOG = "Found cached build, restoring %s from cache";
 
     @Test
-    void simple(Verifier verifier) throws VerificationException, IOException {
+    void simple(Verifier verifier) throws Exception {
 
         verifier.setAutoclean(false);
         Path tempDirectory = Files.createTempDirectory("simple-mandatory-clean");
@@ -58,7 +57,7 @@ class MandatoryCleanTest {
         verifier.verifyErrorFreeLog();
         List<String> cacheSkippedBuild1 = LogFileUtils.findLinesContainingTextsInLogs(
                 verifier, "Cache storing is skipped since there was no \"clean\" phase.");
-        Assertions.assertEquals(2, cacheSkippedBuild1.size(), "Expected 2 skipped module caching");
+        assertEquals(2, cacheSkippedBuild1.size(), "Expected 2 skipped module caching");
 
         assertThrows(
                 VerificationException.class,
@@ -74,7 +73,7 @@ class MandatoryCleanTest {
         verifier.verifyErrorFreeLog();
         List<String> cacheSkippedBuild2 = LogFileUtils.findLinesContainingTextsInLogs(
                 verifier, "Cache storing is skipped since there was no \"clean\" phase.");
-        Assertions.assertEquals(0, cacheSkippedBuild2.size(), "Expected 2 skipped module caching");
+        assertEquals(0, cacheSkippedBuild2.size(), "Expected 2 skipped module caching");
         assertThrows(
                 VerificationException.class,
                 () -> verifier.verifyTextInLog(String.format(CACHE_BUILD_LOG, MODULE_NAME_1)),
@@ -89,14 +88,14 @@ class MandatoryCleanTest {
         verifier.verifyErrorFreeLog();
         List<String> cacheSkippedBuild3 = LogFileUtils.findLinesContainingTextsInLogs(
                 verifier, "Cache storing is skipped since there was no \"clean\" phase.");
-        Assertions.assertEquals(0, cacheSkippedBuild3.size(), "loading from cache, no more caching required");
+        assertEquals(0, cacheSkippedBuild3.size(), "loading from cache, no more caching required");
         // Expect to find and restore cached project
         verifier.verifyTextInLog(String.format(CACHE_BUILD_LOG, MODULE_NAME_1));
         verifier.verifyTextInLog(String.format(CACHE_BUILD_LOG, MODULE_NAME_2));
     }
 
     @Test
-    void disabledViaProperty(Verifier verifier) throws VerificationException {
+    void disabledViaProperty(Verifier verifier) throws Exception {
 
         verifier.setAutoclean(false);
 
@@ -105,7 +104,7 @@ class MandatoryCleanTest {
         verifier.verifyErrorFreeLog();
         List<String> cacheSkippedBuild1 = LogFileUtils.findLinesContainingTextsInLogs(
                 verifier, "Cache storing is skipped since there was no \"clean\" phase.");
-        Assertions.assertEquals(2, cacheSkippedBuild1.size(), "Expected 2 skipped module caching");
+        assertEquals(2, cacheSkippedBuild1.size(), "Expected 2 skipped module caching");
 
         assertThrows(
                 VerificationException.class,
@@ -124,7 +123,7 @@ class MandatoryCleanTest {
         verifier.verifyErrorFreeLog();
         List<String> cacheSkippedBuild2 = LogFileUtils.findLinesContainingTextsInLogs(
                 verifier, "Cache storing is skipped since there was no \"clean\" phase.");
-        Assertions.assertEquals(2, cacheSkippedBuild2.size(), "Expected 2 skipped module caching");
+        assertEquals(2, cacheSkippedBuild2.size(), "Expected 2 skipped module caching");
 
         assertThrows(
                 VerificationException.class,
@@ -143,7 +142,7 @@ class MandatoryCleanTest {
         verifier.verifyErrorFreeLog();
         List<String> cacheSkippedBuild3 = LogFileUtils.findLinesContainingTextsInLogs(
                 verifier, "Cache storing is skipped since there was no \"clean\" phase.");
-        Assertions.assertEquals(0, cacheSkippedBuild3.size(), "Expected 2 skipped module caching");
+        assertEquals(0, cacheSkippedBuild3.size(), "Expected 2 skipped module caching");
         assertThrows(
                 VerificationException.class,
                 () -> verifier.verifyTextInLog(String.format(CACHE_BUILD_LOG, MODULE_NAME_1)),

@@ -29,10 +29,11 @@ import org.apache.maven.buildcache.its.junit.IntegrationTest;
 import org.apache.maven.buildcache.util.LogFileUtils;
 import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Check if cached builds are cleaned up correctly also for projects
@@ -44,7 +45,7 @@ class Issue74Test {
     private static final Logger LOGGER = LoggerFactory.getLogger(Issue74Test.class);
 
     @Test
-    void simple(Verifier verifier) throws VerificationException, IOException {
+    void simple(Verifier verifier) throws Exception {
         verifier.setAutoclean(false);
         verifier.setMavenDebug(true);
 
@@ -89,7 +90,7 @@ class Issue74Test {
         List<Path> entries =
                 Files.list(projectPathInCache).filter(p -> Files.isDirectory(p)).collect(Collectors.toList());
 
-        Assertions.assertEquals(
+        assertEquals(
                 expectedBuilds,
                 entries.size(),
                 "Expected amount of cached builds not satisfied. Found: "

@@ -19,7 +19,6 @@
 package org.apache.maven.buildcache.its;
 
 import org.apache.maven.buildcache.its.junit.IntegrationTest;
-import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
 import org.junit.jupiter.api.Test;
 
@@ -27,7 +26,7 @@ import org.junit.jupiter.api.Test;
 class Issue21Test {
 
     @Test
-    void simple(Verifier verifier) throws VerificationException {
+    void simple(Verifier verifier) throws Exception {
         verifier.setAutoclean(false);
 
         verifier.setLogFileName("../log.txt");

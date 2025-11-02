@@ -72,7 +72,7 @@ class BuildCacheMojosExecutionStrategyTest {
         }
 
         @Test
-        void testBasicParamsMatching() {
+        void basicParamsMatching() {
 
             boolean windows = SystemUtils.IS_OS_WINDOWS;
 
@@ -110,7 +110,7 @@ class BuildCacheMojosExecutionStrategyTest {
         }
 
         @Test
-        void testSkipValue() {
+        void skipValue() {
 
             String propertyName = "anyObject";
 
@@ -139,7 +139,7 @@ class BuildCacheMojosExecutionStrategyTest {
         }
 
         @Test
-        void testDefaultValue() {
+        void defaultValue() {
 
             String propertyName = "anyObject";
 
@@ -167,7 +167,7 @@ class BuildCacheMojosExecutionStrategyTest {
         }
 
         @Test
-        void testMismatch() {
+        void mismatch() {
 
             String propertyName = "anyObject";
 

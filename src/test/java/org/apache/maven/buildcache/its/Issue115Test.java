@@ -32,7 +32,7 @@ class Issue115Test {
     private static final String RESTORED_MESSAGE = "Found cached build, restoring " + PROJECT_NAME + " from cache";
 
     @Test
-    void buildShouldRestoreProjectWithoutError(Verifier verifier) throws VerificationException {
+    void buildShouldRestoreProjectWithoutError(Verifier verifier) throws Exception {
         verifier.setAutoclean(false);
         verifier.setLogFileName("../log-1.txt");
         verifier.executeGoal("package");
