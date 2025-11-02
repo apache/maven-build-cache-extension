@@ -64,7 +64,6 @@ under the License.
     <minimalMavenBuildVersion>3.9.0</minimalMavenBuildVersion>
     <minimalJavaBuildVersion>11</minimalJavaBuildVersion>
     <classWorldsVersion>2.6.0</classWorldsVersion>
-    <version.spotless-maven-plugin>3.0.0</version.spotless-maven-plugin>
 
     <!-- default maven version, will be overridden by maven3 profile -->
     <mavenVersion>4.0.0-alpha-8</mavenVersion>
@@ -427,17 +426,6 @@ under the License.
             </goals>
           </execution>
         </executions>
-      </plugin>
-      <plugin>
-        <groupId>com.diffplug.spotless</groupId>
-        <artifactId>spotless-maven-plugin</artifactId>
-        <configuration>
-          <java>
-            <palantirJavaFormat>
-              <version>2.81.0</version>
-            </palantirJavaFormat>
-          </java>
-        </configuration>
       </plugin>
     </plugins>
   </build>
