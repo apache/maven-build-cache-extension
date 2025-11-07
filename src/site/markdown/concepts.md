@@ -88,6 +88,11 @@ To maximize reuse you need to:
   of threads or log level)
 * Make source code relocatable (environment agnostic)
 
+**Note:** The build cache extension includes a parameter validation system that automatically categorizes plugin parameters
+as "functional" or "behavioral". The system validates reconciliation configurations and warns about unknown or
+misclassified parameters. See the [Parameter Validation section](how-to.html#Parameter_Validation_and_Categorization)
+for details on how to add parameter definitions for new plugins.
+
 Effectively, cache setup involves inspecting the build, taking these decisions, and reflecting them in the cache
 configuration.
 
