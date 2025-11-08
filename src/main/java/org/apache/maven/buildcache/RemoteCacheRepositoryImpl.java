@@ -33,8 +33,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.http.HttpStatus;
-import org.apache.http.client.HttpResponseException;
+import org.apache.hc.core5.http.HttpStatus;
+import org.apache.hc.client5.http.HttpResponseException;
 import org.apache.maven.SessionScoped;
 import org.apache.maven.buildcache.checksum.MavenProjectInput;
 import org.apache.maven.buildcache.xml.Build;
