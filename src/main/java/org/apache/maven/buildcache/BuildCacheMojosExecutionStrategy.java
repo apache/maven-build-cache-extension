@@ -23,6 +23,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.List;
@@ -138,33 +139,58 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
 
             boolean restorable = result.isSuccess() || result.isPartialSuccess();
             boolean restored = false; // if partially restored need to save increment
+
             if (restorable) {
                 CacheRestorationStatus cacheRestorationStatus =
                         restoreProject(result, mojoExecutions, mojoExecutionRunner, cacheConfig);
                 restored = CacheRestorationStatus.SUCCESS == cacheRestorationStatus;
                 executeExtraCleanPhaseIfNeeded(cacheRestorationStatus, cleanPhase, mojoExecutionRunner);
             }
-            if (!restored) {
-                for (MojoExecution mojoExecution : mojoExecutions) {
-                    if (source == Source.CLI
-                            || mojoExecution.getLifecyclePhase() == null
-                            || lifecyclePhasesHelper.isLaterPhaseThanClean(mojoExecution.getLifecyclePhase())) {
-                        mojoExecutionRunner.run(mojoExecution);
+
+            try {
+                if (!restored && !forkedExecution) {
+                    // Move pre-existing artifacts to staging directory to prevent caching stale files
+                    // from previous builds (e.g., after git branch switch, or from cache restored
+                    // with clock skew). This ensures save() only sees fresh files built during this session.
+                    // Skip for forked executions since they don't cache and shouldn't modify artifacts.
+                    try {
+                        cacheController.stagePreExistingArtifacts(session, project);
+                    } catch (IOException e) {
+                        LOGGER.warn("Failed to stage pre-existing artifacts: {}", e.getMessage());
+                        // Continue build - if staging fails, we'll just cache what exists
                     }
                 }
-            }
 
-            if (cacheState == INITIALIZED && (!result.isSuccess() || !restored)) {
-                if (cacheConfig.isSkipSave()) {
-                    LOGGER.info("Cache saving is disabled.");
-                } else if (cacheConfig.isMandatoryClean()
-                        && lifecyclePhasesHelper
-                                .getCleanSegment(project, mojoExecutions)
-                                .isEmpty()) {
-                    LOGGER.info("Cache storing is skipped since there was no \"clean\" phase.");
-                } else {
-                    final Map<String, MojoExecutionEvent> executionEvents = mojoListener.getProjectExecutions(project);
-                    cacheController.save(result, mojoExecutions, executionEvents);
+                if (!restored) {
+                    for (MojoExecution mojoExecution : mojoExecutions) {
+                        if (source == Source.CLI
+                                || mojoExecution.getLifecyclePhase() == null
+                                || lifecyclePhasesHelper.isLaterPhaseThanClean(mojoExecution.getLifecyclePhase())) {
+                            mojoExecutionRunner.run(mojoExecution);
+                        }
+                    }
+                }
+
+                if (cacheState == INITIALIZED && (!result.isSuccess() || !restored)) {
+                    if (cacheConfig.isSkipSave()) {
+                        LOGGER.info("Cache saving is disabled.");
+                    } else if (cacheConfig.isMandatoryClean()
+                            && lifecyclePhasesHelper
+                                    .getCleanSegment(project, mojoExecutions)
+                                    .isEmpty()) {
+                        LOGGER.info("Cache storing is skipped since there was no \"clean\" phase.");
+                    } else {
+                        final Map<String, MojoExecutionEvent> executionEvents =
+                                mojoListener.getProjectExecutions(project);
+                        cacheController.save(result, mojoExecutions, executionEvents);
+                    }
+                }
+            } finally {
+                // Always restore staged files after build completes (whether save ran or not).
+                // Files that were rebuilt are discarded; files that weren't rebuilt are restored.
+                // Skip for forked executions since they don't stage artifacts.
+                if (!restored && !forkedExecution) {
+                    cacheController.restoreStagedArtifacts(session, project);
                 }
             }
 
