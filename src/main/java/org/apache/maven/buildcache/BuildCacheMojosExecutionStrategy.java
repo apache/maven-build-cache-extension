@@ -359,6 +359,14 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
             MavenProject project, MojoExecution mojoExecution, Mojo mojo, CompletedExecution completedExecution) {
         List<TrackedProperty> tracked = cacheConfig.getTrackedProperties(mojoExecution);
 
+        if (mojoExecution.getPlugin() != null) {
+            LOGGER.debug(
+                    "Checking parameter match for {}:{} - tracking {} properties",
+                    mojoExecution.getPlugin().getArtifactId(),
+                    mojoExecution.getGoal(),
+                    tracked.size());
+        }
+
         for (TrackedProperty trackedProperty : tracked) {
             final String propertyName = trackedProperty.getPropertyName();
 
@@ -367,7 +375,7 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                 expectedValue = trackedProperty.getDefaultValue() != null ? trackedProperty.getDefaultValue() : "null";
             }
 
-            final String currentValue;
+            String currentValue;
             try {
                 Object value = ReflectionUtils.getValueIncludingSuperclasses(propertyName, mojo);
 
@@ -386,7 +394,17 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
             } catch (IllegalAccessException e) {
                 LOGGER.error("Cannot extract plugin property {} from mojo {}", propertyName, mojo, e);
                 return false;
+            } catch (Exception e) {
+                // Catch all exceptions including NullPointerException when property doesn't exist in mojo
+                LOGGER.warn(
+                        "Property '{}' not found in mojo {} - treating as null",
+                        propertyName,
+                        mojo.getClass().getSimpleName());
+                currentValue = "null";
             }
+
+            LOGGER.debug(
+                    "Checking property '{}': expected='{}', actual='{}'", propertyName, expectedValue, currentValue);
 
             if (!Strings.CS.equals(currentValue, expectedValue)) {
                 if (!Strings.CS.equals(currentValue, trackedProperty.getSkipValue())) {
