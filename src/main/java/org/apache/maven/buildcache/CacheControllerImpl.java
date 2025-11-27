@@ -374,7 +374,7 @@ public class CacheControllerImpl implements CacheController {
         if (!Files.exists(restorationPath)) {
             Files.createDirectories(restorationPath);
         }
-        CacheUtils.unzip(cachedZip.toPath(), restorationPath);
+        CacheUtils.unzip(cachedZip.toPath(), restorationPath, cacheConfig.isPreservePermissions());
         LOGGER.debug("Restored directory artifact by unzipping: {} -> {}", artifact.getFileName(), restorationPath);
     }
 
@@ -702,7 +702,7 @@ public class CacheControllerImpl implements CacheController {
             File originalFile)
             throws IOException {
         Path tempZip = Files.createTempFile("maven-cache-", "-" + project.getArtifactId() + ".zip");
-        boolean hasFiles = CacheUtils.zip(originalFile.toPath(), tempZip, "*");
+        boolean hasFiles = CacheUtils.zip(originalFile.toPath(), tempZip, "*", cacheConfig.isPreservePermissions());
         if (hasFiles) {
             // Temporarily replace artifact file with zip for saving
             projectArtifact.setFile(tempZip.toFile());
