@@ -198,16 +198,16 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                                     .isEmpty()) {
                         LOGGER.debug("Cache storing is skipped since there was no \"clean\" phase.");
                     } else {
-                        // Validation-time events must exist for cache storage
-                        // If they don't exist, this indicates a bug in the capture logic
+                        // Only save cache if there are validation-time events to store
+                        // When running only clean phase, there are no cacheable mojos
                         if (result.getValidationTimeEvents() == null
                                 || result.getValidationTimeEvents().isEmpty()) {
-                            throw new AssertionError(
-                                    "Validation-time properties not captured for project " + projectName
-                                            + ". This is a bug. Validation-time capture should always succeed when saving to cache.");
+                            LOGGER.debug(
+                                    "Skipping cache storage for {} - no cacheable mojos executed", projectName);
+                        } else {
+                            LOGGER.debug("Using validation-time properties for cache storage (consistent lifecycle point)");
+                            cacheController.save(result, mojoExecutions, result.getValidationTimeEvents());
                         }
-                        LOGGER.debug("Using validation-time properties for cache storage (consistent lifecycle point)");
-                        cacheController.save(result, mojoExecutions, result.getValidationTimeEvents());
                     }
                 }
             } finally {
