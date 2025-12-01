@@ -278,16 +278,6 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                 LOGGER.info(
                         "Mojo execution is forced by project property: {}",
                         cacheCandidate.getMojoDescriptor().getFullGoalName());
-                // need maven 4 as minumum
-                // mojoExecutionScope.seed(
-                // org.apache.maven.api.plugin.Log.class,
-                // new DefaultLog(LoggerFactory.getLogger(
-                // cacheCandidate.getMojoDescriptor().getFullGoalName())));
-                // mojoExecutionScope.seed(Project.class, ((DefaultSession)
-                // session.getSession()).getProject(project));
-                // mojoExecutionScope.seed(
-                // org.apache.maven.api.MojoExecution.class, new
-                // DefaultMojoExecution(cacheCandidate));
                 mojoExecutionRunner.run(cacheCandidate);
             } else {
                 LOGGER.info(
