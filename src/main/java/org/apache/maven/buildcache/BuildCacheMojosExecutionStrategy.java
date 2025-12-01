@@ -189,7 +189,7 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
      */
     private boolean isGoalClean(List<MojoExecution> mojoExecutions) {
         if (mojoExecutions.stream().allMatch(mojoExecution -> "clean".equals(mojoExecution.getLifecyclePhase()))) {
-            LOGGER.warn("Build cache is disabled for 'clean' goal.");
+            LOGGER.info("Build cache is disabled for 'clean' goal.");
             return true;
         }
         return false;
