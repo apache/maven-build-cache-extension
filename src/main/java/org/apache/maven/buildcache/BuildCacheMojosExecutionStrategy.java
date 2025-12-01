@@ -24,6 +24,7 @@ import javax.inject.Named;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -608,7 +609,7 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
      */
     private Map<String, MojoExecutionEvent> captureValidationTimeProperties(
             MavenSession session, MavenProject project, List<MojoExecution> mojoExecutions) {
-        Map<String, MojoExecutionEvent> validationTimeEvents = new java.util.HashMap<>();
+        Map<String, MojoExecutionEvent> validationTimeEvents = new HashMap<>();
 
         for (MojoExecution mojoExecution : mojoExecutions) {
             // Skip mojos that don't execute or are in clean phase
@@ -617,19 +618,22 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                 continue;
             }
 
-            Mojo mojo = null;
             try {
                 mojoExecutionScope.enter();
                 mojoExecutionScope.seed(MavenProject.class, project);
                 mojoExecutionScope.seed(MojoExecution.class, mojoExecution);
 
-                mojo = mavenPluginManager.getConfiguredMojo(Mojo.class, session, mojoExecution);
-                MojoExecutionEvent event = new MojoExecutionEvent(session, project, mojoExecution, mojo);
-                validationTimeEvents.put(mojoExecutionKey(mojoExecution), event);
+                Mojo mojo = mavenPluginManager.getConfiguredMojo(Mojo.class, session, mojoExecution);
+                try {
+                    MojoExecutionEvent event = new MojoExecutionEvent(session, project, mojoExecution, mojo);
+                    validationTimeEvents.put(mojoExecutionKey(mojoExecution), event);
 
-                LOGGER.debug(
-                        "Captured validation-time properties for {}",
-                        mojoExecution.getMojoDescriptor().getFullGoalName());
+                    LOGGER.debug(
+                            "Captured validation-time properties for {}",
+                            mojoExecution.getMojoDescriptor().getFullGoalName());
+                } finally {
+                    mavenPluginManager.releaseMojo(mojo, mojoExecution);
+                }
 
             } catch (PluginConfigurationException | PluginContainerException e) {
                 LOGGER.warn(
@@ -641,9 +645,6 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                     mojoExecutionScope.exit();
                 } catch (MojoExecutionException e) {
                     LOGGER.debug("Error exiting mojo execution scope: {}", e.getMessage());
-                }
-                if (mojo != null) {
-                    mavenPluginManager.releaseMojo(mojo, mojoExecution);
                 }
             }
         }
