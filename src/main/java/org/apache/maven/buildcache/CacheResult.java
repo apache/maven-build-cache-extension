@@ -157,7 +157,7 @@ public class CacheResult {
         return build != null && build.getDto().is_final();
     }
 
-    public Map<String, MojoExecutionEvent> getValidationTimeEvents() {
+    Map<String, MojoExecutionEvent> getValidationTimeEvents() {
         return validationTimeEvents;
     }
 }
