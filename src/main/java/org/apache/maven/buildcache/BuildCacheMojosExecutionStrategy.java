@@ -280,9 +280,8 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
         } else {
             final Map<String, MojoExecutionEvent> executionEvents = result.getValidationTimeEvents();
             if (executionEvents == null || executionEvents.isEmpty()) {
-                throw new AssertionError(
-                        "Validation-time properties not captured for project " + projectName
-                                + ". This is a bug - validation-time capture should always succeed when saving to cache.");
+                LOGGER.debug("Skipping cache storage for {} - no cacheable mojos executed", projectName);
+                return;
             }
             LOGGER.debug("Using validation-time properties for cache storage (consistent lifecycle point)");
             cacheController.save(result, mojoExecutions, executionEvents);

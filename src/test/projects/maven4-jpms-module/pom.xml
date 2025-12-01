@@ -21,7 +21,7 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.13.0</version>
         <configuration>
-          <!-- Maven 4 auto-injects --module-version during compilation -->
+          <!-- Maven 4 auto-injects module-version during compilation -->
           <!-- No explicit moduleVersion configured -->
           <compilerArgs>
             <arg>-parameters</arg>

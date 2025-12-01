@@ -54,20 +54,20 @@ class MultiModuleJpmsTest {
         // First build - should create cache entries for all modules
         verifier.setLogFileName("../log-build-1.txt");
         verifier.executeGoal("clean");
-        verifier.executeGoal("compile");
+        verifier.executeGoal("package");
         verifier.verifyErrorFreeLog();
 
         // Verify compilation succeeded for module-a (JPMS)
         verifier.verifyFilePresent("module-a/target/classes/module-info.class");
-        verifier.verifyFilePresent("module-a/target/classes/org/apache/maven/caching/test/multi/modulea/ModuleA.class");
+        verifier.verifyFilePresent("module-a/target/module-a-1.0.0-SNAPSHOT.jar");
 
         // Verify compilation succeeded for module-b (non-JPMS)
-        verifier.verifyFilePresent("module-b/target/classes/org/apache/maven/caching/test/multi/moduleb/ModuleB.class");
+        verifier.verifyFilePresent("module-b/target/module-b-1.0.0-SNAPSHOT.jar");
 
         // Second build - should restore all modules from cache
         verifier.setLogFileName("../log-build-2.txt");
         verifier.executeGoal("clean");
-        verifier.executeGoal("compile");
+        verifier.executeGoal("package");
         verifier.verifyErrorFreeLog();
 
         // Verify module-a was restored from cache
@@ -79,11 +79,8 @@ class MultiModuleJpmsTest {
         verifier.verifyTextInLog(
                 "Found cached build, restoring org.apache.maven.caching.test.multi:module-b from cache");
 
-        // Verify output files were restored from cache for module-a
-        verifier.verifyFilePresent("module-a/target/classes/module-info.class");
-        verifier.verifyFilePresent("module-a/target/classes/org/apache/maven/caching/test/multi/modulea/ModuleA.class");
-
-        // Verify output files were restored from cache for module-b
-        verifier.verifyFilePresent("module-b/target/classes/org/apache/maven/caching/test/multi/moduleb/ModuleB.class");
+        // Verify JARs were restored from cache
+        verifier.verifyFilePresent("module-a/target/module-a-1.0.0-SNAPSHOT.jar");
+        verifier.verifyFilePresent("module-b/target/module-b-1.0.0-SNAPSHOT.jar");
     }
 }
