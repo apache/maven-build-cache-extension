@@ -55,16 +55,17 @@ class NonJpmsProjectTest {
         // First build - should create cache entry with validation-time properties
         verifier.setLogFileName("../log-build-1.txt");
         verifier.executeGoal("clean");
-        verifier.executeGoal("compile");
+        verifier.executeGoal("package");
         verifier.verifyErrorFreeLog();
 
         // Verify compilation succeeded
         verifier.verifyFilePresent("target/classes/org/apache/maven/caching/test/nonjpms/RegularJavaClass.class");
+        verifier.verifyFilePresent("target/non-jpms-project-1.0.0-SNAPSHOT.jar");
 
         // Second build - should restore from cache
         verifier.setLogFileName("../log-build-2.txt");
         verifier.executeGoal("clean");
-        verifier.executeGoal("compile");
+        verifier.executeGoal("package");
         verifier.verifyErrorFreeLog();
 
         // Verify cache was used (not rebuilt)
@@ -74,7 +75,7 @@ class NonJpmsProjectTest {
         // Verify compilation was skipped (restored from cache)
         verifier.verifyTextInLog("Skipping plugin execution (cached): compiler:compile");
 
-        // Verify output files were restored from cache
-        verifier.verifyFilePresent("target/classes/org/apache/maven/caching/test/nonjpms/RegularJavaClass.class");
+        // Verify JAR was restored from cache
+        verifier.verifyFilePresent("target/non-jpms-project-1.0.0-SNAPSHOT.jar");
     }
 }
