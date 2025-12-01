@@ -1177,7 +1177,7 @@ public class CacheControllerImpl implements CacheController {
      *   <li>Machine B (correct clock at 10:00 AM) restores cache
      *   <li>Restored files have timestamps from the future (11:00 AM)
      *   <li>User runs "git checkout" to different branch (sources timestamped 10:02 AM)
-     *   <li>Maven incremental compiler sees: sources (10:02 AM) < classes (11:00 AM)
+     *   <li>Maven incremental compiler sees: sources (10:02 AM) &lt; classes (11:00 AM)
      *   <li>Maven skips compilation (thinks sources older than classes)
      *   <li>Wrong classes from old branch get cached!
      * </ul>
