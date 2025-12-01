@@ -70,7 +70,7 @@ public class CacheResult {
         return new CacheResult(RestoreStatus.FAILURE, null, context);
     }
 
-    public static CacheResult rebuilded(CacheResult orig, Build build) {
+    public static CacheResult rebuilt(CacheResult orig, Build build) {
         requireNonNull(orig);
         requireNonNull(build);
         return new CacheResult(orig.status, build, orig.context);
