@@ -108,8 +108,8 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
             // execute clean bound goals before restoring to not interfere/slowdown clean
             CacheState cacheState = DISABLED;
             CacheResult result = CacheResult.empty();
-            boolean skipCache = cacheConfig.isSkipCache() || MavenProjectInput.isSkipCache(project)
-                    || isGoalClean(mojoExecutions);
+            boolean skipCache =
+                    cacheConfig.isSkipCache() || MavenProjectInput.isSkipCache(project) || isGoalClean(mojoExecutions);
             boolean cacheIsDisabled = MavenProjectInput.isCacheDisabled(project);
             // Forked execution should be thought as a part of originating mojo internal
             // implementation
@@ -143,8 +143,8 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
             boolean restorable = result.isSuccess() || result.isPartialSuccess();
             boolean restored = false; // if partially restored need to save increment
             if (restorable) {
-                CacheRestorationStatus cacheRestorationStatus = restoreProject(result, mojoExecutions,
-                        mojoExecutionRunner, cacheConfig);
+                CacheRestorationStatus cacheRestorationStatus =
+                        restoreProject(result, mojoExecutions, mojoExecutionRunner, cacheConfig);
                 restored = CacheRestorationStatus.SUCCESS == cacheRestorationStatus;
                 executeExtraCleanPhaseIfNeeded(cacheRestorationStatus, cleanPhase, mojoExecutionRunner);
             }
@@ -244,8 +244,8 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
         final Build build = cacheResult.getBuildInfo();
         final MavenProject project = cacheResult.getContext().getProject();
         final MavenSession session = cacheResult.getContext().getSession();
-        final List<MojoExecution> cachedSegment = lifecyclePhasesHelper.getCachedSegment(project, mojoExecutions,
-                build);
+        final List<MojoExecution> cachedSegment =
+                lifecyclePhasesHelper.getCachedSegment(project, mojoExecutions, build);
 
         // Verify cache consistency for cached mojos
         LOGGER.debug("Verify consistency on cached mojos");
@@ -291,8 +291,8 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                     mojoExecutionScope.seed(MojoExecution.class, cacheCandidate);
 
                     mojo = mavenPluginManager.getConfiguredMojo(Mojo.class, session, cacheCandidate);
-                    MojoExecutionEvent mojoExecutionEvent = new MojoExecutionEvent(session, project, cacheCandidate,
-                            mojo);
+                    MojoExecutionEvent mojoExecutionEvent =
+                            new MojoExecutionEvent(session, project, cacheCandidate, mojo);
                     mojoListener.beforeMojoExecution(mojoExecutionEvent);
                 } catch (PluginConfigurationException | PluginContainerException e) {
                     throw new RuntimeException(e);
@@ -307,8 +307,8 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
 
         // Execute mojos after the cache segment
         LOGGER.debug("Execute mojos post cache segment");
-        List<MojoExecution> postCachedSegment = lifecyclePhasesHelper.getPostCachedSegment(project, mojoExecutions,
-                build);
+        List<MojoExecution> postCachedSegment =
+                lifecyclePhasesHelper.getPostCachedSegment(project, mojoExecutions, build);
         for (MojoExecution mojoExecution : postCachedSegment) {
             mojoExecutionRunner.run(mojoExecution);
         }
