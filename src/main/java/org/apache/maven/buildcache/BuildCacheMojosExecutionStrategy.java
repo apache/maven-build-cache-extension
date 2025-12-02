@@ -156,7 +156,7 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                     try {
                         cacheController.stagePreExistingArtifacts(session, project);
                     } catch (IOException e) {
-                        LOGGER.warn("Failed to stage pre-existing artifacts: {}", e.getMessage());
+                        LOGGER.debug("Failed to stage pre-existing artifacts: {}", e.getMessage());
                         // Continue build - if staging fails, we'll just cache what exists
                     }
                 }
@@ -173,12 +173,12 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
 
                 if (cacheState == INITIALIZED && (!result.isSuccess() || !restored)) {
                     if (cacheConfig.isSkipSave()) {
-                        LOGGER.info("Cache saving is disabled.");
+                        LOGGER.debug("Cache saving is disabled.");
                     } else if (cacheConfig.isMandatoryClean()
                             && lifecyclePhasesHelper
                                     .getCleanSegment(project, mojoExecutions)
                                     .isEmpty()) {
-                        LOGGER.info("Cache storing is skipped since there was no \"clean\" phase.");
+                        LOGGER.debug("Cache storing is skipped since there was no \"clean\" phase.");
                     } else {
                         final Map<String, MojoExecutionEvent> executionEvents =
                                 mojoListener.getProjectExecutions(project);

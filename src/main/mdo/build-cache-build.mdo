@@ -244,7 +244,6 @@ under the License.
           <name>filePath</name>
           <type>String</type>
         </field>
-        <!--xs:element name="isDirectory" type="xs:boolean" minOccurs="0"/-->
         <field>
           <name>isDirectory</name>
           <type>boolean</type>
