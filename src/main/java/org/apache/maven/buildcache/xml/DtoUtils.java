@@ -32,6 +32,7 @@ import org.apache.maven.buildcache.xml.build.CompletedExecution;
 import org.apache.maven.buildcache.xml.build.DigestItem;
 import org.apache.maven.buildcache.xml.build.PropertyValue;
 import org.apache.maven.buildcache.xml.config.TrackedProperty;
+import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.PluginParameterExpressionEvaluator;
