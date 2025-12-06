@@ -730,6 +730,19 @@ public class CacheControllerImpl implements CacheController {
                 }
             }
         }
+        // add properties with expressions
+        for (TrackedProperty trackedProperty : trackedProperties) {
+            if (trackedProperty.getExpression() != null) {
+                String propertyName = trackedProperty.getPropertyName();
+                if (!isExcluded(propertyName, logAll, noLogProperties, forceLogProperties)) {
+                    Object value = DtoUtils.interpolateExpression(
+                            trackedProperty.getExpression(),
+                            executionEvent.getSession(),
+                            executionEvent.getExecution());
+                    DtoUtils.addProperty(execution, propertyName, value, baseDirPath, true);
+                }
+            }
+        }
     }
 
     private static Method getGetter(String fieldName, Class<?> clazz) {

@@ -331,7 +331,8 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                 final CompletedExecution completedExecution = cachedBuild.findMojoExecutionInfo(cacheCandidate);
                 final String fullGoalName = cacheCandidate.getMojoDescriptor().getFullGoalName();
 
-                if (completedExecution != null && !isParamsMatched(project, cacheCandidate, mojo, completedExecution)) {
+                if (completedExecution != null
+                        && !isParamsMatched(project, session, cacheCandidate, mojo, completedExecution)) {
                     LOGGER.info(
                             "Mojo cached parameters mismatch with actual, forcing full project build. Mojo: {}",
                             fullGoalName);
@@ -365,7 +366,11 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
     }
 
     boolean isParamsMatched(
-            MavenProject project, MojoExecution mojoExecution, Mojo mojo, CompletedExecution completedExecution) {
+            MavenProject project,
+            MavenSession session,
+            MojoExecution mojoExecution,
+            Mojo mojo,
+            CompletedExecution completedExecution) {
         List<TrackedProperty> tracked = cacheConfig.getTrackedProperties(mojoExecution);
 
         for (TrackedProperty trackedProperty : tracked) {
@@ -378,7 +383,12 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
 
             final String currentValue;
             try {
-                Object value = ReflectionUtils.getValueIncludingSuperclasses(propertyName, mojo);
+                Object value;
+                if (trackedProperty.getExpression() != null) {
+                    value = DtoUtils.interpolateExpression(trackedProperty.getExpression(), session, mojoExecution);
+                } else {
+                    value = ReflectionUtils.getValueIncludingSuperclasses(propertyName, mojo);
+                }
                 Path baseDirPath = project.getBasedir().toPath();
                 currentValue = DtoUtils.normalizeValue(value, baseDirPath);
             } catch (IllegalAccessException e) {

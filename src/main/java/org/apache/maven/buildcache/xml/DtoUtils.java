@@ -32,7 +32,10 @@ import org.apache.maven.buildcache.xml.build.CompletedExecution;
 import org.apache.maven.buildcache.xml.build.DigestItem;
 import org.apache.maven.buildcache.xml.build.PropertyValue;
 import org.apache.maven.buildcache.xml.config.TrackedProperty;
+import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Dependency;
+import org.apache.maven.plugin.MojoExecution;
+import org.apache.maven.plugin.PluginParameterExpressionEvaluator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -213,5 +216,15 @@ public class DtoUtils {
             LOGGER.debug("normalizedPath '{}' - {} return {}", path, baseDirPath, normalizedPath);
         }
         return normalizedPath;
+    }
+
+    public static Object interpolateExpression(String expression, MavenSession session, MojoExecution execution) {
+        try {
+            PluginParameterExpressionEvaluator evaluator = new PluginParameterExpressionEvaluator(session, execution);
+            return evaluator.evaluate(expression);
+        } catch (Exception e) {
+            LOGGER.warn("Cannot interpolate expression '{}': {}", expression, e.getMessage(), e);
+            return expression; // return the expression as is if interpolation fails
+        }
     }
 }
