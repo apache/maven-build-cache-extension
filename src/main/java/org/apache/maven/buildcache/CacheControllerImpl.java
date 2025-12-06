@@ -685,7 +685,7 @@ public class CacheControllerImpl implements CacheController {
         final Object mojo = executionEvent.getMojo();
 
         final File baseDir = executionEvent.getProject().getBasedir();
-        final String baseDirPath = FilenameUtils.normalizeNoEndSeparator(baseDir.getAbsolutePath()) + File.separator;
+        final Path baseDirPath = baseDir.toPath();
 
         final List<Parameter> parameters = mojoExecution.getMojoDescriptor().getParameters();
         for (Parameter parameter : parameters) {
