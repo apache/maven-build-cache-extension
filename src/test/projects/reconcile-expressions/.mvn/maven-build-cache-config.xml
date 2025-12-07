@@ -22,32 +22,32 @@ under the License.
 <cache xmlns="http://maven.apache.org/BUILD-CACHE-CONFIG/1.3.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xsi:schemaLocation="http://maven.apache.org/BUILD-CACHE-CONFIG/1.3.0 https://maven.apache.org/xsd/build-cache-config-1.3.0.xsd">
 
-    <executionControl>
-        <reconcile>
-            <plugins>
-                <!-- Test expression reconciliation for resources plugin -->
-                <plugin goal="resources" artifactId="maven-resources-plugin" groupId="org.apache.maven.plugins">
-                    <reconciles>
-                        <!-- Test with project.version expression -->
-                        <reconcile propertyName="project.version" expression="${project.version}"/>
-                        <!-- Test with custom property expression -->
-                        <reconcile propertyName="product.name" expression="${product.name}"/>
-                        <!-- Test with build environment property -->
-                        <reconcile propertyName="build.environment" expression="${build.environment}"/>
-                    </reconciles>
-                </plugin>
-                <!-- Test expression reconciliation for compiler plugin -->
-                <plugin goal="compile" artifactId="maven-compiler-plugin" groupId="org.apache.maven.plugins">
-                    <reconciles>
-                        <!-- Test with project groupId expression -->
-                        <reconcile propertyName="project.groupId" expression="${project.groupId}"/>
-                        <!-- Test with project artifactId expression -->
-                        <reconcile propertyName="project.artifactId" expression="${project.artifactId}"/>
-                        <!-- Test with combined expression using multiple properties -->
-                        <reconcile propertyName="custom.timestamp" expression="${custom.timestamp}"/>
-                    </reconciles>
-                </plugin>
-            </plugins>
-        </reconcile>
-    </executionControl>
+  <executionControl>
+    <reconcile>
+      <plugins>
+        <!-- Test expression reconciliation for resources plugin -->
+        <plugin goal="resources" artifactId="maven-resources-plugin" groupId="org.apache.maven.plugins">
+          <reconciles>
+            <!-- Test with project.version expression -->
+            <reconcile propertyName="project.version" expression="${project.version}"/>
+            <!-- Test with custom property expression -->
+            <reconcile propertyName="product.name" expression="${product.name}"/>
+            <!-- Test with build environment property -->
+            <reconcile propertyName="build.environment" expression="${build.environment}"/>
+          </reconciles>
+        </plugin>
+        <!-- Test expression reconciliation for compiler plugin -->
+        <plugin goal="compile" artifactId="maven-compiler-plugin" groupId="org.apache.maven.plugins">
+          <reconciles>
+            <!-- Test with project groupId expression -->
+            <reconcile propertyName="project.groupId" expression="${project.groupId}"/>
+            <!-- Test with project artifactId expression -->
+            <reconcile propertyName="project.artifactId" expression="${project.artifactId}"/>
+            <!-- Test with combined expression using multiple properties -->
+            <reconcile propertyName="custom.timestamp" expression="${custom.timestamp}"/>
+          </reconciles>
+        </plugin>
+      </plugins>
+    </reconcile>
+  </executionControl>
 </cache>

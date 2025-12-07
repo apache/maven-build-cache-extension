@@ -21,6 +21,7 @@ package org.apache.maven.buildcache.xml;
 import javax.annotation.Nonnull;
 
 import java.io.File;
+import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.util.List;
 
@@ -114,6 +115,15 @@ public class DtoUtils {
         return dependency;
     }
 
+    /**
+     * @deprecated use {@link #addProperty(CompletedExecution, String, Object, Path, boolean)}
+     */
+    @Deprecated
+    public static void addProperty(
+            CompletedExecution execution, String propertyName, Object value, String baseDirPath, boolean tracked) {
+        addProperty(execution, propertyName, value, FileSystems.getDefault().getPath(baseDirPath), tracked);
+    }
+
     public static void addProperty(
             CompletedExecution execution, String propertyName, Object value, Path baseDirPath, boolean tracked) {
         final PropertyValue valueType = new PropertyValue();
@@ -178,31 +188,32 @@ public class DtoUtils {
     }
 
     public static String normalizeValue(Object value, Path baseDirPath) {
-        final String currentValue;
         if (value instanceof File) {
             Path path = ((File) value).toPath();
-            currentValue = normalizedPath(path, baseDirPath);
+            return normalizedPath(path, baseDirPath);
         } else if (value instanceof Path) {
-            currentValue = normalizedPath(((Path) value), baseDirPath);
+            return normalizedPath(((Path) value), baseDirPath);
         } else if (value != null && value.getClass().isArray()) {
-            currentValue = ArrayUtils.toString(value);
+            return ArrayUtils.toString(value);
         } else {
-            currentValue = String.valueOf(value);
+            return String.valueOf(value);
         }
-        return currentValue;
     }
 
-    // Best effort to normalize paths from Mojo fields.
-    // - all absolute paths under project root to be relativized for portability
-    // - redundant '..' and '.' to be removed to have consistent views on all paths
-    // - all relative paths are considered portable and should not be touched
-    // - absolute paths outside of project directory could not be deterministically
-    //   relativized and not touched
+    /*
+     Best effort to normalize paths from Mojo fields.
+     - all absolute paths under project root are relativized for portability
+     - redundant '..' and '.' are removed to have consistent views on all paths
+     - all relative paths are considered portable and are not be touched
+     - absolute paths outside of project directory cannot be deterministically
+       relativized and are not touched
+    */
     private static String normalizedPath(Path path, Path baseDirPath) {
         boolean isProjectSubdir = path.isAbsolute() && path.startsWith(baseDirPath);
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug(
-                    "normalizedPath isProjectSubdir {} path '{}' - baseDirPath '{}', path.isAbsolute() {}, path.startsWith(baseDirPath) {}",
+                    "normalizedPath isProjectSubdir {} path '{}' - baseDirPath '{}', path.isAbsolute() {},"
+                            + " path.startsWith(baseDirPath) {}",
                     isProjectSubdir,
                     path,
                     baseDirPath,

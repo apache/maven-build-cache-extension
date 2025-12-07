@@ -17,9 +17,9 @@
 
 -->
 <extensions>
-    <extension>
-        <groupId>org.apache.maven.extensions</groupId>
-        <artifactId>maven-build-cache-extension</artifactId>
-        <version>${projectVersion}</version>
-    </extension>
+  <extension>
+    <groupId>org.apache.maven.extensions</groupId>
+    <artifactId>maven-build-cache-extension</artifactId>
+    <version>${projectVersion}</version>
+  </extension>
 </extensions>
