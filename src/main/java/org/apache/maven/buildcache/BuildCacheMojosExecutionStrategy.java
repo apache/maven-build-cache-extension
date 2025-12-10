@@ -22,14 +22,12 @@ import javax.annotation.Priority;
 import javax.inject.Inject;
 import javax.inject.Named;
 
-import java.io.File;
 import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.Strings;
 import org.apache.maven.SessionScoped;
 import org.apache.maven.buildcache.artifact.ArtifactRestorationReport;
@@ -333,7 +331,8 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                 final CompletedExecution completedExecution = cachedBuild.findMojoExecutionInfo(cacheCandidate);
                 final String fullGoalName = cacheCandidate.getMojoDescriptor().getFullGoalName();
 
-                if (completedExecution != null && !isParamsMatched(project, cacheCandidate, mojo, completedExecution)) {
+                if (completedExecution != null
+                        && !isParamsMatched(project, session, cacheCandidate, mojo, completedExecution)) {
                     LOGGER.info(
                             "Mojo cached parameters mismatch with actual, forcing full project build. Mojo: {}",
                             fullGoalName);
@@ -367,7 +366,11 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
     }
 
     boolean isParamsMatched(
-            MavenProject project, MojoExecution mojoExecution, Mojo mojo, CompletedExecution completedExecution) {
+            MavenProject project,
+            MavenSession session,
+            MojoExecution mojoExecution,
+            Mojo mojo,
+            CompletedExecution completedExecution) {
         List<TrackedProperty> tracked = cacheConfig.getTrackedProperties(mojoExecution);
 
         for (TrackedProperty trackedProperty : tracked) {
@@ -380,20 +383,14 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
 
             final String currentValue;
             try {
-                Object value = ReflectionUtils.getValueIncludingSuperclasses(propertyName, mojo);
-
-                if (value instanceof File) {
-                    Path baseDirPath = project.getBasedir().toPath();
-                    Path path = ((File) value).toPath();
-                    currentValue = normalizedPath(path, baseDirPath);
-                } else if (value instanceof Path) {
-                    Path baseDirPath = project.getBasedir().toPath();
-                    currentValue = normalizedPath(((Path) value), baseDirPath);
-                } else if (value != null && value.getClass().isArray()) {
-                    currentValue = ArrayUtils.toString(value);
+                Object value;
+                if (trackedProperty.getExpression() != null) {
+                    value = DtoUtils.interpolateExpression(trackedProperty.getExpression(), session, mojoExecution);
                 } else {
-                    currentValue = String.valueOf(value);
+                    value = ReflectionUtils.getValueIncludingSuperclasses(propertyName, mojo);
                 }
+                Path baseDirPath = project.getBasedir().toPath();
+                currentValue = DtoUtils.normalizeValue(value, baseDirPath);
             } catch (IllegalAccessException e) {
                 LOGGER.error("Cannot extract plugin property {} from mojo {}", propertyName, mojo, e);
                 return false;
@@ -417,33 +414,6 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
             }
         }
         return true;
-    }
-
-    /**
-     * Best effort to normalize paths from Mojo fields.
-     * - all absolute paths under project root to be relativized for portability
-     * - redundant '..' and '.' to be removed to have consistent views on all paths
-     * - all relative paths are considered portable and should not be touched
-     * - absolute paths outside of project directory could not be deterministically
-     * relativized and not touched
-     */
-    private static String normalizedPath(Path path, Path baseDirPath) {
-        boolean isProjectSubdir = path.isAbsolute() && path.startsWith(baseDirPath);
-        if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug(
-                    "normalizedPath isProjectSubdir {} path '{}' - baseDirPath '{}', path.isAbsolute() {}, path.startsWith(baseDirPath) {}",
-                    isProjectSubdir,
-                    path,
-                    baseDirPath,
-                    path.isAbsolute(),
-                    path.startsWith(baseDirPath));
-        }
-        Path preparedPath = isProjectSubdir ? baseDirPath.relativize(path) : path;
-        String normalizedPath = preparedPath.normalize().toString();
-        if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug("normalizedPath '{}' - {} return {}", path, baseDirPath, normalizedPath);
-        }
-        return normalizedPath;
     }
 
     private enum CacheRestorationStatus {

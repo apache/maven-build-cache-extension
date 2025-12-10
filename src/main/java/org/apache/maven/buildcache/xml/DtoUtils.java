@@ -20,6 +20,9 @@ package org.apache.maven.buildcache.xml;
 
 import javax.annotation.Nonnull;
 
+import java.io.File;
+import java.nio.file.FileSystems;
+import java.nio.file.Path;
 import java.util.List;
 
 import org.apache.commons.lang3.ArrayUtils;
@@ -30,7 +33,10 @@ import org.apache.maven.buildcache.xml.build.CompletedExecution;
 import org.apache.maven.buildcache.xml.build.DigestItem;
 import org.apache.maven.buildcache.xml.build.PropertyValue;
 import org.apache.maven.buildcache.xml.config.TrackedProperty;
+import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Dependency;
+import org.apache.maven.plugin.MojoExecution;
+import org.apache.maven.plugin.PluginParameterExpressionEvaluator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -108,15 +114,21 @@ public class DtoUtils {
         return dependency;
     }
 
+    /**
+     * @deprecated use {@link #addProperty(CompletedExecution, String, Object, Path, boolean)}
+     */
+    @Deprecated
     public static void addProperty(
             CompletedExecution execution, String propertyName, Object value, String baseDirPath, boolean tracked) {
+        addProperty(execution, propertyName, value, FileSystems.getDefault().getPath(baseDirPath), tracked);
+    }
+
+    public static void addProperty(
+            CompletedExecution execution, String propertyName, Object value, Path baseDirPath, boolean tracked) {
         final PropertyValue valueType = new PropertyValue();
         valueType.setName(propertyName);
-        if (value != null && value.getClass().isArray()) {
-            value = ArrayUtils.toString(value);
-        }
-        final String valueText = String.valueOf(value);
-        valueType.setValue(Strings.CS.remove(valueText, baseDirPath));
+        final String valueText = normalizeValue(value, baseDirPath);
+        valueType.setValue(valueText);
         valueType.setTracked(tracked);
         execution.addProperty(valueType);
     }
@@ -172,5 +184,58 @@ public class DtoUtils {
         copy.setFileHash(artifact.getFileHash());
         copy.setFileSize(artifact.getFileSize());
         return copy;
+    }
+
+    public static String normalizeValue(Object value, Path baseDirPath) {
+        final String currentValue;
+        if (value instanceof File) {
+            Path path = ((File) value).toPath();
+            currentValue = normalizedPath(path, baseDirPath);
+        } else if (value instanceof Path) {
+            currentValue = normalizedPath(((Path) value), baseDirPath);
+        } else if (value != null && value.getClass().isArray()) {
+            currentValue = ArrayUtils.toString(value);
+        } else {
+            currentValue = String.valueOf(value);
+        }
+        return currentValue;
+    }
+
+    /**
+     * Best effort to normalize paths from Mojo fields.
+     * - all absolute paths under project root to be relativized for portability
+     * - redundant '..' and '.' to be removed to have consistent views on all paths
+     * - all relative paths are considered portable and should not be touched
+     * - absolute paths outside of project directory could not be deterministically
+     * relativized and not touched
+     */
+    private static String normalizedPath(Path path, Path baseDirPath) {
+        boolean isProjectSubdir = path.isAbsolute() && path.startsWith(baseDirPath);
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug(
+                    "normalizedPath isProjectSubdir {} path '{}' - baseDirPath '{}', path.isAbsolute() {},"
+                            + " path.startsWith(baseDirPath) {}",
+                    isProjectSubdir,
+                    path,
+                    baseDirPath,
+                    path.isAbsolute(),
+                    path.startsWith(baseDirPath));
+        }
+        Path preparedPath = isProjectSubdir ? baseDirPath.relativize(path) : path;
+        String normalizedPath = preparedPath.normalize().toString();
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("normalizedPath '{}' - {} return {}", path, baseDirPath, normalizedPath);
+        }
+        return normalizedPath;
+    }
+
+    public static Object interpolateExpression(String expression, MavenSession session, MojoExecution execution) {
+        try {
+            PluginParameterExpressionEvaluator evaluator = new PluginParameterExpressionEvaluator(session, execution);
+            return evaluator.evaluate(expression);
+        } catch (Exception e) {
+            LOGGER.warn("Cannot interpolate expression '{}': {}", expression, e.getMessage(), e);
+            return expression; // return the expression as is if interpolation fails
+        }
     }
 }
