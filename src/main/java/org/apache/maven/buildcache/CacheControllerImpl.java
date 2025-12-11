@@ -1176,26 +1176,26 @@ public class CacheControllerImpl implements CacheController {
      *   <li>Machine A (clock ahead at 11:00 AM) builds and caches artifacts
      *   <li>Machine B (correct clock at 10:00 AM) restores cache
      *   <li>Restored files have timestamps from the future (11:00 AM)
-     *   <li>User runs "git checkout" to different branch (sources timestamped 10:02 AM)
+     *   <li>User switches branches or updates sources (sources timestamped 10:02 AM)
      *   <li>Maven incremental compiler sees: sources (10:02 AM) &lt; classes (11:00 AM)
      *   <li>Maven skips compilation (thinks sources older than classes)
-     *   <li>Wrong classes from old branch get cached!
+     *   <li>Wrong classes from old source version get cached!
      * </ul>
      *
      * <p><b>Problem 2: Orphaned Class Files from Deleted Sources</b>
      * <ul>
-     *   <li>Branch A has Foo.java → compiles Foo.class
-     *   <li>Git checkout to Branch B (no Foo.java)
+     *   <li>Version A has Foo.java → compiles Foo.class
+     *   <li>Switch to Version B (no Foo.java)
      *   <li>Foo.class remains in target/classes (orphaned)
-     *   <li>Cache miss on new branch triggers mojos
+     *   <li>Cache miss on new version triggers mojos
      *   <li>Without protection, orphaned Foo.class gets cached
      *   <li>Future cache hits restore Foo.class (which shouldn't exist!)
      * </ul>
      *
      * <p><b>Problem 3: Stale JARs/WARs from Previous Builds</b>
      * <ul>
-     *   <li>Yesterday: built myapp.jar on old branch
-     *   <li>Today: git checkout to new branch, sources changed
+     *   <li>Yesterday: built myapp.jar on old version
+     *   <li>Today: switched to new version, sources changed
      *   <li>mvn package runs (cache miss)
      *   <li>If JAR wasn't rebuilt, stale JAR could be cached
      * </ul>

@@ -24,7 +24,7 @@
 
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.apache.maven.caching.test</groupId>
-    <artifactId>git-checkout-stale-artifact</artifactId>
+    <artifactId>stale-artifact</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>jar</packaging>
 

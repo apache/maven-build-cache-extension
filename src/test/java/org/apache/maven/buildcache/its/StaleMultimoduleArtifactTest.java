@@ -34,27 +34,27 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Tests that stale artifacts from git branch switches in multimodule projects are not cached.
+ * Tests that stale artifacts from source changes in multimodule projects are not cached.
  * Verifies that the staging directory correctly preserves the full path structure including
  * submodule paths relative to the multimodule root.
  *
  * <p>Scenario:
  * <ol>
- *   <li>Build multimodule project on branch A (creates module1/target/classes)</li>
- *   <li>Simulate git checkout to branch B (source changes, target/classes remains stale)</li>
+ *   <li>Build multimodule project version A (creates module1/target/classes)</li>
+ *   <li>Simulate source change (source changes, target/classes remains stale)</li>
  *   <li>Build without 'mvn clean' - should stage stale files with full path preservation</li>
  *   <li>Verify staging directory structure: target/.maven-build-cache-stash/module1/target/classes</li>
  * </ol>
  */
-@IntegrationTest("src/test/projects/git-checkout-stale-multimodule")
-class GitCheckoutStaleMultimoduleTest {
+@IntegrationTest("src/test/projects/stale-multimodule-artifact")
+class StaleMultimoduleArtifactTest {
 
     @Test
     void staleMultimoduleDirectoriesCorrectlyStaged(Verifier verifier) throws VerificationException, IOException {
         verifier.setAutoclean(false);
 
-        // Simulate branch A: compile multimodule project
-        verifier.setLogFileName("../log-multimodule-branch-a.txt");
+        // Build version A: compile multimodule project
+        verifier.setLogFileName("../log-multimodule-version-a.txt");
         verifier.executeGoals(Arrays.asList("clean", "compile"));
         verifier.verifyErrorFreeLog();
 
@@ -64,14 +64,14 @@ class GitCheckoutStaleMultimoduleTest {
         Path module1Class = module1ClassesDir.resolve("org/example/Module1.class");
         assertTrue(Files.exists(module1Class), "Module1.class should exist after compile");
 
-        // Simulate git checkout to branch B by:
-        // 1. Modifying source file (simulates different branch content)
+        // Simulate source change (e.g., branch switch, external update) by:
+        // 1. Modifying source file (simulates different source version)
         // 2. Making class file appear OLDER than build start time (stale)
         Path sourceFile = basedir.resolve("module1/src/main/java/org/example/Module1.java");
         String content = new String(Files.readAllBytes(sourceFile), "UTF-8");
-        Files.write(sourceFile, content.replace("Branch A", "Branch B").getBytes("UTF-8"));
+        Files.write(sourceFile, content.replace("Version A", "Version B").getBytes("UTF-8"));
 
-        // Backdate the class file to simulate stale artifact from previous branch
+        // Backdate the class file to simulate stale artifact from previous build
         FileTime oldTime = FileTime.from(Instant.now().minusSeconds(3600)); // 1 hour ago
         Files.setLastModifiedTime(module1Class, oldTime);
 
@@ -80,7 +80,7 @@ class GitCheckoutStaleMultimoduleTest {
         // 1. Move module1/target/classes to target/.maven-build-cache-stash/module1/target/classes
         // 2. Force recompilation (Maven sees clean module1/target/)
         // 3. After save(), restore or discard based on whether files were rebuilt
-        verifier.setLogFileName("../log-multimodule-branch-b.txt");
+        verifier.setLogFileName("../log-multimodule-version-b.txt");
         verifier.executeGoals(Arrays.asList("compile"));
         verifier.verifyErrorFreeLog();
 

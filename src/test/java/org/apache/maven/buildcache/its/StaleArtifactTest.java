@@ -34,21 +34,21 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Tests that stale artifacts from git branch switches are not cached.
+ * Tests that stale artifacts from source changes are not cached.
  * Simulates the scenario:
- * 1. Build on branch A (creates target/classes with old content)
- * 2. Git checkout branch B (sources change, but target/classes remains)
+ * 1. Build version A (creates target/classes with old content)
+ * 2. Source changes (e.g., branch switch, external update), but target/classes remains
  * 3. Build without 'mvn clean' - should NOT cache stale target/classes
  */
-@IntegrationTest("src/test/projects/git-checkout-stale-artifact")
-class GitCheckoutStaleArtifactTest {
+@IntegrationTest("src/test/projects/stale-artifact")
+class StaleArtifactTest {
 
     @Test
     void staleDirectoryNotCached(Verifier verifier) throws VerificationException, IOException {
         verifier.setAutoclean(false);
 
-        // Simulate branch A: compile project
-        verifier.setLogFileName("../log-branch-a.txt");
+        // Build version A: compile project
+        verifier.setLogFileName("../log-version-a.txt");
         verifier.executeGoals(Arrays.asList("clean", "compile"));
         verifier.verifyErrorFreeLog();
 
@@ -56,19 +56,19 @@ class GitCheckoutStaleArtifactTest {
         Path appClass = classesDir.resolve("org/example/App.class");
         assertTrue(Files.exists(appClass), "App.class should exist after compile");
 
-        // Simulate git checkout to branch B by:
-        // 1. Modifying source file (simulates different branch content)
+        // Simulate source change (e.g., branch switch, external update) by:
+        // 1. Modifying source file (simulates different source version)
         // 2. Making class file appear OLDER than build start time (stale)
         Path sourceFile = Paths.get(verifier.getBasedir(), "src/main/java/org/example/App.java");
         String content = new String(Files.readAllBytes(sourceFile), "UTF-8");
-        Files.write(sourceFile, content.replace("Branch A", "Branch B").getBytes("UTF-8"));
+        Files.write(sourceFile, content.replace("Version A", "Version B").getBytes("UTF-8"));
 
-        // Backdate the class file to simulate stale artifact from previous branch
+        // Backdate the class file to simulate stale artifact from previous build
         FileTime oldTime = FileTime.from(Instant.now().minusSeconds(3600)); // 1 hour ago
         Files.setLastModifiedTime(appClass, oldTime);
 
         // Try to build without clean (simulates developer workflow)
-        verifier.setLogFileName("../log-branch-b.txt");
+        verifier.setLogFileName("../log-version-b.txt");
         verifier.executeGoals(Arrays.asList("compile"));
         verifier.verifyErrorFreeLog();
 

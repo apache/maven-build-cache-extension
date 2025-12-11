@@ -18,8 +18,8 @@
  */
 package org.example;
 
-public class App {
+public class Module1 {
     public static void main(String[] args) {
-        System.out.println("Branch A");
+        System.out.println("Module1 Version A");
     }
 }
