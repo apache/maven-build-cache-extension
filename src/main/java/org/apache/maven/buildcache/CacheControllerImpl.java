@@ -102,7 +102,6 @@ import static org.apache.commons.lang3.StringUtils.split;
 import static org.apache.maven.buildcache.CacheResult.empty;
 import static org.apache.maven.buildcache.CacheResult.failure;
 import static org.apache.maven.buildcache.CacheResult.partialSuccess;
-import static org.apache.maven.buildcache.CacheResult.rebuilded;
 import static org.apache.maven.buildcache.CacheResult.success;
 import static org.apache.maven.buildcache.RemoteCacheRepository.BUILDINFO_XML;
 import static org.apache.maven.buildcache.checksum.KeyUtils.getVersionlessProjectKey;
@@ -529,7 +528,7 @@ public class CacheControllerImpl implements CacheController {
                     hashFactory.getAlgorithm());
             populateGitInfo(build, session);
             build.getDto().set_final(cacheConfig.isSaveToRemoteFinal());
-            cacheResults.put(getVersionlessProjectKey(project), rebuilded(cacheResult, build));
+            cacheResults.put(getVersionlessProjectKey(project), CacheResult.rebuilt(cacheResult, build));
 
             localCache.beforeSave(context);
 
