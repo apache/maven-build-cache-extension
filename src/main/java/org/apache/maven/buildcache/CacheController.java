@@ -18,6 +18,7 @@
  */
 package org.apache.maven.buildcache;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -45,4 +46,23 @@ public interface CacheController {
     boolean isForcedExecution(MavenProject project, MojoExecution execution);
 
     void saveCacheReport(MavenSession session);
+
+    /**
+     * Move pre-existing artifacts to staging directory to prevent caching stale files.
+     * Called before mojos run to ensure save() only sees fresh files.
+     *
+     * @param session the Maven session
+     * @param project the Maven project
+     * @throws IOException if file operations fail
+     */
+    void stagePreExistingArtifacts(MavenSession session, MavenProject project) throws IOException;
+
+    /**
+     * Restore staged artifacts after save() completes.
+     * Files that were rebuilt are discarded; files that weren't rebuilt are restored.
+     *
+     * @param session the Maven session
+     * @param project the Maven project
+     */
+    void restoreStagedArtifacts(MavenSession session, MavenProject project);
 }

@@ -244,6 +244,11 @@ under the License.
           <name>filePath</name>
           <type>String</type>
         </field>
+        <field>
+          <name>isDirectory</name>
+          <type>boolean</type>
+          <description>Indicates if this artifact represents a directory (e.g., target/classes) that was zipped for caching</description>
+        </field>
       <!--/xs:sequence-->
       </fields>
     <!--/xs:complexType-->
