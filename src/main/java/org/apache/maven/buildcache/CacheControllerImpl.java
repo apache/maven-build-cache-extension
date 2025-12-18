@@ -684,7 +684,7 @@ public class CacheControllerImpl implements CacheController {
         final Object mojo = executionEvent.getMojo();
 
         final File baseDir = executionEvent.getProject().getBasedir();
-        final String baseDirPath = FilenameUtils.normalizeNoEndSeparator(baseDir.getAbsolutePath()) + File.separator;
+        final Path baseDirPath = baseDir.toPath();
 
         final List<Parameter> parameters = mojoExecution.getMojoDescriptor().getParameters();
         for (Parameter parameter : parameters) {
@@ -726,6 +726,19 @@ public class CacheControllerImpl implements CacheController {
                 if (tracked) {
                     throw new IllegalArgumentException("Property configured in cache introspection config " + "for "
                             + mojo + " is not accessible: " + propertyName);
+                }
+            }
+        }
+        // add properties with expressions
+        for (TrackedProperty trackedProperty : trackedProperties) {
+            if (trackedProperty.getExpression() != null) {
+                String propertyName = trackedProperty.getPropertyName();
+                if (!isExcluded(propertyName, logAll, noLogProperties, forceLogProperties)) {
+                    Object value = DtoUtils.interpolateExpression(
+                            trackedProperty.getExpression(),
+                            executionEvent.getSession(),
+                            executionEvent.getExecution());
+                    DtoUtils.addProperty(execution, propertyName, value, baseDirPath, true);
                 }
             }
         }
