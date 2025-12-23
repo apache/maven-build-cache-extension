@@ -611,7 +611,9 @@ public class CacheControllerImpl implements CacheController {
             boolean isPomProjectWithWork = "pom".equals(project.getPackaging()) && !completedExecution.isEmpty();
 
             if (!hasArtifactFile && !hasAttachedArtifacts && !isPomProjectWithWork) {
-                LOGGER.info("Skipping cache save: no artifacts to save (only metadata present)");
+                LOGGER.info(
+                        "Skipping cache save: no artifacts to save ({}only metadata present)",
+                        cacheCompile ? "" : "cacheCompile=false, ");
                 return;
             }
 
@@ -711,7 +713,7 @@ public class CacheControllerImpl implements CacheController {
             // Clean up temp file after it's been saved to cache
             Files.deleteIfExists(tempZip);
         } else {
-            LOGGER.warn("Directory artifact has no files to cache: {}", originalFile);
+            LOGGER.info("Skipping empty directory artifact: {}", originalFile);
         }
     }
 
@@ -1167,6 +1169,14 @@ public class CacheControllerImpl implements CacheController {
     /**
      * Move pre-existing build artifacts to staging directory to prevent caching stale files.
      *
+     * <p><b>Artifacts Staged:</b>
+     * <ul>
+     *   <li>{@code target/classes} - Compiled main classes directory</li>
+     *   <li>{@code target/test-classes} - Compiled test classes directory</li>
+     *   <li>{@code target/*.jar} - Main project artifact (JAR/WAR files)</li>
+     *   <li>Other directories configured via {@code attachedOutputs} in cache configuration</li>
+     * </ul>
+     *
      * <p><b>DESIGN RATIONALE - Staleness Detection via Staging Directory:</b>
      *
      * <p>This approach solves three critical problems that timestamp-based checking cannot handle:
@@ -1277,7 +1287,19 @@ public class CacheControllerImpl implements CacheController {
     }
 
     /**
-     * Collect paths to all artifacts that will be cached (main artifact + attachedOutputs).
+     * Collects paths to all artifacts that will be considered for caching for the given project.
+     *
+     * <p>This includes:
+     * <ul>
+     *     <li>the main project artifact file (for example, the built JAR), if it has been produced, and</li>
+     *     <li>any attached output directories configured via {@code cacheConfig.getAttachedOutputs()} under the
+     *         project's target directory, when {@code cacheConfig.isCacheCompile()} is enabled.</li>
+     * </ul>
+     * Only paths that currently exist on disk are included in the returned set; non-existent files or directories
+     * are ignored.
+     *
+     * @param project the Maven project whose artifact and attached output paths should be collected
+     * @return a set of existing filesystem paths for the project's main artifact and configured attached outputs
      */
     private Set<Path> collectCachedArtifactPaths(MavenProject project) {
         Set<Path> paths = new HashSet<>();
