@@ -39,6 +39,7 @@ This document contains various configuration parameters supported by the cache e
 | `-Dmaven.build.cache.skipCache=(true/false)`               | Skip looking up artifacts in caches. Does not affect writing artifacts to caches, disables only reading when set to `true`               | May be used to trigger a forced rebuild when matching artifacts do exist in caches |
 | `-Dmaven.build.cache.skipSave=(true/false)`            | Skip writing build result in caches. Does not affect reading from the cache.               | Configuring MR builds to benefits from the cache, but restricting writes to the `master` branch |
 | `-Dmaven.build.cache.mandatoryClean=(true/false)`          | Enable or disable the necessity to execute the `clean` phase in order to store the build result in cache                                  | Reducing the risk to save "wrong" files in cache in a local dev environnement      |
+| `-Dmaven.build.cache.cacheCompile=(true/false)`            | Cache compile phase outputs (classes, test-classes, generated sources). When enabled (default), compile-only builds create cache entries that can be restored by subsequent builds. When disabled, caching only occurs during package phase or later. | Performance optimization for incremental builds                                    |
 
 ### Project-level properties
 
