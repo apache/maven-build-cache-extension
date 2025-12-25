@@ -58,6 +58,7 @@ class BuildExtensionTest {
         verifier.getCliOptions().clear();
         verifier.addCliOption("-D" + CACHE_LOCATION_PROPERTY_NAME + "=" + tempDirectory.toAbsolutePath());
         verifier.addCliOption("-D" + SKIP_SAVE + "=true");
+        verifier.addCliOption("--debug");
 
         verifier.setLogFileName("../log-1.txt");
         verifier.executeGoal("verify");

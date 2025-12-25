@@ -227,3 +227,18 @@ Set attribute `excludeDependencies` to `true` in `input/plugins/plugin` section:
       </plugins>
     </input>
 ```
+
+### I want to disable caching of compile-only builds
+
+By default, the cache extension saves build outputs when running compile-only phases (like `mvn compile` or `mvn test-compile`).
+This allows subsequent builds to restore compiled classes without recompilation. To disable this behavior and only cache
+builds that reach the package phase or later:
+
+```shell
+mvn compile -Dmaven.build.cache.cacheCompile=false
+```
+
+This is useful when:
+* You want to ensure cache entries always contain packaged artifacts (JARs, WARs, etc.)
+* Your workflow relies on artifacts being available in the local repository
+* You prefer the traditional behavior where only complete builds are cached
