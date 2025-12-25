@@ -70,7 +70,7 @@ public class CacheUtils {
     }
 
     public static boolean isSnapshot(String version) {
-        return version.endsWith(SNAPSHOT_VERSION) || version.endsWith(LATEST_VERSION);
+        return version != null && (version.endsWith(SNAPSHOT_VERSION) || version.endsWith(LATEST_VERSION));
     }
 
     public static String normalizedName(Artifact artifact) {

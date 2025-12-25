@@ -39,6 +39,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
@@ -55,6 +56,7 @@ import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.artifact.handler.ArtifactHandler;
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.artifact.resolver.filter.ExcludesArtifactFilter;
+import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
 import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException;
 import org.apache.maven.artifact.versioning.VersionRange;
 import org.apache.maven.buildcache.CacheUtils;
@@ -776,11 +778,23 @@ public class MavenProjectInput {
                 continue;
             }
 
+            final String versionSpec = dependency.getVersion();
+
             // saved to index by the end of dependency build
-            MavenProject dependencyProject = multiModuleSupport
-                    .tryToResolveProject(dependency.getGroupId(), dependency.getArtifactId(), dependency.getVersion())
-                    .orElse(null);
-            boolean isSnapshot = isSnapshot(dependency.getVersion());
+            MavenProject dependencyProject = versionSpec == null
+                    ? null
+                    : multiModuleSupport
+                            .tryToResolveProject(dependency.getGroupId(), dependency.getArtifactId(), versionSpec)
+                            .orElse(null);
+
+            // for dynamic versions (LATEST/RELEASE/ranges), reactor artifacts can be part of the build
+            // but cannot be resolved yet from the workspace (not built), so Aether may try remote download.
+            // If a matching reactor module exists, treat it as multi-module dependency and use project checksum.
+            if (dependencyProject == null && isDynamicVersion(versionSpec)) {
+                dependencyProject = tryResolveReactorProjectByGA(dependency).orElse(null);
+            }
+
+            boolean isSnapshot = isSnapshot(versionSpec);
             if (dependencyProject == null && !isSnapshot) {
                 // external immutable dependency, should skip
                 continue;
@@ -809,6 +823,19 @@ public class MavenProjectInput {
     @Nonnull
     private DigestItem resolveArtifact(final Dependency dependency)
             throws IOException, ArtifactResolutionException, InvalidVersionSpecificationException {
+
+        // system-scoped dependencies are local files (systemPath) and must NOT be resolved via Aether.
+        if (Artifact.SCOPE_SYSTEM.equals(dependency.getScope()) && dependency.getSystemPath() != null) {
+            final Path systemPath = Paths.get(dependency.getSystemPath()).normalize();
+            if (!Files.exists(systemPath)) {
+                throw new DependencyNotResolvedException(
+                        "System dependency file does not exist: " + systemPath + " for dependency: " + dependency);
+            }
+            final HashAlgorithm algorithm = config.getHashFactory().createAlgorithm();
+            final String hash = algorithm.hash(systemPath);
+            final Artifact artifact = createDependencyArtifact(dependency);
+            return DtoUtils.createDigestedFile(artifact, hash);
+        }
 
         org.eclipse.aether.artifact.Artifact dependencyArtifact = new org.eclipse.aether.artifact.DefaultArtifact(
                 dependency.getGroupId(),
@@ -845,6 +872,54 @@ public class MavenProjectInput {
         final HashAlgorithm algorithm = config.getHashFactory().createAlgorithm();
         final String hash = algorithm.hash(resolved.getFile().toPath());
         return DtoUtils.createDigestedFile(artifact, hash);
+    }
+
+    private static boolean isDynamicVersion(String versionSpec) {
+        if (versionSpec == null) {
+            return true;
+        }
+        if ("LATEST".equals(versionSpec) || "RELEASE".equals(versionSpec)) {
+            return true;
+        }
+        // Maven version ranges: [1.0,2.0), (1.0,), etc.
+        return versionSpec.startsWith("[") || versionSpec.startsWith("(") || versionSpec.contains(",");
+    }
+
+    private Optional<MavenProject> tryResolveReactorProjectByGA(Dependency dependency) {
+        final List<MavenProject> projects = session.getAllProjects();
+        if (projects == null || projects.isEmpty()) {
+            return Optional.empty();
+        }
+
+        final String groupId = dependency.getGroupId();
+        final String artifactId = dependency.getArtifactId();
+        final String versionSpec = dependency.getVersion();
+
+        for (MavenProject candidate : projects) {
+            if (!Objects.equals(groupId, candidate.getGroupId())
+                    || !Objects.equals(artifactId, candidate.getArtifactId())) {
+                continue;
+            }
+
+            // For null/LATEST/RELEASE, accept the reactor module directly.
+            if (versionSpec == null || "LATEST".equals(versionSpec) || "RELEASE".equals(versionSpec)) {
+                return Optional.of(candidate);
+            }
+
+            // For ranges, only accept if reactor version fits the range.
+            if (versionSpec.startsWith("[") || versionSpec.startsWith("(") || versionSpec.contains(",")) {
+                try {
+                    VersionRange range = VersionRange.createFromVersionSpec(versionSpec);
+                    if (range.containsVersion(new DefaultArtifactVersion(candidate.getVersion()))) {
+                        return Optional.of(candidate);
+                    }
+                } catch (InvalidVersionSpecificationException e) {
+                    // If the spec is not parseable as range, don't guess.
+                    return Optional.empty();
+                }
+            }
+        }
+        return Optional.empty();
     }
 
     /**
