@@ -134,7 +134,7 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                 for (MojoExecution mojoExecution : cleanPhase) {
                     mojoExecutionRunner.run(mojoExecution);
                 }
-                if (cacheState == INITIALIZED || skipCache) {
+                if (cacheState == INITIALIZED) {
                     result = cacheController.findCachedBuild(session, project, mojoExecutions, skipCache);
                 }
             } else {
