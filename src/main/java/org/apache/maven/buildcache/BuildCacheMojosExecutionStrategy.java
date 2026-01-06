@@ -152,11 +152,12 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
             }
 
             try {
-                if (!restored && !forkedExecution) {
+                if (cacheState == INITIALIZED && !restored && !forkedExecution) {
                     // Move pre-existing artifacts to staging directory to prevent caching stale files
                     // from previous builds (e.g., after source changes or from cache restored
                     // with clock skew). This ensures save() only sees fresh files built during this session.
                     // Skip for forked executions since they don't cache and shouldn't modify artifacts.
+                    // Skip when cache is disabled to avoid accessing uninitialized cache configuration.
                     try {
                         cacheController.stagePreExistingArtifacts(session, project);
                     } catch (IOException e) {
@@ -193,7 +194,8 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                 // Always restore staged files after build completes (whether save ran or not).
                 // Files that were rebuilt are discarded; files that weren't rebuilt are restored.
                 // Skip for forked executions since they don't stage artifacts.
-                if (!restored && !forkedExecution) {
+                // Skip when cache is disabled since staging was not performed.
+                if (cacheState == INITIALIZED && !restored && !forkedExecution) {
                     cacheController.restoreStagedArtifacts(session, project);
                 }
             }
