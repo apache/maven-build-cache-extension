@@ -18,6 +18,7 @@
  */
 package org.apache.maven.buildcache.its;
 
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.maven.buildcache.its.junit.IntegrationTest;
@@ -54,6 +55,29 @@ class SkipBuildExtensionTest {
         verifier.verifyErrorFreeLog();
 
         verifyNoTextInLog(verifier, "Build cache is disabled for 'clean' goal.");
+    }
+
+    /**
+     * Verifies that running with -Dmaven.build.cache.enabled=false does not cause
+     * IllegalStateException and the build completes successfully.
+     * <p>
+     * This tests the fix for the regression where stagePreExistingArtifacts() was called
+     * without checking if the cache was initialized, causing IllegalStateException when
+     * cache is disabled via command line.
+     *
+     * @see <a href="https://github.com/apache/maven-build-cache-extension/pull/394#issuecomment-3714680789">PR #394 comment</a>
+     */
+    @Test
+    void cacheDisabledViaCommandLine(Verifier verifier) throws VerificationException {
+        verifier.setAutoclean(false);
+        verifier.addCliOption("-Dmaven.build.cache.enabled=false");
+
+        verifier.setLogFileName("../log-cache-disabled.txt");
+        verifier.executeGoals(Arrays.asList("clean", "install"));
+        verifier.verifyErrorFreeLog();
+
+        // Verify cache was actually disabled
+        verifier.verifyTextInLog("Cache disabled by command line flag");
     }
 
     private static void verifyNoTextInLog(Verifier verifier, String text) throws VerificationException {
