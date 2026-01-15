@@ -20,11 +20,13 @@ package org.apache.maven.buildcache;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
+import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -32,15 +34,23 @@ import java.nio.file.attribute.FileTime;
 import java.nio.file.attribute.PosixFilePermission;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Stream;
+import java.util.zip.Deflater;
+import java.util.zip.ZipEntry;
 
+import org.apache.commons.compress.archivers.zip.ParallelScatterZipCreator;
+import org.apache.commons.compress.archivers.zip.UnixStat;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
-import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
+import org.apache.commons.compress.archivers.zip.ZipFile;
+import org.apache.commons.compress.parallel.InputStreamSupplier;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
 import org.apache.commons.lang3.mutable.MutableBoolean;
@@ -60,7 +70,6 @@ import static org.apache.maven.artifact.Artifact.SNAPSHOT_VERSION;
  * Cache Utils
  */
 public class CacheUtils {
-
     public static boolean isPom(MavenProject project) {
         return project.getPackaging().equals("pom");
     }
@@ -153,6 +162,42 @@ public class CacheUtils {
     }
 
     /**
+     * File extensions that are already compressed and should be stored without compression.
+     */
+    private static final Set<String> INCOMPRESSIBLE_EXTENSIONS = new HashSet<>(Arrays.asList(
+            // Archives
+            ".zip",
+            ".gz",
+            ".tgz",
+            ".bz2",
+            ".xz",
+            ".7z",
+            ".rar",
+            ".jar",
+            ".war",
+            ".ear",
+            // Images
+            ".jpg",
+            ".jpeg",
+            ".png",
+            ".gif",
+            ".webp",
+            ".ico",
+            ".svg",
+            // Media
+            ".mp3",
+            ".mp4",
+            ".avi",
+            ".mov",
+            ".webm",
+            ".ogg",
+            // Other
+            ".woff",
+            ".woff2",
+            ".eot",
+            ".ttf"));
+
+    /**
      * Put every matching files of a directory in a zip.
      * @param dir directory to zip
      * @param zip zip to populate
@@ -170,49 +215,111 @@ public class CacheUtils {
             throws IOException {
         final MutableBoolean hasFiles = new MutableBoolean();
         // Check once if filesystem supports POSIX permissions instead of catching exceptions for every file
-        final boolean supportsPosix = preservePermissions
-                && dir.getFileSystem().supportedFileAttributeViews().contains("posix");
+        final boolean supportsPosix = preservePermissions && isPosixSupported();
 
-        try (ZipArchiveOutputStream zipOutputStream = new ZipArchiveOutputStream(Files.newOutputStream(zip))) {
+        try (ZipArchiveOutputStream zipOutputStream = new ZipArchiveOutputStream(zip)) {
+            zipOutputStream.setLevel(Deflater.BEST_SPEED);
+            ParallelScatterZipCreator parallelCreator =
+                    new ParallelScatterZipCreator(java.util.concurrent.Executors.newWorkStealingPool());
 
             PathMatcher matcher =
                     "*".equals(glob) ? null : FileSystems.getDefault().getPathMatcher("glob:" + glob);
-            Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
 
+            Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
                 @Override
                 public FileVisitResult visitFile(Path path, BasicFileAttributes basicFileAttributes)
                         throws IOException {
-
                     if (matcher == null || matcher.matches(path.getFileName())) {
-                        final ZipArchiveEntry zipEntry =
-                                new ZipArchiveEntry(dir.relativize(path).toString());
+                        String relativePath = dir.relativize(path).toString();
+                        boolean isSymlink = basicFileAttributes.isSymbolicLink();
 
-                        // Preserve Unix permissions if requested and filesystem supports it
-                        if (supportsPosix) {
-                            Set<PosixFilePermission> permissions = Files.getPosixFilePermissions(path);
-                            zipEntry.setUnixMode(permissionsToMode(permissions));
+                        if (isSymlink) {
+                            final ZipArchiveEntry zipEntry = new ZipArchiveEntry(path.toFile(), relativePath);
+                            zipEntry.setUnixMode(UnixStat.LINK_FLAG | UnixStat.DEFAULT_LINK_PERM);
+                            zipOutputStream.putArchiveEntry(zipEntry);
+                            Path symlinkTarget = Files.readSymbolicLink(path);
+                            zipOutputStream.write(symlinkTarget.toString().getBytes());
+                            zipOutputStream.closeArchiveEntry();
+                        } else {
+                            final ZipArchiveEntry zipEntry = createZipEntry(path, relativePath, supportsPosix);
+                            InputStreamSupplier streamSupplier = () -> {
+                                try {
+                                    return Files.newInputStream(path);
+                                } catch (IOException e) {
+                                    throw new java.io.UncheckedIOException(e);
+                                }
+                            };
+                            parallelCreator.addArchiveEntry(zipEntry, streamSupplier);
                         }
-
-                        zipOutputStream.putArchiveEntry(zipEntry);
-                        Files.copy(path, zipOutputStream);
                         hasFiles.setTrue();
-                        zipOutputStream.closeArchiveEntry();
                     }
                     return FileVisitResult.CONTINUE;
                 }
             });
+
+            try {
+                parallelCreator.writeTo(zipOutputStream);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IOException("Zip creation interrupted", e);
+            } catch (ExecutionException e) {
+                throw new IOException("Zip creation failed", e.getCause());
+            }
         }
         return hasFiles.booleanValue();
     }
 
+    private static ZipArchiveEntry createZipEntry(Path path, String relativePath, boolean supportsPosix)
+            throws IOException {
+        ZipArchiveEntry zipEntry = new ZipArchiveEntry(path.toFile(), relativePath);
+
+        if (isIncompressible(path)) {
+            zipEntry.setMethod(ZipEntry.STORED);
+            zipEntry.setSize(Files.size(path));
+            zipEntry.setCrc(computeCrc32(path));
+        } else {
+            // ParallelScatterZipCreator requires method to be explicitly set
+            zipEntry.setMethod(ZipEntry.DEFLATED);
+        }
+
+        if (supportsPosix) {
+            Set<PosixFilePermission> permissions = Files.getPosixFilePermissions(path);
+            zipEntry.setUnixMode(toUnixMode(permissions));
+        }
+
+        return zipEntry;
+    }
+
+    private static boolean isIncompressible(Path path) {
+        String fileName = path.getFileName().toString().toLowerCase(Locale.ROOT);
+        for (String ext : INCOMPRESSIBLE_EXTENSIONS) {
+            if (fileName.endsWith(ext)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static long computeCrc32(Path path) throws IOException {
+        java.util.zip.CRC32 crc = new java.util.zip.CRC32();
+        byte[] buffer = new byte[8192];
+        try (InputStream in = Files.newInputStream(path)) {
+            int len;
+            while ((len = in.read(buffer)) != -1) {
+                crc.update(buffer, 0, len);
+            }
+        }
+        return crc.getValue();
+    }
+
     public static void unzip(Path zip, Path out, boolean preservePermissions) throws IOException {
         // Check once if filesystem supports POSIX permissions instead of catching exceptions for every file
-        final boolean supportsPosix = preservePermissions
-                && out.getFileSystem().supportedFileAttributeViews().contains("posix");
+        final boolean supportsPosix = preservePermissions && isPosixSupported();
 
-        try (ZipArchiveInputStream zis = new ZipArchiveInputStream(Files.newInputStream(zip))) {
-            ZipArchiveEntry entry = zis.getNextEntry();
-            while (entry != null) {
+        try (ZipFile zipFile = ZipFile.builder().setPath(zip).get()) {
+            Enumeration<ZipArchiveEntry> entries = zipFile.getEntries();
+            while (entries.hasMoreElements()) {
+                ZipArchiveEntry entry = entries.nextElement();
                 Path file = out.resolve(entry.getName());
                 if (!file.normalize().startsWith(out.normalize())) {
                     throw new RuntimeException("Bad zip entry");
@@ -222,20 +329,23 @@ public class CacheUtils {
                 } else {
                     Path parent = file.getParent();
                     Files.createDirectories(parent);
-                    Files.copy(zis, file, StandardCopyOption.REPLACE_EXISTING);
-                }
-                Files.setLastModifiedTime(file, FileTime.fromMillis(entry.getTime()));
-
-                // Restore Unix permissions if requested and filesystem supports it
-                if (supportsPosix) {
-                    int unixMode = entry.getUnixMode();
-                    if (unixMode != 0) {
-                        Set<PosixFilePermission> permissions = modeToPermissions(unixMode);
-                        Files.setPosixFilePermissions(file, permissions);
+                    if (supportsPosix && entry.isUnixSymlink()) {
+                        Path target = Paths.get(zipFile.getUnixSymlink(entry));
+                        Files.deleteIfExists(file);
+                        Files.createSymbolicLink(file, target);
+                    } else {
+                        Files.copy(zipFile.getInputStream(entry), file, StandardCopyOption.REPLACE_EXISTING);
                     }
                 }
-
-                entry = zis.getNextEntry();
+                if (!entry.isUnixSymlink()) {
+                    Files.setLastModifiedTime(file, FileTime.fromMillis(entry.getTime()));
+                    if (supportsPosix) {
+                        int unixMode = entry.getUnixMode();
+                        if (unixMode != 0) {
+                            Files.setPosixFilePermissions(file, fromUnixMode(unixMode));
+                        }
+                    }
+                }
             }
         }
     }
@@ -253,63 +363,75 @@ public class CacheUtils {
         }
     }
 
-    /**
-     * Convert POSIX file permissions to Unix mode integer, following Git's approach of only
-     * preserving the owner executable bit.
-     *
-     * <p>Git stores file permissions as either {@code 100644} (non-executable) or {@code 100755}
-     * (executable). This simplified approach focuses on the functional aspect (executability)
-     * while ignoring platform-specific permission details that are generally irrelevant for
-     * cross-platform builds.</p>
-     *
-     * @param permissions POSIX file permissions
-     * @return Unix mode: {@code 0100755} if owner-executable, {@code 0100644} otherwise
-     */
-    private static int permissionsToMode(Set<PosixFilePermission> permissions) {
-        // Following Git's approach: preserve only the owner executable bit
-        // Git uses 100644 (rw-r--r--) for regular files and 100755 (rwxr-xr-x) for executables
-        if (permissions.contains(PosixFilePermission.OWNER_EXECUTE)) {
-            return 0100755; // Regular file, executable
-        } else {
-            return 0100644; // Regular file, non-executable
-        }
+    public static boolean isPosixSupported() {
+        return FileSystems.getDefault().supportedFileAttributeViews().contains("posix");
     }
 
-    /**
-     * Convert Unix mode integer to POSIX file permissions, following Git's simplified approach.
-     *
-     * <p>This method interprets the two Git-standard modes:</p>
-     * <ul>
-     *   <li>{@code 0100755} - Executable file: sets owner+group+others read/execute, owner write</li>
-     *   <li>{@code 0100644} - Regular file: sets owner+group+others read, owner write</li>
-     * </ul>
-     *
-     * <p>The key distinction is the presence of the execute bit. Other permission variations
-     * are normalized to these two standard patterns for portability.</p>
-     *
-     * @param mode Unix mode (should be either {@code 0100755} or {@code 0100644})
-     * @return Set of POSIX file permissions
-     */
-    private static Set<PosixFilePermission> modeToPermissions(int mode) {
+    protected static int toUnixMode(final Set<PosixFilePermission> permissions) {
+        int mode = 0;
+
+        if (permissions.contains(PosixFilePermission.OWNER_READ)) {
+            mode |= 0400;
+        }
+        if (permissions.contains(PosixFilePermission.OWNER_WRITE)) {
+            mode |= 0200;
+        }
+        if (permissions.contains(PosixFilePermission.OWNER_EXECUTE)) {
+            mode |= 0100;
+        }
+        if (permissions.contains(PosixFilePermission.GROUP_READ)) {
+            mode |= 0040;
+        }
+        if (permissions.contains(PosixFilePermission.GROUP_WRITE)) {
+            mode |= 0020;
+        }
+        if (permissions.contains(PosixFilePermission.GROUP_EXECUTE)) {
+            mode |= 0010;
+        }
+        if (permissions.contains(PosixFilePermission.OTHERS_READ)) {
+            mode |= 0004;
+        }
+        if (permissions.contains(PosixFilePermission.OTHERS_WRITE)) {
+            mode |= 0002;
+        }
+        if (permissions.contains(PosixFilePermission.OTHERS_EXECUTE)) {
+            mode |= 0001;
+        }
+
+        return mode;
+    }
+
+    public static Set<PosixFilePermission> fromUnixMode(int mode) {
         Set<PosixFilePermission> permissions = new HashSet<>();
 
-        // Check owner executable bit (following Git's approach)
+        if ((mode & 0400) != 0) {
+            permissions.add(PosixFilePermission.OWNER_READ);
+        }
+        if ((mode & 0200) != 0) {
+            permissions.add(PosixFilePermission.OWNER_WRITE);
+        }
         if ((mode & 0100) != 0) {
-            // Mode 100755: rwxr-xr-x (executable file)
-            permissions.add(PosixFilePermission.OWNER_READ);
-            permissions.add(PosixFilePermission.OWNER_WRITE);
             permissions.add(PosixFilePermission.OWNER_EXECUTE);
+        }
+        if ((mode & 0040) != 0) {
             permissions.add(PosixFilePermission.GROUP_READ);
+        }
+        if ((mode & 0020) != 0) {
+            permissions.add(PosixFilePermission.GROUP_WRITE);
+        }
+        if ((mode & 0010) != 0) {
             permissions.add(PosixFilePermission.GROUP_EXECUTE);
-            permissions.add(PosixFilePermission.OTHERS_READ);
-            permissions.add(PosixFilePermission.OTHERS_EXECUTE);
-        } else {
-            // Mode 100644: rw-r--r-- (regular file)
-            permissions.add(PosixFilePermission.OWNER_READ);
-            permissions.add(PosixFilePermission.OWNER_WRITE);
-            permissions.add(PosixFilePermission.GROUP_READ);
+        }
+        if ((mode & 0004) != 0) {
             permissions.add(PosixFilePermission.OTHERS_READ);
         }
+        if ((mode & 0002) != 0) {
+            permissions.add(PosixFilePermission.OTHERS_WRITE);
+        }
+        if ((mode & 0001) != 0) {
+            permissions.add(PosixFilePermission.OTHERS_EXECUTE);
+        }
+
         return permissions;
     }
 }
