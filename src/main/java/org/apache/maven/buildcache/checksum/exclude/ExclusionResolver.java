@@ -37,8 +37,8 @@ import org.apache.maven.project.MavenProject;
 public class ExclusionResolver {
 
     /**
-     * property name prefix to exclude files from input. smth like maven.build.cache.exclude.value.1 should be set in project
-     * props
+     * Property name prefix to exclude files from input. smth like maven.build.cache.exclude.value.1 should be set in project
+     * props.
      */
     private static final String PROJECT_PROPERTY_EXCLUDE_PREFIX = "maven.build.cache.exclude";
 
@@ -48,11 +48,11 @@ public class ExclusionResolver {
     public static final String PROJECT_PROPERTY_EXCLUDE_MATCHER_TYPE = PROJECT_PROPERTY_EXCLUDE_PREFIX + ".matcherType";
 
     /**
-     * Directories exclusions based on a glob
+     * Directories exclusions based on a glob.
      */
     private final List<Exclusion> directoryExclusions = new ArrayList<>();
     /**
-     * Files exclusions based on a glob
+     * Files exclusions based on a glob.
      */
     private final List<Exclusion> filesExclusions = new ArrayList<>();
     /**

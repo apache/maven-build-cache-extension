@@ -22,7 +22,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
 /**
- * ReflectionUtils
+ * ReflectionUtils.
  */
 class ReflectionUtils {
 

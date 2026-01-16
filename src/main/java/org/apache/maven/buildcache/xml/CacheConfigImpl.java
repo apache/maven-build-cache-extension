@@ -75,7 +75,7 @@ import static java.lang.Boolean.TRUE;
 import static org.apache.maven.buildcache.CacheUtils.getMultimoduleRoot;
 
 /**
- * CacheConfigImpl
+ * CacheConfigImpl.
  */
 @SessionScoped
 @Named
@@ -110,7 +110,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     public static final String CACHE_SKIP = "maven.build.cache.skipCache";
 
     /**
-     * Flag to disable cache saving
+     * Flag to disable cache saving.
      */
     public static final String SKIP_SAVE = "maven.build.cache.skipSave";
 

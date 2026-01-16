@@ -25,7 +25,7 @@ import org.apache.maven.project.MavenProject;
 import static java.util.Objects.requireNonNull;
 
 /**
- * CacheContext
+ * CacheContext.
  */
 public class CacheContext {
 

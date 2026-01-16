@@ -21,9 +21,6 @@ package org.apache.maven.buildcache;
 import org.apache.maven.buildcache.xml.build.ProjectsInputInfo;
 import org.apache.maven.project.MavenProject;
 
-/**
- *
- */
 public interface ProjectInputCalculator {
 
     ProjectsInputInfo calculateInput(MavenProject project);

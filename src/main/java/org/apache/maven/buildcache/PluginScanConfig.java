@@ -23,7 +23,7 @@ import javax.annotation.Nonnull;
 import org.apache.maven.buildcache.xml.config.DirScanConfig;
 
 /**
- * PluginScanConfig
+ * PluginScanConfig.
  */
 public interface PluginScanConfig {
 

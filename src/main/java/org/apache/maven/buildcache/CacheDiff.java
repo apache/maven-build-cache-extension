@@ -39,7 +39,7 @@ import org.apache.maven.buildcache.xml.diff.Diff;
 import org.apache.maven.buildcache.xml.diff.Mismatch;
 
 /**
- * Utility class for comparing 2 builds
+ * Utility class for comparing 2 builds.
  */
 public class CacheDiff {
 

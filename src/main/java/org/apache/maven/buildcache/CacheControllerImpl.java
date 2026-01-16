@@ -110,7 +110,7 @@ import static org.apache.maven.buildcache.checksum.KeyUtils.getVersionlessProjec
 import static org.apache.maven.buildcache.checksum.MavenProjectInput.CACHE_IMPLEMENTATION_VERSION;
 
 /**
- * CacheControllerImpl
+ * CacheControllerImpl.
  */
 @SessionScoped
 @Named
@@ -487,7 +487,7 @@ public class CacheControllerImpl implements CacheController {
 
     /**
      * Helper method similar to {@link org.apache.maven.project.MavenProjectHelper#attachArtifact} to work specifically
-     * with restored from cache artifacts
+     * with restored from cache artifacts.
      */
     private RestoredArtifact restoredArtifact(
             org.apache.maven.artifact.Artifact parent,
@@ -1232,8 +1232,8 @@ public class CacheControllerImpl implements CacheController {
      * <p><b>Interrupted Build Handling:</b>
      * If staging directory exists from interrupted previous run, it's deleted and recreated.
      *
-     * @param session The Maven session
-     * @param project The Maven project being built
+     * @param session the Maven session
+     * @param project the Maven project being built
      * @throws IOException if file move operations fail
      */
     public void stagePreExistingArtifacts(MavenSession session, MavenProject project) throws IOException {
@@ -1342,8 +1342,8 @@ public class CacheControllerImpl implements CacheController {
      *
      * <p>Finally, deletes the staging directory.
      *
-     * @param session The Maven session
-     * @param project The Maven project being built
+     * @param session the Maven session
+     * @param project the Maven project being built
      */
     public void restoreStagedArtifacts(MavenSession session, MavenProject project) {
         final ProjectCacheState state = getProjectState(project);

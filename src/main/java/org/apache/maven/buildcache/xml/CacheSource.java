@@ -19,7 +19,7 @@
 package org.apache.maven.buildcache.xml;
 
 /**
- * CacheSource
+ * CacheSource.
  */
 public enum CacheSource {
     LOCAL,

@@ -70,7 +70,7 @@ public class RestoredArtifact extends DefaultArtifact {
     }
 
     /**
-     * Returns file using caller thread to download it if necessary
+     * Returns file using caller thread to download it if necessary.
      */
     @Override
     public File getFile() {

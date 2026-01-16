@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 
 /**
- * HashChecksum
+ * HashChecksum.
  */
 public class HashChecksum {
 

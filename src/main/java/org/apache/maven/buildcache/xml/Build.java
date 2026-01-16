@@ -42,7 +42,7 @@ import org.apache.maven.plugin.MojoExecution;
 import static org.apache.maven.buildcache.CacheUtils.mojoExecutionKey;
 
 /**
- * Build
+ * Build.
  */
 public class Build {
 

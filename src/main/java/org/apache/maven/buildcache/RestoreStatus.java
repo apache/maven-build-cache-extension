@@ -19,7 +19,7 @@
 package org.apache.maven.buildcache;
 
 /**
- * RestoreStatus
+ * RestoreStatus.
  */
 public enum RestoreStatus {
     EMPTY,

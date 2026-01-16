@@ -37,7 +37,7 @@ import org.apache.maven.model.PluginExecution;
 import org.apache.maven.plugin.MojoExecution;
 
 /**
- * A java interface to the information configured in the maven-build-cache-config.xml file
+ * A java interface to the information configured in the maven-build-cache-config.xml file.
  */
 public interface CacheConfig {
 
@@ -134,24 +134,24 @@ public interface CacheConfig {
 
     /**
      * Flag to restore (default) or not generated sources as it might be desired to disable it in continuous integration
-     * scenarios
+     * scenarios.
      */
     boolean isRestoreGeneratedSources();
 
     /**
-     * Flag to restore (default) or not generated artifacts
+     * Flag to restore (default) or not generated artifacts.
      */
     boolean isRestoreOnDiskArtifacts();
 
     String getAlwaysRunPlugins();
 
     /**
-     * Flag to disable cache saving
+     * Flag to disable cache saving.
      */
     boolean isSkipSave();
 
     /**
-     * Flag to save in cache only if a build went through the clean lifecycle
+     * Flag to save in cache only if a build went through the clean lifecycle.
      */
     boolean isMandatoryClean();
 
@@ -162,7 +162,7 @@ public interface CacheConfig {
      * <p>
      * Use: -Dmaven.build.cache.cacheCompile=(true|false)
      * <p>
-     * Default: true
+     * Default: true.
      */
     boolean isCacheCompile();
 }

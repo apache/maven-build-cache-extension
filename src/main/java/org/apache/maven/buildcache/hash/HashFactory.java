@@ -25,7 +25,7 @@ import java.util.Map;
 import net.openhft.hashing.LongHashFunction;
 
 /**
- * HashFactory
+ * HashFactory.
  */
 public enum HashFactory {
     SHA1(new SHA("SHA-1")),

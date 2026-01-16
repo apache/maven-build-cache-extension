@@ -38,7 +38,7 @@ import org.slf4j.LoggerFactory;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
- * DigestUtils
+ * DigestUtils.
  */
 public class DigestUtils {
 

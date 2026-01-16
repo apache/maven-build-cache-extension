@@ -24,7 +24,7 @@ import org.apache.maven.buildcache.xml.CacheSource;
 import static java.util.Objects.requireNonNull;
 
 /**
- * CacheResult
+ * CacheResult.
  */
 public class CacheResult {
 

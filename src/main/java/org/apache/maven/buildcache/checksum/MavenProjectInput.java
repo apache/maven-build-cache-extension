@@ -105,26 +105,26 @@ import static org.apache.maven.buildcache.xml.CacheConfigImpl.RESTORE_GENERATED_
 import static org.apache.maven.buildcache.xml.CacheConfigImpl.RESTORE_ON_DISK_ARTIFACTS_PROPERTY_NAME;
 
 /**
- * MavenProjectInput
+ * MavenProjectInput.
  */
 public class MavenProjectInput {
 
     /**
-     * Version of cache implementation. It is recommended to change to simplify remote cache maintenance
+     * Version of cache implementation. It is recommended to change to simplify remote cache maintenance.
      */
     public static final String CACHE_IMPLEMENTATION_VERSION = "v1.1";
 
     /**
-     * property name to pass glob value. The glob to be used to list directory files in plugins scanning
+     * Property name to pass glob value. The glob to be used to list directory files in plugins scanning.
      */
     private static final String CACHE_INPUT_GLOB_NAME = "maven.build.cache.input.glob";
     /**
-     * property name prefix to pass input files with project properties. smth like maven.build.cache.input.1 will be
-     * accepted
+     * Property name prefix to pass input files with project properties. smth like maven.build.cache.input.1 will be
+     * accepted.
      */
     private static final String CACHE_INPUT_NAME = "maven.build.cache.input";
     /**
-     * Flag to control if we should check values from plugin configs as file system objects
+     * Flag to control if we should check values from plugin configs as file system objects.
      */
     private static final String CACHE_PROCESS_PLUGINS = "maven.build.cache.processPlugins";
 
@@ -143,7 +143,7 @@ public class MavenProjectInput {
     private final ArtifactHandlerManager artifactHandlerManager;
 
     /**
-     * The project glob to use every time there is no override
+     * The project glob to use every time there is no override.
      */
     private final String projectGlob;
 
@@ -422,7 +422,7 @@ public class MavenProjectInput {
     }
 
     /**
-     * entry point for directory walk
+     * Entry point for directory walk.
      */
     private void startWalk(
             Path candidate, String glob, boolean recursive, List<Path> collectedFiles, Set<WalkKey> visitedDirs) {
@@ -923,7 +923,7 @@ public class MavenProjectInput {
     }
 
     /**
-     * PathIgnoringCaseComparator
+     * PathIgnoringCaseComparator.
      */
     public static class PathIgnoringCaseComparator implements Comparator<Path> {
 
@@ -942,8 +942,8 @@ public class MavenProjectInput {
     /**
      * Skip lookup on a per-project level via a property to force module rebuild
      * e.g.{@code <maven.build.cache.skipCache>true<maven.build.cache.skipCache/>}
+     *
      * @param project
-     * @return
      */
     public static boolean isSkipCache(MavenProject project) {
         return Boolean.parseBoolean(project.getProperties().getProperty(CACHE_SKIP, "false"));
@@ -953,8 +953,7 @@ public class MavenProjectInput {
      * Allow skipping generated sources restoration on a per-project level via a property (which defaults to true)
      * e.g. {@code <maven.build.cache.restoreGeneratedSources>false<maven.build.cache.restoreGeneratedSources/>}.
      *
-     * @param  project
-     * @return
+     * @param project
      */
     public static boolean isRestoreGeneratedSources(MavenProject project) {
         return Boolean.parseBoolean(
@@ -965,8 +964,7 @@ public class MavenProjectInput {
      * Allow skipping artifacts restoration on a per-project level via a property (which defaults to true)
      * e.g. {@code <maven.build.cache.restoreOnDiskArtifacts>false<maven.build.cache.restoreOnDiskArtifacts/>}.
      *
-     * @param  project
-     * @return
+     * @param project
      */
     public static boolean isRestoreOnDiskArtifacts(MavenProject project) {
         return Boolean.parseBoolean(
@@ -977,8 +975,8 @@ public class MavenProjectInput {
      * Allow disabling caching entirely on a per-project level via a property - both artifact lookup and upload
      * Defaults to false
      * {@code <maven.build.cache.enabled>false<maven.build.cache.enabled/>}
+     *
      * @param project
-     * @return
      */
     public static boolean isCacheDisabled(MavenProject project) {
         return !Boolean.parseBoolean(project.getProperties().getProperty(CACHE_ENABLED_PROPERTY_NAME, "true"));

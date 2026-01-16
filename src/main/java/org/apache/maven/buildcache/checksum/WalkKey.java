@@ -21,7 +21,7 @@ package org.apache.maven.buildcache.checksum;
 import java.nio.file.Path;
 
 /**
- * WalkKey
+ * WalkKey.
  */
 public class WalkKey {
 

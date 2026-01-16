@@ -19,7 +19,7 @@
 package org.apache.maven.buildcache.xml;
 
 /**
- * CacheState
+ * CacheState.
  */
 public enum CacheState {
     DISABLED,

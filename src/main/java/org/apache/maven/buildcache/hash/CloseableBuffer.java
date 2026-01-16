@@ -54,7 +54,7 @@ public class CloseableBuffer implements AutoCloseable {
     private ByteBuffer buffer;
 
     /**
-     * Unmap only DirectByteBuffer and MappedByteBuffer
+     * Unmap only DirectByteBuffer and MappedByteBuffer.
      */
     private CloseableBuffer(ByteBuffer buffer) {
         // Java 8: buffer.isDirect()
@@ -62,7 +62,7 @@ public class CloseableBuffer implements AutoCloseable {
     }
 
     /**
-     * Do not use buffer after close
+     * Do not use buffer after close.
      */
     public ByteBuffer getBuffer() {
         return buffer;
@@ -131,7 +131,7 @@ public class CloseableBuffer implements AutoCloseable {
         /**
          * Calling the above code in JDK9+ gives a reflection warning on stderr,
          * Unsafe.theUnsafe.invokeCleaner(byteBuffer)
-         * makes the same call, but does not print the reflection warning
+         * makes the same call, but does not print the reflection warning.
          */
         @Override
         public boolean clean(ByteBuffer buffer) {

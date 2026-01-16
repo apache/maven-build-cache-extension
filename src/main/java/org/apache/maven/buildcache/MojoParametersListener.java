@@ -37,7 +37,7 @@ import static org.apache.maven.buildcache.xml.CacheState.DISABLED;
 import static org.apache.maven.buildcache.xml.CacheState.INITIALIZED;
 
 /**
- * MojoParametersListener
+ * MojoParametersListener.
  */
 @Singleton
 @Named

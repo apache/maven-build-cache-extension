@@ -30,7 +30,7 @@ import org.apache.maven.buildcache.xml.config.Exclude;
 public class Exclusion {
 
     /**
-     * Glob prefix for path matchers
+     * Glob prefix for path matchers.
      */
     private static final String GLOB_PX = "glob:";
 
@@ -38,7 +38,7 @@ public class Exclusion {
     private static final String GLOB_ALL_NAMES = "*";
 
     /**
-     * Default glob
+     * Default glob.
      */
     private static final String DEFAULT_GLOB = GLOB_ALL_PATHS;
 
@@ -50,17 +50,17 @@ public class Exclusion {
     private final EntryType entryType;
 
     /**
-     * Denormalization to increase pathmatching resolution speed if the glob obviously match all files
+     * Denormalization to increase pathmatching resolution speed if the glob obviously match all files.
      */
     private boolean matchesAllNames;
 
     /**
-     * Denormalization to increase pathmatching resolution speed if the glob obviously match all paths
+     * Denormalization to increase pathmatching resolution speed if the glob obviously match all paths.
      */
     private boolean matchesAllPaths;
 
     /**
-     * True if the configured value was already an absolute path
+     * True if the configured value was already an absolute path.
      */
     private final boolean configuredAsAbsolute;
 
@@ -114,6 +114,7 @@ public class Exclusion {
 
     /**
      * True if the exclusion applies to the given path (does not indicate that the path is excluded)
+     *
      * @param path a visited path
      * @return true if the exclusion applies to the given path
      */

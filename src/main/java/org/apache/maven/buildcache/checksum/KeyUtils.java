@@ -23,7 +23,7 @@ import org.apache.maven.buildcache.xml.build.Artifact;
 import org.apache.maven.project.MavenProject;
 
 /**
- * KeyUtils
+ * KeyUtils.
  */
 public class KeyUtils {
 

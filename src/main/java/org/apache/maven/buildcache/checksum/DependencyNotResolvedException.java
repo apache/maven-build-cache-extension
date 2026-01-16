@@ -19,7 +19,7 @@
 package org.apache.maven.buildcache.checksum;
 
 /**
- * DependencyNotResolvedException
+ * DependencyNotResolvedException.
  */
 public class DependencyNotResolvedException extends RuntimeException {
 

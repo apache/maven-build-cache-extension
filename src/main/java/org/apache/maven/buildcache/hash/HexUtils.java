@@ -21,7 +21,7 @@ package org.apache.maven.buildcache.hash;
 import java.nio.charset.StandardCharsets;
 
 /**
- * HexUtils
+ * HexUtils.
  */
 @SuppressWarnings("checkstyle:MagicNumber")
 public class HexUtils {

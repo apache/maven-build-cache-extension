@@ -29,7 +29,7 @@ import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.project.MavenProject;
 
 /**
- * CacheController
+ * CacheController.
  */
 public interface CacheController {
 

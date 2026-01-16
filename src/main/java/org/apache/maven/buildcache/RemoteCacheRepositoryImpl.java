@@ -143,7 +143,7 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
     }
 
     /**
-     * Downloads content of the resource
+     * Downloads content of the resource.
      *
      * @return null or content
      */

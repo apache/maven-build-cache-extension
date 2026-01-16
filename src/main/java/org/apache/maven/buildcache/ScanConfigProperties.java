@@ -19,7 +19,7 @@
 package org.apache.maven.buildcache;
 
 /**
- * ScanConfigProperties
+ * ScanConfigProperties.
  */
 public class ScanConfigProperties {
 

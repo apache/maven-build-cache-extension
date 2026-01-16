@@ -23,7 +23,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Objects;
 
 /**
- * ThreadLocalDigest
+ * ThreadLocalDigest.
  */
 public class ThreadLocalDigest {
 

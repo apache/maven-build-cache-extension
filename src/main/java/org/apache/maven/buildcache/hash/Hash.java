@@ -22,12 +22,12 @@ import java.io.IOException;
 import java.nio.file.Path;
 
 /**
- * Hash
+ * Hash.
  */
 public class Hash {
 
     /**
-     * Algorithm
+     * Algorithm.
      */
     public interface Algorithm {
 
@@ -37,7 +37,7 @@ public class Hash {
     }
 
     /**
-     * accumulates states and should be completed by {@link #digest()}
+     * Accumulates states and should be completed by {@link #digest()}
      */
     public interface Checksum {
 
@@ -47,7 +47,7 @@ public class Hash {
     }
 
     /**
-     * Factory
+     * Factory.
      */
     public interface Factory {
 

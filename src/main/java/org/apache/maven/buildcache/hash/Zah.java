@@ -30,7 +30,7 @@ import static java.nio.channels.FileChannel.MapMode.READ_ONLY;
 import static java.nio.file.StandardOpenOption.READ;
 
 /**
- * Zero-Allocation-Hash based factory
+ * Zero-Allocation-Hash based factory.
  */
 public class Zah implements Hash.Factory {
 

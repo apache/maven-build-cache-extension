@@ -21,12 +21,12 @@ package org.apache.maven.buildcache.artifact;
 public class ArtifactRestorationReport {
 
     /**
-     * Success restoration indicator
+     * Success restoration indicator.
      */
     private boolean success;
 
     /**
-     * True if some files have been restored (or attempted in case of error) in the project directory
+     * True if some files have been restored (or attempted in case of error) in the project directory.
      */
     private boolean restoredFilesInProjectDirectory;
 

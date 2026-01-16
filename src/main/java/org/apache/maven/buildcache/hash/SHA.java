@@ -24,7 +24,7 @@ import java.nio.file.Path;
 import java.security.MessageDigest;
 
 /**
- * SHA
+ * SHA.
  */
 public class SHA implements Hash.Factory {
 

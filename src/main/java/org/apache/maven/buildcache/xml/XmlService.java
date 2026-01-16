@@ -43,7 +43,7 @@ import org.apache.maven.buildcache.xml.report.io.xpp3.BuildCacheReportXpp3Writer
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
 /**
- * XmlService
+ * XmlService.
  */
 @Singleton
 @Named

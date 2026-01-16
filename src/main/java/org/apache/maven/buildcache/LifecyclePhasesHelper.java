@@ -135,7 +135,7 @@ public class LifecyclePhasesHelper extends AbstractExecutionListener {
     }
 
     /**
-     * Computes the list of mojos executions in the clean phase
+     * Computes the list of mojos executions in the clean phase.
      */
     public List<MojoExecution> getCleanSegment(MavenProject project, List<MojoExecution> mojoExecutions) {
         List<MojoExecution> list = new ArrayList<>(mojoExecutions.size());
@@ -151,11 +151,11 @@ public class LifecyclePhasesHelper extends AbstractExecutionListener {
     }
 
     /**
-     * Resolves lifecycle phase of a given mojo forks aware
+     * Resolves lifecycle phase of a given mojo forks aware.
      *
-     * @param  project       - project context
-     * @param  mojoExecution - mojo to resolve lifecycle for
-     * @return               phase
+     * @param project       - project context
+     * @param mojoExecution - mojo to resolve lifecycle for
+     * @return phase
      */
     private String resolveMojoExecutionLifecyclePhase(MavenProject project, MojoExecution mojoExecution) {
 

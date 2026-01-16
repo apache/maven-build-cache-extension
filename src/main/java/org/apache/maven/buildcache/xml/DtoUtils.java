@@ -37,7 +37,7 @@ import org.slf4j.LoggerFactory;
 import static org.apache.maven.buildcache.checksum.KeyUtils.getArtifactKey;
 
 /**
- * DtoUtils
+ * DtoUtils.
  */
 public class DtoUtils {
 
@@ -122,11 +122,11 @@ public class DtoUtils {
     }
 
     /**
-     * Checks that all tracked (for reconciliation purposes) properties present in cached build record
+     * Checks that all tracked (for reconciliation purposes) properties present in cached build record.
      *
-     * @param  cachedExecution   mojo execution record (from cache)
-     * @param  trackedProperties list of tracked properties (from config)
-     * @return                   true if all tracked properties are listed in the cache record
+     * @param cachedExecution   mojo execution record (from cache)
+     * @param trackedProperties list of tracked properties (from config)
+     * @return true if all tracked properties are listed in the cache record
      */
     public static boolean containsAllProperties(
             @Nonnull CompletedExecution cachedExecution, List<TrackedProperty> trackedProperties) {

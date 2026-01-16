@@ -57,7 +57,7 @@ import static org.apache.maven.artifact.Artifact.LATEST_VERSION;
 import static org.apache.maven.artifact.Artifact.SNAPSHOT_VERSION;
 
 /**
- * Cache Utils
+ * Cache Utils.
  */
 public class CacheUtils {
 
@@ -154,6 +154,7 @@ public class CacheUtils {
 
     /**
      * Put every matching files of a directory in a zip.
+     *
      * @param dir directory to zip
      * @param zip zip to populate
      * @param glob glob to apply to filenames
@@ -163,7 +164,7 @@ public class CacheUtils {
      *                           the ZIP file (e.g., for cache keys) will include permission information, ensuring
      *                           cache invalidation when file permissions change. This behavior is similar to how Git
      *                           includes file mode in tree hashes.</p>
-     * @return true if at least one file has been included in the zip.
+     * @return true if at least one file has been included in the zip
      * @throws IOException
      */
     public static boolean zip(final Path dir, final Path zip, final String glob, boolean preservePermissions)
@@ -263,7 +264,7 @@ public class CacheUtils {
      * cross-platform builds.</p>
      *
      * @param permissions POSIX file permissions
-     * @return Unix mode: {@code 0100755} if owner-executable, {@code 0100644} otherwise
+     * @return unix mode: {@code 0100755} if owner-executable, {@code 0100644} otherwise
      */
     private static int permissionsToMode(Set<PosixFilePermission> permissions) {
         // Following Git's approach: preserve only the owner executable bit
@@ -287,8 +288,8 @@ public class CacheUtils {
      * <p>The key distinction is the presence of the execute bit. Other permission variations
      * are normalized to these two standard patterns for portability.</p>
      *
-     * @param mode Unix mode (should be either {@code 0100755} or {@code 0100644})
-     * @return Set of POSIX file permissions
+     * @param mode unix mode (should be either {@code 0100755} or {@code 0100644})
+     * @return set of POSIX file permissions
      */
     private static Set<PosixFilePermission> modeToPermissions(int mode) {
         Set<PosixFilePermission> permissions = new HashSet<>();

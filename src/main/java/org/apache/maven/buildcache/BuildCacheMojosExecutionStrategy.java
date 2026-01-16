@@ -210,7 +210,7 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
     }
 
     /**
-     * Check if the current mojo execution is for the clean goal
+     * Check if the current mojo execution is for the clean goal.
      *
      * @param mojoExecutions the mojo executions
      * @return true if the goal is clean and it is the only goal, false otherwise
@@ -453,7 +453,7 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
      * - redundant '..' and '.' to be removed to have consistent views on all paths
      * - all relative paths are considered portable and should not be touched
      * - absolute paths outside of project directory could not be deterministically
-     * relativized and not touched
+     * relativized and not touched.
      */
     private static String normalizedPath(Path path, Path baseDirPath) {
         boolean isProjectSubdir = path.isAbsolute() && path.startsWith(baseDirPath);

@@ -28,7 +28,7 @@ import org.apache.maven.buildcache.xml.config.TagExclude;
 import org.apache.maven.buildcache.xml.config.TagScanConfig;
 
 /**
- * PluginScanConfigImpl
+ * PluginScanConfigImpl.
  */
 public class PluginScanConfigImpl implements PluginScanConfig {
 
