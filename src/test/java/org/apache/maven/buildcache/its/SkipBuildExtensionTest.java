@@ -26,7 +26,6 @@ import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.testcontainers.shaded.com.google.common.collect.Lists;
 
 import static org.apache.maven.buildcache.util.LogFileUtils.findFirstLineContainingTextsInLogs;
 
@@ -50,7 +49,7 @@ class SkipBuildExtensionTest {
 
         verifier.setLogFileName("../log-2.txt");
         String[] goals = {"clean", "install"};
-        List<String> goalsList = Lists.newArrayList(goals);
+        List<String> goalsList = Arrays.asList(goals);
         verifier.executeGoals(goalsList);
         verifier.verifyErrorFreeLog();
 

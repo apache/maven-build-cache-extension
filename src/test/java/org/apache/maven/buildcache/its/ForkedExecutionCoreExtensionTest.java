@@ -21,8 +21,8 @@ package org.apache.maven.buildcache.its;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collections;
 
-import com.google.common.collect.Lists;
 import org.apache.commons.io.FileUtils;
 import org.apache.maven.buildcache.its.junit.IntegrationTest;
 import org.apache.maven.it.VerificationException;
@@ -61,7 +61,7 @@ class ForkedExecutionCoreExtensionTest {
         verifier.setLogFileName("../log-1.txt");
         verifier.setMavenDebug(true);
         verifier.setCliOptions(
-                Lists.newArrayList("-D" + CACHE_LOCATION_PROPERTY_NAME + "=" + tempDirectory.toAbsolutePath()));
+                Collections.singletonList("-D" + CACHE_LOCATION_PROPERTY_NAME + "=" + tempDirectory.toAbsolutePath()));
         verifier.executeGoal("verify");
         verifier.verifyTextInLog("Started forked project");
         // forked execution actually runs
