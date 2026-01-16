@@ -87,7 +87,7 @@ class Issue74Test {
         }
 
         List<Path> entries =
-                Files.list(projectPathInCache).filter(p -> Files.isDirectory(p)).collect(Collectors.toList());
+                Files.list(projectPathInCache).filter(Files::isDirectory).collect(Collectors.toList());
 
         Assertions.assertEquals(
                 expectedBuilds,

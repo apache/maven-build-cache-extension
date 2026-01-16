@@ -806,13 +806,12 @@ public class MavenProjectInput {
                         projectInputCalculator.calculateInput(dependencyProject).getChecksum();
             } else // this is a snapshot dependency
             {
-                DigestItem resolved = null;
                 try {
-                    resolved = resolveArtifact(dependency);
+                    DigestItem resolved = resolveArtifact(dependency);
+                    projectHash = resolved.getHash();
                 } catch (ArtifactResolutionException | InvalidVersionSpecificationException e) {
                     throw new IOException(e);
                 }
-                projectHash = resolved.getHash();
             }
             result.put(
                     keyPrefix + KeyUtils.getVersionlessArtifactKey(createDependencyArtifact(dependency)), projectHash);

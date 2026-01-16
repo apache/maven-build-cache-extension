@@ -31,6 +31,7 @@ import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -92,14 +93,14 @@ class StaleMultimoduleArtifactTest {
                 "Compiler should have recompiled stale class (new timestamp: " + newTime + ", old timestamp: " + oldTime
                         + ")");
 
-        // Verify that staging directory was cleaned up after restore
+        // Verify that staging directory was cleaned up after restore.
         // After a successful build, all files should be either:
         // 1. Restored (moved back to original location) - for unchanged files
         // 2. Discarded (deleted from staging) - for rebuilt files
         // So the staging directory should be empty or deleted
         Path stagingDir = basedir.resolve("target/maven-build-cache-extension");
-        assertTrue(
-                !Files.exists(stagingDir),
+        assertFalse(
+                Files.exists(stagingDir),
                 "Staging directory should be deleted after all files are restored or discarded");
     }
 }
