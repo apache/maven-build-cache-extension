@@ -140,7 +140,7 @@ under the License.
     <dependency>
       <groupId>org.apache.maven.resolver</groupId>
       <artifactId>maven-resolver-spi</artifactId>
-      <version>1.9.16</version>
+      <version>${resolverVersion}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
