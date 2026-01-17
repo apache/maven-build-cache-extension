@@ -45,10 +45,9 @@ public final class LogFileUtils {
     public static String findFirstLineContainingTextsInLogs(final Verifier verifier, final String... texts)
             throws VerificationException {
         List<String> lines = verifier.loadFile(verifier.getBasedir(), verifier.getLogFileName(), false);
-        Iterator it = lines.iterator();
 
-        while (it.hasNext()) {
-            String line = verifier.stripAnsi((String) it.next());
+        for (String s : lines) {
+            String line = Verifier.stripAnsi(s);
             boolean matches = true;
             Iterator<String> toMatchIterator = Arrays.stream(texts).iterator();
             while (matches && toMatchIterator.hasNext()) {
@@ -73,8 +72,8 @@ public final class LogFileUtils {
             throws VerificationException {
         List<String> lines = verifier.loadFile(verifier.getBasedir(), verifier.getLogFileName(), false);
         return lines.stream()
-                .map(s -> verifier.stripAnsi(s))
-                .filter(s -> Arrays.stream(texts).allMatch(text -> s.contains(text)))
+                .map(s -> Verifier.stripAnsi(s))
+                .filter(s -> Arrays.stream(texts).allMatch(s::contains))
                 .collect(Collectors.toList());
     }
 }

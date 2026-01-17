@@ -158,17 +158,13 @@ class LifecyclePhasesHelperTest {
         assertFalse(lifecyclePhasesHelper.isLaterPhase("test", "site"));
         assertFalse(lifecyclePhasesHelper.isLaterPhase("clean", "site"));
 
-        assertThrows(IllegalArgumentException.class, () -> {
-            lifecyclePhasesHelper.isLaterPhase("install", null);
-        });
+        assertThrows(IllegalArgumentException.class, () -> lifecyclePhasesHelper.isLaterPhase("install", null));
 
-        assertThrows(IllegalArgumentException.class, () -> {
-            lifecyclePhasesHelper.isLaterPhase("install", "unknown phase");
-        });
+        assertThrows(
+                IllegalArgumentException.class, () -> lifecyclePhasesHelper.isLaterPhase("install", "unknown phase"));
 
-        assertThrows(IllegalArgumentException.class, () -> {
-            lifecyclePhasesHelper.isLaterPhase("unknown phase", "install");
-        });
+        assertThrows(
+                IllegalArgumentException.class, () -> lifecyclePhasesHelper.isLaterPhase("unknown phase", "install"));
     }
 
     @Test
