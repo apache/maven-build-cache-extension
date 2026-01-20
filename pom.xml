@@ -144,6 +144,12 @@ under the License.
       <scope>provided</scope>
     </dependency>
     <dependency>
+      <groupId>javax.inject</groupId>
+      <artifactId>javax.inject</artifactId>
+      <version>1</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
       <groupId>net.openhft</groupId>
       <artifactId>zero-allocation-hashing</artifactId>
       <version>0.27ea1</version>
@@ -199,7 +205,7 @@ under the License.
     </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-engine</artifactId>
+      <artifactId>junit-jupiter-api</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
