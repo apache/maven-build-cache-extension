@@ -18,8 +18,6 @@
  */
 package org.apache.maven.buildcache.xml;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Provider;
@@ -68,6 +66,8 @@ import org.apache.maven.model.Plugin;
 import org.apache.maven.model.PluginExecution;
 import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.rtinfo.RuntimeInformation;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -132,7 +132,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
         this.rtInfo = rtInfo;
     }
 
-    @Nonnull
+    @NonNull
     @Override
     public CacheState initialize() {
         if (state == null) {
@@ -225,7 +225,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
         }
     }
 
-    @Nonnull
+    @NonNull
     @Override
     public List<TrackedProperty> getTrackedProperties(MojoExecution mojoExecution) {
         checkInitializedState();
@@ -272,7 +272,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
         return null;
     }
 
-    @Nonnull
+    @NonNull
     @Override
     public List<PropertyName> getLoggedProperties(MojoExecution mojoExecution) {
         checkInitializedState();
@@ -285,7 +285,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
         }
     }
 
-    @Nonnull
+    @NonNull
     @Override
     public List<PropertyName> getNologProperties(MojoExecution mojoExecution) {
         checkInitializedState();
@@ -297,7 +297,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
         }
     }
 
-    @Nonnull
+    @NonNull
     @Override
     public List<String> getEffectivePomExcludeProperties(Plugin plugin) {
         checkInitializedState();
@@ -348,7 +348,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
                         || Strings.CS.equals(pluginConfig.getGroupId(), plugin.getGroupId()));
     }
 
-    @Nonnull
+    @NonNull
     @Override
     public PluginScanConfig getPluginDirScanConfig(Plugin plugin) {
         checkInitializedState();
@@ -360,7 +360,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
         return new PluginScanConfigImpl(pluginConfig.getDirScan());
     }
 
-    @Nonnull
+    @NonNull
     @Override
     public PluginScanConfig getExecutionDirScanConfig(Plugin plugin, PluginExecution exec) {
         checkInitializedState();
@@ -399,21 +399,21 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
         return StringUtils.trim(cacheConfig.getInput().getGlobal().getGlob());
     }
 
-    @Nonnull
+    @NonNull
     @Override
     public List<Include> getGlobalIncludePaths() {
         checkInitializedState();
         return cacheConfig.getInput().getGlobal().getIncludes();
     }
 
-    @Nonnull
+    @NonNull
     @Override
     public List<Exclude> getGlobalExcludePaths() {
         checkInitializedState();
         return cacheConfig.getInput().getGlobal().getExcludes();
     }
 
-    @Nonnull
+    @NonNull
     @Override
     public HashFactory getHashFactory() {
         checkInitializedState();
@@ -613,7 +613,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
         }
     }
 
-    @Nonnull
+    @NonNull
     @Override
     public List<Pattern> getExcludePatterns() {
         checkInitializedState();

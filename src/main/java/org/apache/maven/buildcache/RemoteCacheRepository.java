@@ -18,8 +18,6 @@
  */
 package org.apache.maven.buildcache;
 
-import javax.annotation.Nonnull;
-
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Optional;
@@ -27,6 +25,7 @@ import java.util.Optional;
 import org.apache.maven.buildcache.xml.Build;
 import org.apache.maven.buildcache.xml.build.Artifact;
 import org.apache.maven.project.MavenProject;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Remote cache repository.
@@ -43,9 +42,9 @@ public interface RemoteCacheRepository extends CacheRepository {
      */
     boolean getArtifactContent(CacheContext context, Artifact artifact, Path target) throws IOException;
 
-    @Nonnull
+    @NonNull
     String getResourceUrl(CacheContext context, String filename);
 
-    @Nonnull
+    @NonNull
     Optional<Build> findBaselineBuild(MavenProject project);
 }

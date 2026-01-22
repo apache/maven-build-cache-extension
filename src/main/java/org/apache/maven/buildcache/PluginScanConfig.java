@@ -18,9 +18,8 @@
  */
 package org.apache.maven.buildcache;
 
-import javax.annotation.Nonnull;
-
 import org.apache.maven.buildcache.xml.config.DirScanConfig;
+import org.jspecify.annotations.NonNull;
 
 /**
  * PluginScanConfig
@@ -33,7 +32,7 @@ public interface PluginScanConfig {
 
     PluginScanConfig mergeWith(PluginScanConfig overrideSource);
 
-    @Nonnull
+    @NonNull
     ScanConfigProperties getTagScanProperties(String tagName);
 
     DirScanConfig dto();

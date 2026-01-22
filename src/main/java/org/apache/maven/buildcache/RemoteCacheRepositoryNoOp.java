@@ -18,7 +18,6 @@
  */
 package org.apache.maven.buildcache;
 
-import javax.annotation.Nonnull;
 import javax.inject.Named;
 
 import java.io.IOException;
@@ -31,12 +30,13 @@ import org.apache.maven.buildcache.xml.Build;
 import org.apache.maven.buildcache.xml.report.CacheReport;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.project.MavenProject;
+import org.jspecify.annotations.NonNull;
 
 @SessionScoped
 @Named("noop")
 public class RemoteCacheRepositoryNoOp implements RemoteCacheRepository {
 
-    @Nonnull
+    @NonNull
     @Override
     public Optional<Build> findBuild(CacheContext context) throws IOException {
         return Optional.empty();
@@ -63,7 +63,7 @@ public class RemoteCacheRepositoryNoOp implements RemoteCacheRepository {
         return null;
     }
 
-    @Nonnull
+    @NonNull
     @Override
     public Optional<Build> findBaselineBuild(MavenProject project) {
         return Optional.empty();

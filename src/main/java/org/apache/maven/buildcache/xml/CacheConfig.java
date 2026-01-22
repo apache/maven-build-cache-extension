@@ -18,9 +18,6 @@
  */
 package org.apache.maven.buildcache.xml;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -35,27 +32,29 @@ import org.apache.maven.buildcache.xml.config.TrackedProperty;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.model.PluginExecution;
 import org.apache.maven.plugin.MojoExecution;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 /**
  * A java interface to the information configured in the maven-build-cache-config.xml file
  */
 public interface CacheConfig {
 
-    @Nonnull
+    @NonNull
     CacheState initialize();
 
-    @Nonnull
+    @NonNull
     List<TrackedProperty> getTrackedProperties(MojoExecution mojoExecution);
 
     boolean isLogAllProperties(MojoExecution mojoExecution);
 
-    @Nonnull
+    @NonNull
     List<PropertyName> getLoggedProperties(MojoExecution mojoExecution);
 
-    @Nonnull
+    @NonNull
     List<PropertyName> getNologProperties(MojoExecution mojoExecution);
 
-    @Nonnull
+    @NonNull
     List<String> getEffectivePomExcludeProperties(Plugin plugin);
 
     boolean isPluginDependenciesExcluded(Plugin plugin);
@@ -67,19 +66,19 @@ public interface CacheConfig {
 
     String getDefaultGlob();
 
-    @Nonnull
+    @NonNull
     List<Include> getGlobalIncludePaths();
 
-    @Nonnull
+    @NonNull
     List<Exclude> getGlobalExcludePaths();
 
-    @Nonnull
+    @NonNull
     PluginScanConfig getPluginDirScanConfig(Plugin plugin);
 
-    @Nonnull
+    @NonNull
     PluginScanConfig getExecutionDirScanConfig(Plugin plugin, PluginExecution exec);
 
-    @Nonnull
+    @NonNull
     HashFactory getHashFactory();
 
     boolean isForcedExecution(MojoExecution execution);
@@ -116,7 +115,7 @@ public interface CacheConfig {
 
     boolean canIgnore(MojoExecution mojoExecution);
 
-    @Nonnull
+    @NonNull
     List<Pattern> getExcludePatterns();
 
     boolean isBaselineDiffEnabled();

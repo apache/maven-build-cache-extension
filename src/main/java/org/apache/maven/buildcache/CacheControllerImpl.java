@@ -18,7 +18,6 @@
  */
 package org.apache.maven.buildcache;
 
-import javax.annotation.Nonnull;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Provider;
@@ -94,6 +93,7 @@ import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.MavenProjectHelper;
 import org.codehaus.plexus.util.ReflectionUtils;
 import org.eclipse.aether.RepositorySystem;
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -186,7 +186,7 @@ public class CacheControllerImpl implements CacheController {
     }
 
     @Override
-    @Nonnull
+    @NonNull
     public CacheResult findCachedBuild(
             MavenSession session, MavenProject project, List<MojoExecution> mojoExecutions, boolean skipCache) {
         final LifecyclePhasesHelper lifecyclePhasesHelper = providerLifecyclePhasesHelper.get();

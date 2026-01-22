@@ -18,7 +18,6 @@
  */
 package org.apache.maven.buildcache;
 
-import javax.annotation.Nonnull;
 import javax.inject.Inject;
 import javax.inject.Named;
 
@@ -55,6 +54,7 @@ import org.eclipse.aether.spi.connector.transport.GetTask;
 import org.eclipse.aether.spi.connector.transport.PutTask;
 import org.eclipse.aether.spi.connector.transport.Transporter;
 import org.eclipse.aether.spi.connector.transport.TransporterProvider;
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -105,7 +105,7 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
         }
     }
 
-    @Nonnull
+    @NonNull
     @Override
     public Optional<Build> findBuild(CacheContext context) throws IOException {
         final String resourceUrl = getResourceUrl(context, BUILDINFO_XML);
@@ -147,7 +147,7 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
      *
      * @return null or content
      */
-    @Nonnull
+    @NonNull
     public Optional<byte[]> getResourceContent(String url) {
         String fullUrl = getFullUrl(url);
         try {
@@ -213,7 +213,7 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
         }
     }
 
-    @Nonnull
+    @NonNull
     @Override
     public String getResourceUrl(CacheContext context, String filename) {
         return getResourceUrl(
@@ -256,7 +256,7 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
 
     private final AtomicReference<CacheReport> cacheReportSupplier = new AtomicReference<>();
 
-    @Nonnull
+    @NonNull
     @Override
     public Optional<Build> findBaselineBuild(MavenProject project) {
         Optional<List<ProjectReport>> cachedProjectsHolder = findCacheInfo().map(CacheReport::getProjects);

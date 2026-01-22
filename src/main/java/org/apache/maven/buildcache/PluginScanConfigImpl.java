@@ -18,14 +18,13 @@
  */
 package org.apache.maven.buildcache;
 
-import javax.annotation.Nonnull;
-
 import java.util.List;
 
 import org.apache.commons.lang3.Strings;
 import org.apache.maven.buildcache.xml.config.DirScanConfig;
 import org.apache.maven.buildcache.xml.config.TagExclude;
 import org.apache.maven.buildcache.xml.config.TagScanConfig;
+import org.jspecify.annotations.NonNull;
 
 /**
  * PluginScanConfigImpl
@@ -65,7 +64,7 @@ public class PluginScanConfigImpl implements PluginScanConfig {
         return false;
     }
 
-    @Nonnull
+    @NonNull
     @Override
     public PluginScanConfig mergeWith(final PluginScanConfig overrideConfig) {
         if (dto == null) {
@@ -97,7 +96,7 @@ public class PluginScanConfigImpl implements PluginScanConfig {
         return new PluginScanConfigImpl(merged);
     }
 
-    @Nonnull
+    @NonNull
     public ScanConfigProperties getTagScanProperties(String tagName) {
         ScanConfigProperties scanProperties = findTagScanProperties(tagName);
         return scanProperties != null ? scanProperties : defaultScanConfig();
