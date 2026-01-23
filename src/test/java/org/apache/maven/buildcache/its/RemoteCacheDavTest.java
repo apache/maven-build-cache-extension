@@ -36,7 +36,6 @@ import org.apache.maven.buildcache.its.junit.IntegrationTest;
 import org.apache.maven.buildcache.its.junit.IntegrationTestExtension;
 import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
-import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -222,7 +221,6 @@ class RemoteCacheDavTest {
         return Files.walk(cache).anyMatch(isBuildInfoXml());
     }
 
-    @NotNull
     private Predicate<Path> isBuildInfoXml() {
         return p -> p.getFileName().toString().equals("buildinfo.xml");
     }
