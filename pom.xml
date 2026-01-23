@@ -180,6 +180,12 @@ under the License.
       <version>1.3.2</version>
     </dependency>
     <dependency>
+      <groupId>org.eclipse.sisu</groupId>
+      <artifactId>org.eclipse.sisu.plexus</artifactId>
+      <version>0.9.0.M4</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
       <groupId>org.codehaus.plexus</groupId>
       <artifactId>plexus-utils</artifactId>
     </dependency>
@@ -192,6 +198,11 @@ under the License.
       <artifactId>jsr305</artifactId>
       <version>3.0.2</version>
       <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>${slf4jVersion}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.maven.wagon</groupId>
