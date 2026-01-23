@@ -40,11 +40,14 @@ public class PluginScanConfigImpl implements PluginScanConfig {
 
     @Override
     public boolean isSkip() {
-        return Strings.CS.equals(dto.getMode(), "skip");
+        return dto != null && Strings.CS.equals(dto.getMode(), "skip");
     }
 
     @Override
     public boolean accept(String tagName) {
+        if (dto == null) {
+            return false;
+        }
         // include or exclude is a choice element, could be only obe property set
 
         //noinspection ConstantConditions
