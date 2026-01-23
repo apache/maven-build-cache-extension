@@ -248,6 +248,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
                 && cacheConfig.getExecutionControl().getReconcile().isLogAllProperties();
     }
 
+    @Nullable
     private GoalReconciliation findReconciliationConfig(MojoExecution mojoExecution) {
         if (cacheConfig.getExecutionControl() == null) {
             return null;
@@ -327,6 +328,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
         return cacheConfig.getConfiguration().getMultiModule();
     }
 
+    @Nullable
     private PluginConfigurationScan findPluginScanConfig(Plugin plugin) {
         if (cacheConfig.getInput() == null) {
             return null;
@@ -377,6 +379,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
         return new DefaultPluginScanConfig();
     }
 
+    @Nullable
     private ExecutionConfigurationScan findExecutionScanConfig(
             PluginExecution execution, List<ExecutionConfigurationScan> scanConfigs) {
         for (ExecutionConfigurationScan executionScanConfig : scanConfigs) {
@@ -507,6 +510,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
         return getProperty(BASELINE_BUILD_URL_PROPERTY_NAME, null) != null;
     }
 
+    @Nullable
     @Override
     public String getBaselineCacheUrl() {
         return getProperty(BASELINE_BUILD_URL_PROPERTY_NAME, null);
@@ -527,6 +531,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
         return getProperty(RESTORE_ON_DISK_ARTIFACTS_PROPERTY_NAME, true);
     }
 
+    @Nullable
     @Override
     public String getAlwaysRunPlugins() {
         return getProperty(ALWAYS_RUN_PLUGINS, null);
@@ -553,6 +558,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
         return getProperty(REMOTE_SERVER_ID_PROPERTY_NAME, getRemote().getId());
     }
 
+    @Nullable
     @Override
     public String getUrl() {
         checkInitializedState();
@@ -571,6 +577,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
         return getLocal().getMaxBuildsCached();
     }
 
+    @Nullable
     @Override
     public String getLocalRepositoryLocation() {
         checkInitializedState();
@@ -649,7 +656,8 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
         }
     }
 
-    private String getProperty(String key, String defaultValue) {
+    @Nullable
+    private String getProperty(String key, @Nullable String defaultValue) {
         MavenSession session = providerSession.get();
         String value = session.getUserProperties().getProperty(key);
         if (value == null) {

@@ -31,6 +31,7 @@ import org.apache.maven.buildcache.xml.report.CacheReport;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.project.MavenProject;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 @SessionScoped
 @Named("noop")
@@ -58,6 +59,7 @@ public class RemoteCacheRepositoryNoOp implements RemoteCacheRepository {
         return false;
     }
 
+    @Nullable
     @Override
     public String getResourceUrl(CacheContext context, String filename) {
         return null;

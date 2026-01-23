@@ -55,6 +55,7 @@ import org.eclipse.aether.spi.connector.transport.PutTask;
 import org.eclipse.aether.spi.connector.transport.Transporter;
 import org.eclipse.aether.spi.connector.transport.TransporterProvider;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -148,7 +149,7 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
      * @return null or content
      */
     @NonNull
-    public Optional<byte[]> getResourceContent(String url) {
+    public Optional<byte[]> getResourceContent(@Nullable String url) {
         String fullUrl = getFullUrl(url);
         try {
             LOGGER.info("Downloading {}", fullUrl);
@@ -201,7 +202,7 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
         }
     }
 
-    public boolean getResourceContent(String url, Path target) {
+    public boolean getResourceContent(@Nullable String url, Path target) {
         try {
             LOGGER.info("Downloading {}", getFullUrl(url));
             GetTask task = new GetTask(new URI(url)).setDataFile(target.toFile());
@@ -213,7 +214,7 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
         }
     }
 
-    @NonNull
+    @Nullable
     @Override
     public String getResourceUrl(CacheContext context, String filename) {
         return getResourceUrl(
@@ -228,7 +229,7 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
                 + filename;
     }
 
-    private void putToRemoteCache(byte[] bytes, String url) throws IOException {
+    private void putToRemoteCache(byte[] bytes, @Nullable String url) throws IOException {
         Path tmp = Files.createTempFile("mbce-", ".tmp");
         try {
             Files.write(tmp, bytes);
@@ -243,7 +244,7 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
         }
     }
 
-    private void putToRemoteCache(File file, String url) throws IOException {
+    private void putToRemoteCache(File file, @Nullable String url) throws IOException {
         try {
             PutTask put = new PutTask(new URI(url));
             put.setDataFile(file);
@@ -313,7 +314,7 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
         return report;
     }
 
-    private String getFullUrl(String url) {
+    private String getFullUrl(@Nullable String url) {
         return cacheConfig.getUrl() + "/" + url;
     }
 }

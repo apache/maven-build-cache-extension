@@ -25,6 +25,7 @@ import org.apache.maven.buildcache.xml.config.DirScanConfig;
 import org.apache.maven.buildcache.xml.config.TagExclude;
 import org.apache.maven.buildcache.xml.config.TagScanConfig;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 /**
  * PluginScanConfigImpl
@@ -33,7 +34,7 @@ public class PluginScanConfigImpl implements PluginScanConfig {
 
     private final DirScanConfig dto;
 
-    public PluginScanConfigImpl(DirScanConfig scanConfig) {
+    public PluginScanConfigImpl(@Nullable DirScanConfig scanConfig) {
         this.dto = scanConfig;
     }
 
@@ -102,11 +103,13 @@ public class PluginScanConfigImpl implements PluginScanConfig {
         return scanProperties != null ? scanProperties : defaultScanConfig();
     }
 
+    @Nullable
     @Override
     public DirScanConfig dto() {
         return dto;
     }
 
+    @Nullable
     private ScanConfigProperties findTagScanProperties(String tagName) {
         ScanConfigProperties scanConfigProperties = findConfigByName(tagName, dto.getIncludes());
         if (scanConfigProperties == null) {
@@ -115,6 +118,7 @@ public class PluginScanConfigImpl implements PluginScanConfig {
         return scanConfigProperties;
     }
 
+    @Nullable
     private ScanConfigProperties findConfigByName(String tagName, List<TagScanConfig> configs) {
         if (configs == null) {
             return null;

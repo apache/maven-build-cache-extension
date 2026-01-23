@@ -26,6 +26,7 @@ import org.apache.maven.buildcache.xml.Build;
 import org.apache.maven.buildcache.xml.build.Artifact;
 import org.apache.maven.project.MavenProject;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Remote cache repository.
@@ -42,7 +43,7 @@ public interface RemoteCacheRepository extends CacheRepository {
      */
     boolean getArtifactContent(CacheContext context, Artifact artifact, Path target) throws IOException;
 
-    @NonNull
+    @Nullable
     String getResourceUrl(CacheContext context, String filename);
 
     @NonNull

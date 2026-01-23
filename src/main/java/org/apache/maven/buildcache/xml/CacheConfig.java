@@ -85,6 +85,7 @@ public interface CacheConfig {
 
     String getId();
 
+    @Nullable
     String getUrl();
 
     String getTransport();
@@ -103,6 +104,7 @@ public interface CacheConfig {
 
     int getMaxLocalBuildsCached();
 
+    @Nullable
     String getLocalRepositoryLocation();
 
     List<DirName> getAttachedOutputs();
@@ -120,6 +122,7 @@ public interface CacheConfig {
 
     boolean isBaselineDiffEnabled();
 
+    @Nullable
     String getBaselineCacheUrl();
 
     /**
@@ -142,6 +145,7 @@ public interface CacheConfig {
      */
     boolean isRestoreOnDiskArtifacts();
 
+    @Nullable
     String getAlwaysRunPlugins();
 
     /**
