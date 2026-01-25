@@ -109,7 +109,11 @@ public class DtoUtils {
     }
 
     public static void addProperty(
-            CompletedExecution execution, String propertyName, @Nullable Object value, String baseDirPath, boolean tracked) {
+            CompletedExecution execution,
+            String propertyName,
+            @Nullable Object value,
+            String baseDirPath,
+            boolean tracked) {
         final PropertyValue valueType = new PropertyValue();
         valueType.setName(propertyName);
         if (value != null && value.getClass().isArray()) {
