@@ -592,6 +592,13 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     }
 
     @Override
+    public boolean isPreserveTimestamps() {
+        checkInitializedState();
+        final AttachedOutputs attachedOutputs = getConfiguration().getAttachedOutputs();
+        return attachedOutputs == null || attachedOutputs.isPreserveTimestamps();
+    }
+
+    @Override
     public boolean adjustMetaInfVersion() {
         if (isEnabled()) {
             return Optional.ofNullable(getConfiguration().getProjectVersioning())
