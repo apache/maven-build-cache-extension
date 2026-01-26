@@ -18,8 +18,6 @@
  */
 package org.apache.maven.buildcache;
 
-import javax.annotation.Nonnull;
-
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Optional;
@@ -29,6 +27,7 @@ import org.apache.maven.buildcache.xml.CacheSource;
 import org.apache.maven.buildcache.xml.build.Artifact;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Dependency;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Local cache repository.
@@ -41,9 +40,9 @@ public interface LocalCacheRepository extends CacheRepository {
 
     void clearCache(CacheContext context);
 
-    @Nonnull
+    @NonNull
     Optional<Build> findBestMatchingBuild(MavenSession session, Dependency dependency) throws IOException;
 
-    @Nonnull
+    @NonNull
     Optional<Build> findLocalBuild(CacheContext context) throws IOException;
 }

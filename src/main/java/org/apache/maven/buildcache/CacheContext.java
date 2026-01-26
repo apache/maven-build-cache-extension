@@ -21,6 +21,7 @@ package org.apache.maven.buildcache;
 import org.apache.maven.buildcache.xml.build.ProjectsInputInfo;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.project.MavenProject;
+import org.jspecify.annotations.NonNull;
 
 import static java.util.Objects.requireNonNull;
 
@@ -39,14 +40,17 @@ public class CacheContext {
         this.session = requireNonNull(session);
     }
 
+    @NonNull
     public MavenProject getProject() {
         return project;
     }
 
+    @NonNull
     public ProjectsInputInfo getInputInfo() {
         return inputInfo;
     }
 
+    @NonNull
     public MavenSession getSession() {
         return session;
     }

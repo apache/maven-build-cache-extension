@@ -51,6 +51,7 @@ import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.project.MavenProject;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
 import static org.apache.maven.artifact.Artifact.LATEST_VERSION;
@@ -69,10 +70,11 @@ public class CacheUtils {
         return dependency.getType().equals("pom");
     }
 
-    public static boolean isSnapshot(String version) {
+    public static boolean isSnapshot(@Nullable String version) {
         return version != null && (version.endsWith(SNAPSHOT_VERSION) || version.endsWith(LATEST_VERSION));
     }
 
+    @Nullable
     public static String normalizedName(Artifact artifact) {
         if (artifact.getFile() == null) {
             return null;
@@ -241,7 +243,7 @@ public class CacheUtils {
     }
 
     public static <T> void debugPrintCollection(
-            Logger logger, Collection<T> values, String heading, String elementCaption) {
+            Logger logger, @Nullable Collection<T> values, @Nullable String heading, @Nullable String elementCaption) {
         if (logger.isDebugEnabled() && values != null && !values.isEmpty()) {
             final int size = values.size();
             int i = 0;

@@ -20,6 +20,8 @@ package org.apache.maven.buildcache.checksum;
 
 import java.nio.file.Path;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * WalkKey
  */
@@ -36,7 +38,7 @@ public class WalkKey {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
         if (this == o) {
             return true;
         }
