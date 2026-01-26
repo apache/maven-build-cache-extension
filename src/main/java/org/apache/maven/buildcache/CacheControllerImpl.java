@@ -956,14 +956,18 @@ public class CacheControllerImpl implements CacheController {
                 return false;
             }
 
+            // Allow cache restore even if some tracked properties are missing from the cached build.
+            // The reconciliation check will detect mismatches and trigger rebuild if needed.
+            // This provides backward compatibility when new properties are added to tracking.
             if (!DtoUtils.containsAllProperties(cachedExecution, trackedProperties)) {
-                LOGGER.warn(
-                        "Cached build record doesn't contain all tracked properties. Plugin: {}, goal: {},"
-                                + " executionId: {}",
+                LOGGER.info(
+                        "Cached build record doesn't contain all currently-tracked properties. "
+                                + "Plugin: {}, goal: {}, executionId: {}. "
+                                + "Proceeding with cache restore - reconciliation will verify parameters.",
                         mojoExecution.getPlugin(),
                         mojoExecution.getGoal(),
                         mojoExecution.getExecutionId());
-                return false;
+                // Don't reject the cache - let reconciliation check handle it
             }
         }
         return true;
