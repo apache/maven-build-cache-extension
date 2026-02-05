@@ -169,11 +169,12 @@ class CacheUtilsPermissionsTest {
         Path zippedFile = tempDir.resolve("target.zip");
         CacheUtils.zip(source, zippedFile, "*", true);
 
-        // And: then the ZIP file is extracted with "preservePermissions=true"
+        // And: ZIP file is extracted with "preservePermissions=true"
         Path unzippedDir = tempDir.resolve("target-unzipped");
         Files.createDirectories(unzippedDir);
         CacheUtils.unzip(zippedFile, unzippedDir, true);
 
+        // Then: extracted file should have executable permissions
         Path extractedScript = unzippedDir.resolve("script.sh");
         assertTrue(Files.exists(extractedScript), "Extracted script should exist.");
         assertTrue(Files.isExecutable(extractedScript), "Permissions should be restored when the file is extracted");
