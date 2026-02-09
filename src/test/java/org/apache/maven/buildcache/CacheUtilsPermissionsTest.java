@@ -29,6 +29,8 @@ import java.util.Arrays;
 import java.util.Set;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -50,11 +52,8 @@ class CacheUtilsPermissionsTest {
      * cache correctness similar to how Git includes file mode in tree hashes.
      */
     @Test
+    @DisabledOnOs(OS.WINDOWS)
     void testPermissionsAffectFileHashWhenEnabled() throws IOException {
-        // Skip test on non-POSIX filesystems (e.g., Windows)
-        if (!tempDir.getFileSystem().supportedFileAttributeViews().contains("posix")) {
-            return;
-        }
 
         // Given: Same directory content with different permissions
         Path sourceDir1 = tempDir.resolve("source1");
@@ -100,12 +99,8 @@ class CacheUtilsPermissionsTest {
      * the key point is that permission information is NOT deterministically stored.
      */
     @Test
+    @DisabledOnOs(OS.WINDOWS)
     void testPermissionsDoNotAffectHashWhenDisabled() throws IOException {
-        // Skip test on non-POSIX filesystems (e.g., Windows)
-        if (!tempDir.getFileSystem().supportedFileAttributeViews().contains("posix")) {
-            return;
-        }
-
         // Given: Same directory content with different permissions
         Path sourceDir1 = tempDir.resolve("source1");
         Files.createDirectories(sourceDir1);
