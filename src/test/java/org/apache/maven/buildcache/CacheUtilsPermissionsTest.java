@@ -150,12 +150,8 @@ class CacheUtilsPermissionsTest {
     }
 
     @Test
+    @DisabledOnOs(OS.WINDOWS)
     void testPermissionsAreRestoredOnUnzip() throws Exception {
-        // Skip test on non-POSIX filesystems (e.g., Windows)
-        if (!tempDir.getFileSystem().supportedFileAttributeViews().contains("posix")) {
-            return;
-        }
-
         // Given: a source directory with a file that has "execute" permission
         Path source = tempDir.resolve("source");
         Files.createDirectories(source);
