@@ -20,6 +20,7 @@ package org.apache.maven.buildcache;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -32,6 +33,7 @@ import java.nio.file.attribute.FileTime;
 import java.nio.file.attribute.PosixFilePermission;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -39,8 +41,8 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
-import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
+import org.apache.commons.compress.archivers.zip.ZipFile;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
 import org.apache.commons.lang3.mutable.MutableBoolean;
@@ -210,9 +212,10 @@ public class CacheUtils {
         final boolean supportsPosix = preservePermissions
                 && out.getFileSystem().supportedFileAttributeViews().contains("posix");
 
-        try (ZipArchiveInputStream zis = new ZipArchiveInputStream(Files.newInputStream(zip))) {
-            ZipArchiveEntry entry = zis.getNextEntry();
-            while (entry != null) {
+        try (ZipFile zipFile = ZipFile.builder().setFile(zip.toFile()).get()) {
+            Enumeration<ZipArchiveEntry> entries = zipFile.getEntries();
+            while (entries.hasMoreElements()) {
+                ZipArchiveEntry entry = entries.nextElement();
                 Path file = out.resolve(entry.getName());
                 if (!file.normalize().startsWith(out.normalize())) {
                     throw new RuntimeException("Bad zip entry");
@@ -222,7 +225,9 @@ public class CacheUtils {
                 } else {
                     Path parent = file.getParent();
                     Files.createDirectories(parent);
-                    Files.copy(zis, file, StandardCopyOption.REPLACE_EXISTING);
+                    try (InputStream is = zipFile.getInputStream(entry)) {
+                        Files.copy(is, file, StandardCopyOption.REPLACE_EXISTING);
+                    }
                 }
                 Files.setLastModifiedTime(file, FileTime.fromMillis(entry.getTime()));
 
@@ -234,8 +239,6 @@ public class CacheUtils {
                         Files.setPosixFilePermissions(file, permissions);
                     }
                 }
-
-                entry = zis.getNextEntry();
             }
         }
     }
