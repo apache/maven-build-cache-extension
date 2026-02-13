@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import com.google.common.collect.Lists;
 import org.apache.maven.buildcache.xml.Build;
 import org.apache.maven.execution.ExecutionEvent;
 import org.apache.maven.execution.MavenSession;
@@ -296,7 +295,7 @@ class LifecyclePhasesHelperTest {
         List<MojoExecution> notCachedSegment =
                 lifecyclePhasesHelper.getPostCachedSegment(projectMock, mojoExecutions, build);
 
-        assertIterableEquals(Lists.newArrayList(test, install), notCachedSegment);
+        assertIterableEquals(Arrays.asList(test, install), notCachedSegment);
     }
 
     @Test
