@@ -231,7 +231,7 @@ class LifecyclePhasesHelperTest {
 
         List<MojoExecution> cachedSegment = lifecyclePhasesHelper.getCachedSegment(projectMock, mojoExecutions, build);
 
-        assertIterableEquals(Lists.newArrayList(compile, test), cachedSegment);
+        assertIterableEquals(Arrays.asList(compile, test), cachedSegment);
     }
 
     @Test
