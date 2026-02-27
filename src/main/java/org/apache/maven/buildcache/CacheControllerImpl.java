@@ -864,14 +864,14 @@ public class CacheControllerImpl implements CacheController {
                 Field field = ReflectionUtils.getFieldByNameIncludingSuperclasses(propertyName, mojo.getClass());
                 if (field != null) {
                     final Object value = ReflectionUtils.getValueIncludingSuperclasses(propertyName, mojo);
-                    DtoUtils.addProperty(execution, propertyName, value, baseDirPath, tracked);
+                    CacheUtils.addProperty(execution, propertyName, value, baseDirPath, tracked);
                     continue;
                 }
                 // no field but maybe there is a getter with standard naming and no args
                 Method getter = getGetter(propertyName, mojo.getClass());
                 if (getter != null) {
                     Object value = getter.invoke(mojo);
-                    DtoUtils.addProperty(execution, propertyName, value, baseDirPath, tracked);
+                    CacheUtils.addProperty(execution, propertyName, value, baseDirPath, tracked);
                     continue;
                 }
 
@@ -895,11 +895,11 @@ public class CacheControllerImpl implements CacheController {
             if (trackedProperty.getExpression() != null) {
                 String propertyName = trackedProperty.getPropertyName();
                 if (!isExcluded(propertyName, logAll, noLogProperties, forceLogProperties)) {
-                    Object value = DtoUtils.interpolateExpression(
+                    Object value = CacheUtils.interpolateExpression(
                             trackedProperty.getExpression(),
                             executionEvent.getSession(),
                             executionEvent.getExecution());
-                    DtoUtils.addProperty(execution, propertyName, value, baseDirPath, true);
+                    CacheUtils.addProperty(execution, propertyName, value, baseDirPath, true);
                 }
             }
         }

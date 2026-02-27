@@ -413,12 +413,12 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
             try {
                 Object value;
                 if (trackedProperty.getExpression() != null) {
-                    value = DtoUtils.interpolateExpression(trackedProperty.getExpression(), session, mojoExecution);
+                    value = CacheUtils.interpolateExpression(trackedProperty.getExpression(), session, mojoExecution);
                 } else {
                     value = ReflectionUtils.getValueIncludingSuperclasses(propertyName, mojo);
                 }
                 Path baseDirPath = project.getBasedir().toPath();
-                currentValue = DtoUtils.normalizeValue(value, baseDirPath);
+                currentValue = CacheUtils.normalizeValue(value, baseDirPath);
             } catch (IllegalAccessException e) {
                 LOGGER.error("Cannot extract plugin property {} from mojo {}", propertyName, mojo, e);
                 return false;
