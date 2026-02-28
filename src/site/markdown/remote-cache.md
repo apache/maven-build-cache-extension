@@ -233,11 +233,15 @@ Filter out environment-specific properties from the effective pom model:
     <global>
         ...
     </global>
-    <plugin artifactId="maven-surefire-plugin">
-        <effectivePom>
-            <excludeProperty>argLine</excludeProperty>
-        </effectivePom>
-    </plugin>
+    <plugins>
+        <plugin artifactId="maven-surefire-plugin">
+            <effectivePom>
+                <excludeProperties>
+                    <excludeProperty>argLine</excludeProperty>
+                </excludeProperties>
+            </effectivePom>
+        </plugin>
+    </plugins>
 </input>
 ```
 

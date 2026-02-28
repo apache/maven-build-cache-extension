@@ -22,8 +22,6 @@ understand how it works, and figure out an optimal config
 
 ### Minimal config
 
-Minimal config
-
 ```xml
 <?xml version="1.0" encoding="UTF-8" ?>
 <cache xmlns="http://maven.apache.org/BUILD-CACHE-CONFIG/1.2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -31,6 +29,7 @@ Minimal config
 
     <configuration>
         <enabled>true</enabled>
+        <!-- XX is the default and fastest algorithm. See performance.html for all available algorithms. -->
         <hashAlgorithm>XX</hashAlgorithm>
     </configuration>
 

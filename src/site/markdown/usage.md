@@ -17,7 +17,9 @@
 
 ## Usage
 
-Once the extension is activated, the cache automatically kicks in on every `package` or higher phase.
+Once the extension is activated, the cache kicks in automatically. By default, compile-phase builds
+(`mvn compile`, `mvn test-compile`) are cached in addition to `package` and later phases. Set
+`-Dmaven.build.cache.cacheCompile=false` to restrict caching to the `package` phase and above.
 
 ## Subtree builds
 
