@@ -69,7 +69,9 @@ Add all the project-specific source code files in `<glob>`. Scala, in this case:
 
 ### Adding source directory for bespoke project layouts
 
-In most cases, the build-cache extension automatically recognizes directories by introspecting the build. When it is not enough, adding additional directories with `<include>` is possible. Also, you can filter out undesirable dirs and files by using exclude tag.
+In most cases, the build-cache extension automatically recognizes directories by introspecting the build. When it is not
+enough, adding additional directories with `<include>` is possible. Also, you can filter out undesirable dirs and files
+by using exclude tag.
 
 ```xml
     <input>
@@ -106,11 +108,13 @@ Consider to exclude env specific properties:
     </input>
 ```
 
-Implications - builds with different `argLine` will have an identical key. Validate that it is acceptable in terms of artifact equivalency.
+Implications - builds with different `argLine` will have an identical key. Validate that it is acceptable in terms of
+artifact equivalency.
 
 ### Plugin property points to a directory where only a subset of files is relevant
 
-If the plugin configuration property points to `somedir`, it will be scanned with the default glob. You can tweak it with custom
+If the plugin configuration property points to `somedir`, it will be scanned with the default glob. You can tweak it
+with custom
 processing rule
 
 ```xml
@@ -162,7 +166,8 @@ Add `executionControl/runAlways` section:
 ### I occasionally cached build with `-DskipTests=true`, and tests do not run now
 
 If you add command line flags to your build, they do not participate in effective pom - Maven defers the final value
-resolution to plugin runtime. To invalidate the build if the filed value is different in runtime, add a reconciliation section
+resolution to plugin runtime. To invalidate the build if the filed value is different in runtime, add a reconciliation
+section
 to `executionControl`:
 
 ```xml
@@ -192,7 +197,10 @@ to `executionControl`:
 </cache>
 ```
 
-Please notice the `skipValue` attribute. It captures the value that makes the plugin skip execution. Think of `skipProperty` as follows: if the build started with `-DskipTests=true`, restoring results from a build with completed tests is safe because the local run does not require completed tests. The same logic applies to any other plugin, not just Surefire.
+Please notice the `skipValue` attribute. It captures the value that makes the plugin skip execution. Think of
+`skipProperty` as follows: if the build started with `-DskipTests=true`, restoring results from a build with completed
+tests is safe because the local run does not require completed tests. The same logic applies to any other plugin, not
+just Surefire.
 
 ### How to renormalize line endings in working copy after committing .gitattributes (git 2.16+)
 
@@ -211,7 +219,8 @@ git reset --hard
 
 ### I want to cache the interim build and override it later with the final version
 
-Solution: set `-Dmaven.build.cache.remote.save.final=true` to nodes that produce final builds. Such builds will not be overridden
+Solution: set `-Dmaven.build.cache.remote.save.final=true` to nodes that produce final builds. Such builds will not be
+overridden
 and eventually will replace all interim builds
 
 ### I want to disable dependencies checksum calculation of one plugin
@@ -229,7 +238,8 @@ Set attribute `excludeDependencies` to `true` in `input/plugins/plugin` section:
 
 ### I want to disable caching of compile-only builds
 
-By default, the cache extension saves build outputs when running compile-only phases (like `mvn compile` or `mvn test-compile`).
+By default, the cache extension saves build outputs when running compile-only phases (like `mvn compile` or
+`mvn test-compile`).
 This allows subsequent builds to restore compiled classes without recompilation. To disable this behavior and only cache
 builds that reach the package phase or later:
 
@@ -238,6 +248,7 @@ mvn compile -Dmaven.build.cache.cacheCompile=false
 ```
 
 This is useful when:
+
 * You want to ensure cache entries always contain packaged artifacts (JARs, WARs, etc.)
 * Your workflow relies on artifacts being available in the local repository
 * You prefer the traditional behavior where only complete builds are cached

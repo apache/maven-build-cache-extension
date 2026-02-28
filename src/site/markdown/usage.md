@@ -66,6 +66,7 @@ On the command line:
 ```
 
 When a configuration is disabled by default in the config, it can be enabled via the command line with:
+
 ```
 -Dmaven.build.cache.enabled=true
 ```

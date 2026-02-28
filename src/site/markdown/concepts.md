@@ -33,10 +33,12 @@ project without building and installing dependencies from the larger project.
 
 ### Cache concepts
 
-The build cache calculates a key from module inputs, stores outputs in the cache, and transparently restores them later to the standard Maven core. The cache associates each project state with a unique key
+The build cache calculates a key from module inputs, stores outputs in the cache, and transparently restores them later
+to the standard Maven core. The cache associates each project state with a unique key
 and restores it in subsequent builds. It analyzes source code, project model,
 plugins, and their parameters. Projects with the same key are up-to-date (not changed) and can be restored from
-the cache. Projects that produce different keys are out-of-date (changed), and the cache fully rebuilds them. In the latter
+the cache. Projects that produce different keys are out-of-date (changed), and the cache fully rebuilds them. In the
+latter
 case, the cache does not make any
 interventions in the build execution logic and delegates build work to the standard maven Maven core. This approach
 ensures that
@@ -47,7 +49,8 @@ a configuration file. Source code content fingerprinting is digest based, which 
 the file timestamps used in tools like Make or Apache Ant. Cache outputs can be shared using a remote cache.
 Deterministic inputs calculation allows distributed and parallel builds running in heterogeneous environments (like a
 cloud of build agents) to efficiently reuse cached build artifacts as soon as they are published.
-The build cache is particularly useful for large Maven projects that have a significant number of small modules. Remote caching, combined with relocatable inputs
+The build cache is particularly useful for large Maven projects that have a significant number of small modules. Remote
+caching, combined with relocatable inputs
 identification, effectively enables the "change once - build once" approach across all environments.
 
 ### Maven insights
@@ -93,7 +96,8 @@ configuration.
 Though strict, comprehensive cache rules aiming for 100% coverage of all parameters and files might be tempting, it is
 rarely the optimal decision. When applied to real projects, perfect correctness could lead to prevailing hit misses and
 render caching useless. Configuring sufficient (good enough) correctness might yield the best outcomes. The build cache
-provides flexible and transparent control over caching policy and allows achieving desired results — maximizing usability
+provides flexible and transparent control over caching policy and allows achieving desired results — maximizing
+usability
 or maximizing equivalency between pre-cached candidates and requested builds.
 
 ## Usage
