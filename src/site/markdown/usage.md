@@ -53,9 +53,9 @@ Disable in config:
 ```xml
 
 <cache>
-  <configuration>
-    <enabled>false</enabled>
-  </configuration>
+    <configuration>
+        <enabled>false</enabled>
+    </configuration>
 </cache>
 ```
 

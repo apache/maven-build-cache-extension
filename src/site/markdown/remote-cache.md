@@ -151,6 +151,7 @@ OR
 Or configure your remote with the following configuration (`dav:url`)
 
 ```xml
+
 <remote enabled="true">
     <url>dav:http://your-buildcache-url</url>
 </remote>

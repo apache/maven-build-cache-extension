@@ -40,6 +40,7 @@ non-cryptographic hash algorithm and is sufficient for most use cases. All suppo
 | `SHA-512`  | Cryptographic, slowest.                                                                          |
 
 ```xml
+
 <hashAlgorithm>XX</hashAlgorithm>
 ```
 
@@ -57,11 +58,12 @@ EAR or ZIP archive locally is more efficient than storing them in cache bundles.
 configuration section:
 
 ```xml
+
 <cache>
     <output>
         <exclude>
             <patterns>
-              <pattern>.*\.zip</pattern>
+                <pattern>.*\.zip</pattern>
             </patterns>
         </exclude>
     </output>
@@ -100,6 +102,7 @@ correction requires copying and repacking archive entries and adds overhead. If 
 the build, consider disabling it (off by default):
 
 ```xml
+
 <cache>
     <configuration>
         ...

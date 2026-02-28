@@ -46,13 +46,14 @@ understand how it works, and figure out an optimal config
 Just add `<remote>` section under `<configuration>`
 
 ```xml
-    <configuration>
-        <enabled>true</enabled>
-        <hashAlgorithm>XX</hashAlgorithm>
-        <remote>
-            <url>https://yourserver:port</url>
-        </remote>
-    </configuration>
+
+<configuration>
+    <enabled>true</enabled>
+    <hashAlgorithm>XX</hashAlgorithm>
+    <remote>
+        <url>https://yourserver:port</url>
+    </remote>
+</configuration>
 ```
 
 ### Adding more file types to input
@@ -60,11 +61,12 @@ Just add `<remote>` section under `<configuration>`
 Add all the project-specific source code files in `<glob>`. Scala, in this case:
 
 ```xml
-    <input>
-        <global>
-            <glob>{*.java,*.xml,*.properties,*.scala}</glob>
-        </global>
-    </input>
+
+<input>
+    <global>
+        <glob>{*.java,*.xml,*.properties,*.scala}</glob>
+    </global>
+</input>
 ```
 
 ### Adding source directory for bespoke project layouts
@@ -74,17 +76,18 @@ enough, adding additional directories with `<include>` is possible. Also, you ca
 by using exclude tag.
 
 ```xml
-    <input>
-        <global>
-            <glob>{*.java,*.xml,*.properties,*.scala}</glob>
-            <includes>
-                <include>importantdir/</include>
-            </includes>
-            <excludes>
-                <exclude>tempfile.out</exclude>
-            </excludes>
-        </global>
-    </input>
+
+<input>
+    <global>
+        <glob>{*.java,*.xml,*.properties,*.scala}</glob>
+        <includes>
+            <include>importantdir/</include>
+        </includes>
+        <excludes>
+            <exclude>tempfile.out</exclude>
+        </excludes>
+    </global>
+</input>
 ```
 
 ### Plugin property is environment-specific and yields different cache keys in different environments
@@ -92,20 +95,21 @@ by using exclude tag.
 Consider to exclude env specific properties:
 
 ```xml
-    <input>
-        <global>
-            ...
-        </global>
-        <plugins>
-            <plugin artifactId="maven-surefire-plugin">
-                <effectivePom>
-                    <excludeProperties>
-                        <excludeProperty>argLine</excludeProperty>
-                    </excludeProperties>
-                </effectivePom>
-            </plugin>
-        </plugins>
-    </input>
+
+<input>
+    <global>
+        ...
+    </global>
+    <plugins>
+        <plugin artifactId="maven-surefire-plugin">
+            <effectivePom>
+                <excludeProperties>
+                    <excludeProperty>argLine</excludeProperty>
+                </excludeProperties>
+            </effectivePom>
+        </plugin>
+    </plugins>
+</input>
 ```
 
 Implications - builds with different `argLine` will have an identical key. Validate that it is acceptable in terms of
@@ -118,21 +122,22 @@ with custom
 processing rule
 
 ```xml
-    <input>
-        <global>
-            ...
-        </global>
-        <plugins>
-            <plugin artifactId="protoc-maven-plugin">
-                <dirScan mode="auto">
-                    <!--<protoBaseDirectory>${basedir}/..</protoBaseDirectory>-->
-                    <tagScanConfigs>
-                        <tagScanConfig tagName="protoBaseDirectory" recursive="false" glob="{*.proto}"/>
-                    </tagScanConfigs>
-                </dirScan>
-            </plugin>
-        </plugins>
-    </input>
+
+<input>
+    <global>
+        ...
+    </global>
+    <plugins>
+        <plugin artifactId="protoc-maven-plugin">
+            <dirScan mode="auto">
+                <!--<protoBaseDirectory>${basedir}/..</protoBaseDirectory>-->
+                <tagScanConfigs>
+                    <tagScanConfig tagName="protoBaseDirectory" recursive="false" glob="{*.proto}"/>
+                </tagScanConfigs>
+            </dirScan>
+        </plugin>
+    </plugins>
+</input>
 ```
 
 ### Local repository is not updated because the `install` phase is cached
@@ -140,27 +145,28 @@ processing rule
 Add `executionControl/runAlways` section:
 
 ```xml
-    <executionControl>
-        <runAlways>
-            <plugins>
-                <plugin artifactId="maven-failsafe-plugin"/>
-            </plugins>
-            <executions>
-                <execution artifactId="maven-dependency-plugin">
-                    <execIds>
-                        <execId>unpack-autoupdate</execId>
-                    </execIds>
-                </execution>
-            </executions>
-            <goalsLists>
-                <goalsList artifactId="maven-install-plugin">
-                    <goals>
-                        <goal>install</goal>
-                    </goals>
-                </goalsList>
-            </goalsLists>
-        </runAlways>
-    </executionControl>
+
+<executionControl>
+    <runAlways>
+        <plugins>
+            <plugin artifactId="maven-failsafe-plugin"/>
+        </plugins>
+        <executions>
+            <execution artifactId="maven-dependency-plugin">
+                <execIds>
+                    <execId>unpack-autoupdate</execId>
+                </execIds>
+            </execution>
+        </executions>
+        <goalsLists>
+            <goalsList artifactId="maven-install-plugin">
+                <goals>
+                    <goal>install</goal>
+                </goals>
+            </goalsList>
+        </goalsLists>
+    </runAlways>
+</executionControl>
 ```
 
 ### I occasionally cached build with `-DskipTests=true`, and tests do not run now
@@ -228,12 +234,13 @@ and eventually will replace all interim builds
 Set attribute `excludeDependencies` to `true` in `input/plugins/plugin` section:
 
 ```xml
-    <input>
-      <plugins>
+
+<input>
+    <plugins>
         <plugin artifactId="maven-surefire-plugin" excludeDependencies="true">
         </plugin>
-      </plugins>
-    </input>
+    </plugins>
+</input>
 ```
 
 ### I want to disable caching of compile-only builds
