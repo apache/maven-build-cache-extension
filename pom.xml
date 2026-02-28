@@ -332,6 +332,8 @@ under the License.
           <artifactId>maven-compiler-plugin</artifactId>
           <configuration>
             <release>${javaVersion}</release>
+            <!-- 17 is the minimal CI version -->
+            <testRelease>17</testRelease>
           </configuration>
         </plugin>
         <plugin>
@@ -504,6 +506,48 @@ under the License.
                 <maven.basedir>${maven.basedir}</maven.basedir>
               </systemPropertyVariables>
               <includes>**/its/**</includes>
+            </configuration>
+            <executions>
+              <execution>
+                <id>it-tests</id>
+                <goals>
+                  <goal>integration-test</goal>
+                  <goal>verify</goal>
+                </goals>
+                <phase>integration-test</phase>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <!--
+        Developer smoke-test profile: runs the most critical integration tests plus
+        at least one test per Maven project flavor and major cache trait.
+        Excludes slow/environment-specific tests (Docker, toolchains, Maven 4-only).
+
+        Usage:
+          mvn verify -Prun-its-smoke                  # Maven 4 (default)
+          mvn verify -Prun-its-smoke,maven3           # Maven 3
+      -->
+      <id>run-its-smoke</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-failsafe-plugin</artifactId>
+            <configuration>
+              <systemPropertyVariables>
+                <!-- local repo provided by m-invoker-p:install -->
+                <localRepo>${project.build.directory}/local-repo</localRepo>
+                <projectVersion>${project.version}</projectVersion>
+                <maven.multiModuleProjectDirectory>${maven.multiModuleProjectDirectory}</maven.multiModuleProjectDirectory>
+                <maven.basedir>${maven.basedir}</maven.basedir>
+              </systemPropertyVariables>
+              <includes>**/its/**</includes>
+              <!-- JUnit 5 tag filter — only tests annotated @Tag("smoke") are executed -->
+              <groups>smoke</groups>
             </configuration>
             <executions>
               <execution>
