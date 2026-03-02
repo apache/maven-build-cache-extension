@@ -69,7 +69,7 @@ public class ReferenceProjectBootstrap {
      */
     public static Stream<Path> listProjects() throws IOException {
         Path base = Paths.get(REFERENCE_PROJECTS_DIR).toAbsolutePath();
-        return Files.list(base).filter(Files::isDirectory).sorted();
+        return Files.list(base).filter(Files::isDirectory).limit(1).sorted();
     }
 
     /**

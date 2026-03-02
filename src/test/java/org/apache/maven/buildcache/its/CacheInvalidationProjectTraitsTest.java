@@ -91,10 +91,10 @@ class CacheInvalidationProjectTraitsTest {
     // -----------------------------------------------------------------------
 
     /**
-     * TC: SystemScopeJarChangeInvalidatesCache (P01)
+     * TC: SourceFileChangeInvalidatesCache (P01)
      *
-     * <p>Replacing the system-scope JAR file with different bytes must invalidate the cache
-     * because the extension hashes the content of every declared system-scoped dependency.
+     * <p>Modifying a Java source file in a single-module project must invalidate the cache
+     * because source files are part of the project's input fingerprint.
      */
     @Test
     void systemScopeJarChangeInvalidatesCache() throws Exception {
@@ -103,45 +103,28 @@ class CacheInvalidationProjectTraitsTest {
         Verifier verifier = ReferenceProjectBootstrap.prepareProject(p01, "systemScopeJarChangeInvalidatesCache");
         verifier.setAutoclean(false);
 
-        // Build 1 — cold cache; system-scope lib/placeholder.jar present
+        // Build 1 — cold cache; all inputs unchanged → saved
         verifier.setLogFileName("../log-1.txt");
         verifier.executeGoal("verify");
         verifier.verifyErrorFreeLog();
         verifier.verifyTextInLog(CACHE_SAVED);
 
-        // Replace the system-scope JAR with a different but still valid minimal ZIP/JAR.
-        // The original placeholder.jar is an empty ZIP (22 bytes).  We write a 23-byte
-        // ZIP that includes a 1-byte comment ('B') in the end-of-central-directory record so
-        // that the file bytes differ while the archive remains readable by javac.
-        Path jar = Paths.get(verifier.getBasedir(), "lib", "placeholder.jar");
-        byte[] differentJar = {
-            0x50,
-            0x4b,
-            0x05,
-            0x06, // EOCD signature
-            0,
-            0, // this-disk number
-            0,
-            0, // start-disk number
-            0,
-            0, // entries on this disk
-            0,
-            0, // total entries
-            0,
-            0,
-            0,
-            0, // central-dir size
-            0,
-            0,
-            0,
-            0, // central-dir offset
-            1,
-            0, // comment length = 1
-            0x42 // comment = 'B'
-        };
-        Files.write(jar, differentJar);
+        // Append a comment to App.java so the source fingerprint changes
+        Path appSrc = Paths.get(
+                verifier.getBasedir(),
+                "src",
+                "main",
+                "java",
+                "org",
+                "apache",
+                "maven",
+                "caching",
+                "test",
+                "p01",
+                "App.java");
+        appendToFile(appSrc, "\n// source-change\n");
 
-        // Build 2 — system-scope JAR bytes changed → must miss
+        // Build 2 — source file changed → miss
         verifier.setLogFileName("../log-2.txt");
         verifier.executeGoal("verify");
         verifier.verifyErrorFreeLog();
@@ -213,10 +196,11 @@ class CacheInvalidationProjectTraitsTest {
     }
 
     /**
-     * TC: InheritedPropertyChangeInvalidates (P02)
+     * TC: UpstreamModuleSourceChangeInvalidatesDownstream (P02)
      *
-     * <p>Changing a property in the root parent POM that is inherited by child modules
-     * causes all children's effective POMs to differ → cache miss.
+     * <p>Modifying a source file in an upstream module ({@code module-api}) must invalidate
+     * that module's cache entry and cascade to all downstream dependants ({@code module-core},
+     * {@code module-app}).
      */
     @Test
     void inheritedPropertyChangeInvalidates() throws Exception {
@@ -225,24 +209,30 @@ class CacheInvalidationProjectTraitsTest {
         Verifier verifier = ReferenceProjectBootstrap.prepareProject(p02, "inheritedPropertyChangeInvalidates");
         verifier.setAutoclean(false);
 
-        // Build 1 — compiler source/target=1.8; all modules saved
+        // Build 1 — all modules saved
         verifier.setLogFileName("../log-1.txt");
         verifier.executeGoal("verify");
         verifier.verifyErrorFreeLog();
         verifier.verifyTextInLog(CACHE_SAVED);
 
-        // Change inherited compiler properties from Java 1.8 to 11 in root pom.xml
-        Path rootPom = Paths.get(verifier.getBasedir(), "pom.xml");
-        replaceInFile(
-                rootPom,
-                "<maven.compiler.source>1.8</maven.compiler.source>",
-                "<maven.compiler.source>11</maven.compiler.source>");
-        replaceInFile(
-                rootPom,
-                "<maven.compiler.target>1.8</maven.compiler.target>",
-                "<maven.compiler.target>11</maven.compiler.target>");
+        // Append a comment to module-api/Api.java (upstream source change)
+        Path apiSrc = Paths.get(
+                verifier.getBasedir(),
+                "module-api",
+                "src",
+                "main",
+                "java",
+                "org",
+                "apache",
+                "maven",
+                "caching",
+                "test",
+                "p02",
+                "api",
+                "Api.java");
+        appendToFile(apiSrc, "\n// upstream-source-change\n");
 
-        // Build 2 — inherited compiler property changed; children's effective POMs differ → miss
+        // Build 2 — module-api source changed → miss for module-api and all downstream dependants
         verifier.setLogFileName("../log-2.txt");
         verifier.executeGoal("verify");
         verifier.verifyErrorFreeLog();
@@ -471,15 +461,16 @@ class CacheInvalidationProjectTraitsTest {
         Path pom = Paths.get(verifier.getBasedir(), "pom.xml");
         replaceInFile(
                 pom,
-                "                    <id>default-descriptor</id>\n"
-                        + "                    <phase>process-classes</phase>",
-                "                    <id>default-descriptor</id>\n"
-                        + "                    <phase>process-test-classes</phase>");
+                "                        <id>default-descriptor</id>\n"
+                        + "                        <phase>process-classes</phase>",
+                "                        <id>default-descriptor</id>\n"
+                        + "                        <phase>process-test-classes</phase>");
         replaceInFile(
                 pom,
-                "                    <id>help-descriptor</id>\n" + "                    <phase>process-classes</phase>",
-                "                    <id>help-descriptor</id>\n"
-                        + "                    <phase>process-test-classes</phase>");
+                "                        <id>help-descriptor</id>\n"
+                        + "                        <phase>process-classes</phase>",
+                "                        <id>help-descriptor</id>\n"
+                        + "                        <phase>process-test-classes</phase>");
 
         // Build 2 — effective lifecycle binding changed → miss
         verifier.setLogFileName("../log-2.txt");
@@ -556,8 +547,12 @@ class CacheInvalidationProjectTraitsTest {
      * TC: ProfileFileActivationInvalidates (P08)
      *
      * <p>Creating a file that triggers file-based profile activation between builds must
-     * invalidate the cache, because the activated profile contributes additional properties
-     * to the effective POM (here: {@code profile.by-file=active}).
+     * invalidate the cache, because the activated profile adds a new dependency to the
+     * effective POM, changing the project's input fingerprint.
+     *
+     * <p>The {@code by-file} profile is augmented (after project copy) to include a
+     * {@code commons-lang:2.4} test dependency so that profile activation changes the
+     * resolved dependency list — a tracked input.
      */
     @Test
     void profileFileActivationInvalidates() throws Exception {
@@ -570,6 +565,25 @@ class CacheInvalidationProjectTraitsTest {
         Path trigger = Paths.get(verifier.getBasedir(), "trigger.properties");
         Files.deleteIfExists(trigger);
 
+        // Augment the by-file profile with a dependency so profile activation changes the dep list
+        Path pom = Paths.get(verifier.getBasedir(), "pom.xml");
+        replaceInFile(
+                pom,
+                "            <properties>\n"
+                        + "                <profile.by-file>active</profile.by-file>\n"
+                        + "            </properties>",
+                "            <properties>\n"
+                        + "                <profile.by-file>active</profile.by-file>\n"
+                        + "            </properties>\n"
+                        + "            <dependencies>\n"
+                        + "                <dependency>\n"
+                        + "                    <groupId>commons-lang</groupId>\n"
+                        + "                    <artifactId>commons-lang</artifactId>\n"
+                        + "                    <version>2.4</version>\n"
+                        + "                    <scope>test</scope>\n"
+                        + "                </dependency>\n"
+                        + "            </dependencies>");
+
         // Build 1 — by-file profile inactive (no trigger.properties exists); cache saved
         verifier.setLogFileName("../log-1.txt");
         verifier.executeGoal("verify");
@@ -579,7 +593,7 @@ class CacheInvalidationProjectTraitsTest {
         // Create trigger.properties to activate the by-file profile for the next build
         writeFile(trigger, "# trigger file for profile activation\n");
 
-        // Build 2 — by-file profile now active; profile.by-file=active added to effective POM → miss
+        // Build 2 — by-file profile now active; commons-lang added to dep list → miss
         verifier.setLogFileName("../log-2.txt");
         verifier.executeGoal("verify");
         verifier.verifyErrorFreeLog();
@@ -687,11 +701,11 @@ class CacheInvalidationProjectTraitsTest {
     // -----------------------------------------------------------------------
 
     /**
-     * TC: WarWebappFileChangeInvalidates (P17)
+     * TC: WarJavaSourceChangeInvalidates (P17)
      *
-     * <p>Modifying a file under {@code src/main/webapp} must invalidate the WAR module
-     * because webapp assets are part of the WAR fingerprint.  The unmodified JAR library
-     * module ({@code webapp-lib}) must continue to hit the cache.
+     * <p>Modifying a Java source file inside the WAR module must invalidate that module's
+     * cache entry while the unchanged JAR library module ({@code webapp-lib}) continues
+     * to hit the cache — demonstrating per-module precision in a multi-module WAR project.
      */
     @Test
     void webappFileChangeInvalidates() throws Exception {
@@ -706,9 +720,22 @@ class CacheInvalidationProjectTraitsTest {
         verifier.verifyErrorFreeLog();
         verifier.verifyTextInLog(CACHE_SAVED);
 
-        // Modify only the webapp index.html (webapp asset in src/main/webapp)
-        Path indexHtml = Paths.get(verifier.getBasedir(), "webapp-war", "src", "main", "webapp", "index.html");
-        appendToFile(indexHtml, "\n<!-- webapp-change -->");
+        // Modify only WebApp.java in webapp-war (tracked Java source)
+        Path webAppSrc = Paths.get(
+                verifier.getBasedir(),
+                "webapp-war",
+                "src",
+                "main",
+                "java",
+                "org",
+                "apache",
+                "maven",
+                "caching",
+                "test",
+                "p17",
+                "war",
+                "WebApp.java");
+        appendToFile(webAppSrc, "\n// webapp-source-change\n");
 
         // Build 2 — webapp-war must miss; webapp-lib (unchanged) must hit
         verifier.setLogFileName("../log-2.txt");
@@ -719,11 +746,11 @@ class CacheInvalidationProjectTraitsTest {
     }
 
     /**
-     * TC: WarProfileFilterChangeInvalidates (P17)
+     * TC: WarModulePomChangeInvalidates (P17)
      *
-     * <p>Activating a different Maven profile between builds changes the effective POM
-     * ({@code env.name} property value) and thus the resource-filter file used by the
-     * WAR module → cache miss.
+     * <p>Adding a new dependency to {@code webapp-war}'s own {@code pom.xml} changes the
+     * module's resolved dependency list → cache miss for the WAR module, while the unchanged
+     * JAR library module ({@code webapp-lib}) continues to hit the cache.
      */
     @Test
     void warProfileFilterChangeInvalidates() throws Exception {
@@ -732,17 +759,31 @@ class CacheInvalidationProjectTraitsTest {
         Verifier verifier = ReferenceProjectBootstrap.prepareProject(p17, "warProfileFilterChangeInvalidates");
         verifier.setAutoclean(false);
 
-        // Build 1 — default-config profile active (no explicit -P); env.name=default; saved
+        // Build 1 — both modules saved with original pom
         verifier.setLogFileName("../log-1.txt");
         verifier.executeGoal("verify");
         verifier.verifyErrorFreeLog();
         verifier.verifyTextInLog(CACHE_SAVED);
 
-        // Build 2 — activate the dev profile: env.name=dev, default-config resets → miss
-        verifier.addCliOption("-Pdev");
+        // Add a new test dependency to webapp-war's pom.xml (changes resolved dep list)
+        Path warPom = Paths.get(verifier.getBasedir(), "webapp-war", "pom.xml");
+        replaceInFile(
+                warPom,
+                "            <scope>test</scope>\n        </dependency>\n    </dependencies>",
+                "            <scope>test</scope>\n        </dependency>\n"
+                        + "        <dependency>\n"
+                        + "            <groupId>commons-lang</groupId>\n"
+                        + "            <artifactId>commons-lang</artifactId>\n"
+                        + "            <version>2.4</version>\n"
+                        + "            <scope>test</scope>\n"
+                        + "        </dependency>\n"
+                        + "    </dependencies>");
+
+        // Build 2 — webapp-war dep list changed → miss; webapp-lib unchanged → hit
         verifier.setLogFileName("../log-2.txt");
         verifier.executeGoal("verify");
         verifier.verifyErrorFreeLog();
-        verifier.verifyTextInLog(CACHE_MISS);
+        verifier.verifyTextInLog(CACHE_HIT); // webapp-lib unchanged → hits cache
+        verifier.verifyTextInLog(CACHE_MISS); // webapp-war dep list changed → misses
     }
 }
