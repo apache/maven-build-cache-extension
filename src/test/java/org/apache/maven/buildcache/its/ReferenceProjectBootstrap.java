@@ -57,7 +57,7 @@ import org.apache.maven.it.Verifier;
  * </ul>
  * Only plain-text files (XML, properties, txt) are substituted; binary files are skipped.
  */
-class ReferenceProjectBootstrap {
+public class ReferenceProjectBootstrap {
 
     private static final String REFERENCE_PROJECTS_DIR = "src/test/projects/reference-test-projects";
     private static final String TEST_WORK_DIR = "target/mvn-cache-tests/ReferenceProjectTest";
@@ -67,7 +67,7 @@ class ReferenceProjectBootstrap {
      * {@code src/test/projects/reference-test-projects}.
      * New projects added to that directory are picked up automatically.
      */
-    static Stream<Path> listProjects() throws IOException {
+    public static Stream<Path> listProjects() throws IOException {
         Path base = Paths.get(REFERENCE_PROJECTS_DIR).toAbsolutePath();
         return Files.list(base).filter(Files::isDirectory).sorted();
     }
@@ -83,10 +83,33 @@ class ReferenceProjectBootstrap {
      * @throws IOException           if the project cannot be copied or pre-install fails
      * @throws VerificationException if the {@link Verifier} cannot be created
      */
-    static Verifier prepareProject(Path projectSrcDir) throws VerificationException, IOException {
+    public static Verifier prepareProject(Path projectSrcDir) throws VerificationException, IOException {
         List<String> extraCliOpts = readLines(projectSrcDir.resolve("test-options.txt"));
         List<String> preInstallDirs = readLines(projectSrcDir.resolve("pre-install-dirs.txt"));
         return prepareProject(projectSrcDir.getFileName().toString(), extraCliOpts, preInstallDirs);
+    }
+
+    /**
+     * Variant of {@link #prepareProject(Path)} that appends a {@code qualifier} to the
+     * project's work-directory name. Use this when two test classes target the same reference
+     * project, so their isolated copies do not collide.
+     *
+     * <p>The work directory will be:
+     * {@code target/mvn-cache-tests/ReferenceProjectTest/<projectId>-<qualifier>/}
+     *
+     * @param projectSrcDir source directory of the reference project
+     * @param qualifier     a short identifier for the test class (e.g. simple class name)
+     * @return a fully configured {@link Verifier}
+     * @throws IOException           if the project cannot be copied or pre-install fails
+     * @throws VerificationException if the {@link Verifier} cannot be created
+     */
+    public static Verifier prepareProject(Path projectSrcDir, String qualifier)
+            throws VerificationException, IOException {
+        List<String> extraCliOpts = readLines(projectSrcDir.resolve("test-options.txt"));
+        List<String> preInstallDirs = readLines(projectSrcDir.resolve("pre-install-dirs.txt"));
+        // qualifier is appended only to the work directory name, not the source lookup
+        String workDirId = projectSrcDir.getFileName().toString() + "-" + qualifier;
+        return prepareProject(projectSrcDir.toAbsolutePath().normalize(), workDirId, extraCliOpts, preInstallDirs);
     }
 
     private static Verifier prepareProject(String projectId, List<String> extraCliOpts, List<String> preInstallDirs)
@@ -97,9 +120,19 @@ class ReferenceProjectBootstrap {
         if (!Files.exists(srcDir)) {
             throw new IllegalArgumentException("Reference project not found: " + srcDir);
         }
+        return prepareProject(srcDir, projectId, extraCliOpts, preInstallDirs);
+    }
+
+    private static Verifier prepareProject(
+            Path srcDir, String workDirId, List<String> extraCliOpts, List<String> preInstallDirs)
+            throws VerificationException, IOException {
+
+        if (!Files.exists(srcDir)) {
+            throw new IllegalArgumentException("Reference project not found: " + srcDir);
+        }
 
         // parentDir holds the project copy and the isolated build-cache directory
-        Path parentDir = Paths.get(TEST_WORK_DIR, projectId).toAbsolutePath();
+        Path parentDir = Paths.get(TEST_WORK_DIR, workDirId).toAbsolutePath();
         IntegrationTestExtension.deleteDir(parentDir);
         Files.createDirectories(parentDir);
 
