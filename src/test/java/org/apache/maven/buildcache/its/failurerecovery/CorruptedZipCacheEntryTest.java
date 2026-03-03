@@ -27,6 +27,7 @@ import org.apache.maven.buildcache.its.junit.IntegrationTest;
 import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import static org.apache.maven.buildcache.util.LogFileUtils.findFirstLineContainingTextsInLogs;
@@ -41,6 +42,7 @@ import static org.apache.maven.buildcache.util.LogFileUtils.findFirstLineContain
  * the artifact; it logs "Cannot restore project artifacts, continuing with non cached build",
  * executes all mojos from scratch, and saves a new valid cache entry.
  */
+@Tag("smoke")
 @IntegrationTest("src/test/projects/failure-recovery")
 class CorruptedZipCacheEntryTest {
 

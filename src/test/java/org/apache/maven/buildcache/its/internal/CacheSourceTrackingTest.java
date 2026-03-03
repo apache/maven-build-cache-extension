@@ -18,20 +18,19 @@
  */
 package org.apache.maven.buildcache.its.internal;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.stream.Stream;
 
 import org.apache.maven.buildcache.its.CacheITUtils;
+import org.apache.maven.buildcache.its.MavenSetup;
 import org.apache.maven.buildcache.its.ReferenceProjectBootstrap;
+import org.apache.maven.buildcache.its.junit.ForEachReferenceProject;
 import org.apache.maven.it.Verifier;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.DynamicTest;
-import org.junit.jupiter.api.TestFactory;
+import org.junit.jupiter.api.parallel.ResourceLock;
+import org.junit.jupiter.api.parallel.Resources;
 
 import static org.apache.maven.buildcache.util.LogFileUtils.findFirstLineContainingTextsInLogs;
 
@@ -48,41 +47,18 @@ import static org.apache.maven.buildcache.util.LogFileUtils.findFirstLineContain
  *
  * <p>Projects P13 (toolchains) and P18 (Maven 4) are excluded.
  */
+@ResourceLock(Resources.SYSTEM_PROPERTIES)
 class CacheSourceTrackingTest {
 
     private static final String SAVED_BUILD_PREFIX = "Saved Build to local file: ";
 
     @BeforeAll
-    static void setUpMaven() throws IOException {
-        Path basedir;
-        String basedirStr = System.getProperty("maven.basedir");
-        if (basedirStr == null) {
-            if (Files.exists(Paths.get("target/maven3"))) {
-                basedir = Paths.get("target/maven3");
-            } else if (Files.exists(Paths.get("target/maven4"))) {
-                basedir = Paths.get("target/maven4");
-            } else {
-                throw new IllegalStateException("Could not find maven home!");
-            }
-        } else {
-            basedir = Paths.get(basedirStr);
-        }
-        Path mavenHome = Files.list(basedir.toAbsolutePath())
-                .filter(p -> Files.exists(p.resolve("bin/mvn")))
-                .findAny()
-                .orElseThrow(() -> new IllegalStateException("Could not find maven home"));
-        System.setProperty("maven.home", mavenHome.toString());
-        mavenHome.resolve("bin/mvn").toFile().setExecutable(true);
+    static void setUpMaven() throws Exception {
+        MavenSetup.configureMavenHome();
     }
 
-    @TestFactory
-    Stream<DynamicTest> buildInfoShowsLocalCacheSource() throws IOException {
-        return eligibleProjects()
-                .map(projectDir -> DynamicTest.dynamicTest(
-                        projectDir.getFileName().toString(), () -> runCacheSourceTest(projectDir)));
-    }
-
-    static void runCacheSourceTest(Path projectDir) throws Exception {
+    @ForEachReferenceProject
+    void buildInfoShowsLocalCacheSource(Path projectDir) throws Exception {
         Verifier verifier = ReferenceProjectBootstrap.prepareProject(projectDir, "SRCTRACK");
         verifier.setAutoclean(false);
 
@@ -112,16 +88,9 @@ class CacheSourceTrackingTest {
         if (buildInfoPath != null && Files.exists(buildInfoPath)) {
             String buildInfo = new String(Files.readAllBytes(buildInfoPath), StandardCharsets.UTF_8);
             // The buildinfo.xml should mention the cache source (LOCAL or similar)
-            // This checks the cache metadata is properly written
             org.junit.jupiter.api.Assertions.assertTrue(
                     buildInfo.contains("build") || buildInfo.contains("cache"),
                     "buildinfo.xml should contain cache metadata. Path: " + buildInfoPath);
         }
-    }
-
-    static Stream<Path> eligibleProjects() throws IOException {
-        return ReferenceProjectBootstrap.listProjects()
-                .filter(p -> !Arrays.asList("p13-toolchains-jdk", "p18-maven4-native")
-                        .contains(p.getFileName().toString()));
     }
 }

@@ -21,6 +21,7 @@ package org.apache.maven.buildcache.its.pluginexecution;
 import org.apache.maven.buildcache.its.junit.IntegrationTest;
 import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -31,6 +32,7 @@ import org.junit.jupiter.api.Test;
  * the {@code alwaysRunPlugins} system property and must still report a cache HIT while also
  * executing the install goal.
  */
+@Tag("smoke")
 @IntegrationTest("src/test/projects/reference-test-projects/p01-superpom-minimal")
 class AlwaysRunPluginsCliTest {
 

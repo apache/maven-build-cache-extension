@@ -27,6 +27,37 @@ Read [cache guide](https://maven.apache.org/extensions/maven-build-cache-extensi
 
 Requires Maven 3.9+ ([MNG-7391](https://issues.apache.org/jira/browse/MNG-7391)).
 
+Running Integration Tests
+-------------------------
+
+### Full test suite
+
+```shell
+# Maven 4 (default)
+mvn verify -Prun-its
+
+# Maven 3
+mvn verify -Prun-its,maven3
+```
+
+### Smoke profile (quick developer check)
+
+The `run-its-smoke` profile runs a focused subset of ~42 integration tests annotated
+with `@Tag("smoke")`. It covers the most critical cache behaviours plus at least one
+test per Maven project flavour (P01–P19) and per major cache trait (F1–F13).
+Typical runtime is significantly shorter than the full suite.
+
+```shell
+# Maven 4
+mvn verify -Prun-its-smoke
+
+# Maven 3
+mvn verify -Prun-its-smoke,maven3
+```
+
+Tests are selected via the JUnit 5 tag `smoke`. To add a new test to the smoke
+profile, annotate its class with `@Tag("smoke")`.
+
 License
 -------
 This code is under the [Apache License, Version 2.0, January 2004][license].

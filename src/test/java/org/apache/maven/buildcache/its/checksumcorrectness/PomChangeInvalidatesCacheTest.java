@@ -28,6 +28,7 @@ import org.apache.maven.buildcache.its.junit.IntegrationTest;
 import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import static org.apache.maven.buildcache.util.LogFileUtils.findFirstLineContainingTextsInLogs;
@@ -40,6 +41,7 @@ import static org.apache.maven.buildcache.util.LogFileUtils.findFirstLineContain
  * their configurations in the checksum. Adding a plugin parameter that was not present before
  * changes the normalized model and therefore the cache key.
  */
+@Tag("smoke")
 @IntegrationTest("src/test/projects/checksum-correctness")
 class PomChangeInvalidatesCacheTest {
 

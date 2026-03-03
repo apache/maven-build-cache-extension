@@ -18,20 +18,19 @@
  */
 package org.apache.maven.buildcache.its.hashalgorithm;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.stream.Stream;
 
 import org.apache.maven.buildcache.its.CacheITUtils;
+import org.apache.maven.buildcache.its.MavenSetup;
 import org.apache.maven.buildcache.its.ReferenceProjectBootstrap;
+import org.apache.maven.buildcache.its.junit.ForEachReferenceProject;
 import org.apache.maven.it.Verifier;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.DynamicTest;
-import org.junit.jupiter.api.TestFactory;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.parallel.ResourceLock;
+import org.junit.jupiter.api.parallel.Resources;
 
 /**
  * Verifies that the cache extension works correctly with the SHA-256 hash algorithm (TC-071, K-01).
@@ -42,39 +41,17 @@ import org.junit.jupiter.api.TestFactory;
  *
  * <p>Projects P13 (toolchains) and P18 (Maven 4) are excluded.
  */
+@Tag("smoke")
+@ResourceLock(Resources.SYSTEM_PROPERTIES)
 class HashAlgorithmSHA256Test {
 
     @BeforeAll
-    static void setUpMaven() throws IOException {
-        Path basedir;
-        String basedirStr = System.getProperty("maven.basedir");
-        if (basedirStr == null) {
-            if (Files.exists(Paths.get("target/maven3"))) {
-                basedir = Paths.get("target/maven3");
-            } else if (Files.exists(Paths.get("target/maven4"))) {
-                basedir = Paths.get("target/maven4");
-            } else {
-                throw new IllegalStateException("Could not find maven home!");
-            }
-        } else {
-            basedir = Paths.get(basedirStr);
-        }
-        Path mavenHome = Files.list(basedir.toAbsolutePath())
-                .filter(p -> Files.exists(p.resolve("bin/mvn")))
-                .findAny()
-                .orElseThrow(() -> new IllegalStateException("Could not find maven home"));
-        System.setProperty("maven.home", mavenHome.toString());
-        mavenHome.resolve("bin/mvn").toFile().setExecutable(true);
+    static void setUpMaven() throws Exception {
+        MavenSetup.configureMavenHome();
     }
 
-    @TestFactory
-    Stream<DynamicTest> sha256AlgorithmRoundTrip() throws IOException {
-        return eligibleProjects()
-                .map(projectDir -> DynamicTest.dynamicTest(
-                        projectDir.getFileName().toString(), () -> runSha256RoundTrip(projectDir)));
-    }
-
-    static void runSha256RoundTrip(Path projectDir) throws Exception {
+    @ForEachReferenceProject
+    void sha256AlgorithmRoundTrip(Path projectDir) throws Exception {
         Verifier verifier = ReferenceProjectBootstrap.prepareProject(projectDir, "SHA256");
         verifier.setAutoclean(false);
 
@@ -106,11 +83,5 @@ class HashAlgorithmSHA256Test {
         verifier.executeGoal("verify");
         verifier.verifyErrorFreeLog();
         verifier.verifyTextInLog(CacheITUtils.CACHE_HIT);
-    }
-
-    static Stream<Path> eligibleProjects() throws IOException {
-        return ReferenceProjectBootstrap.listProjects()
-                .filter(p -> !Arrays.asList("p13-toolchains-jdk", "p18-maven4-native")
-                        .contains(p.getFileName().toString()));
     }
 }

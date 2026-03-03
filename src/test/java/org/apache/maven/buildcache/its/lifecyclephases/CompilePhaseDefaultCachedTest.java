@@ -21,12 +21,14 @@ package org.apache.maven.buildcache.its.lifecyclephases;
 import org.apache.maven.buildcache.its.junit.IntegrationTest;
 import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 /**
  * Verifies that {@code mvn compile} saves a cache entry and that a second identical invocation
  * restores from that entry rather than re-compiling (test 2.1).
  */
+@Tag("smoke")
 @IntegrationTest("src/test/projects/lifecycle-phases")
 class CompilePhaseDefaultCachedTest {
 

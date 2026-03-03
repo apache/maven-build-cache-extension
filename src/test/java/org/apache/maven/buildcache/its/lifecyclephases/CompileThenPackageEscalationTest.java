@@ -21,6 +21,7 @@ package org.apache.maven.buildcache.its.lifecyclephases;
 import org.apache.maven.buildcache.its.junit.IntegrationTest;
 import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -28,6 +29,7 @@ import org.junit.jupiter.api.Test;
  * running {@code mvn package} partially restores the compile segment from cache and then executes
  * the remaining phases up to {@code package} (test 2.7).
  */
+@Tag("smoke")
 @IntegrationTest("src/test/projects/lifecycle-phases")
 class CompileThenPackageEscalationTest {
 

@@ -18,16 +18,14 @@
  */
 package org.apache.maven.buildcache.its;
 
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.stream.Stream;
 
+import org.apache.maven.buildcache.its.junit.ForEachReferenceProject;
 import org.apache.maven.it.Verifier;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.DynamicTest;
-import org.junit.jupiter.api.TestFactory;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.parallel.ResourceLock;
+import org.junit.jupiter.api.parallel.Resources;
 
 /**
  * Smoke-test that runs every Maven project under
@@ -51,39 +49,17 @@ import org.junit.jupiter.api.TestFactory;
  *   <li>p13 — {@code -Dmaven.toolchains.skip=true} (placeholder JDK paths in toolchains.xml)</li>
  * </ul>
  */
+@Tag("smoke")
+@ResourceLock(Resources.SYSTEM_PROPERTIES)
 class CoreExtensionTest {
 
     @BeforeAll
-    static void setUpMaven() throws IOException {
-        Path basedir;
-        String basedirStr = System.getProperty("maven.basedir");
-        if (basedirStr == null) {
-            if (Files.exists(Paths.get("target/maven3"))) {
-                basedir = Paths.get("target/maven3");
-            } else if (Files.exists(Paths.get("target/maven4"))) {
-                basedir = Paths.get("target/maven4");
-            } else {
-                throw new IllegalStateException("Could not find maven home!");
-            }
-        } else {
-            basedir = Paths.get(basedirStr);
-        }
-        Path mavenHome = Files.list(basedir.toAbsolutePath())
-                .filter(p -> Files.exists(p.resolve("bin/mvn")))
-                .findAny()
-                .orElseThrow(() -> new IllegalStateException("Could not find maven home"));
-        System.setProperty("maven.home", mavenHome.toString());
-        mavenHome.resolve("bin/mvn").toFile().setExecutable(true);
+    static void setUpMaven() throws Exception {
+        MavenSetup.configureMavenHome();
     }
 
-    @TestFactory
-    Stream<DynamicTest> buildTwiceSecondHitsCache() throws IOException {
-        return ReferenceProjectBootstrap.listProjects()
-                .map(projectDir -> DynamicTest.dynamicTest(
-                        projectDir.getFileName().toString(), () -> runCacheRoundTrip(projectDir)));
-    }
-
-    private static void runCacheRoundTrip(Path projectDir) throws Exception {
+    @ForEachReferenceProject
+    void buildTwiceSecondHitsCache(Path projectDir) throws Exception {
         Verifier verifier = ReferenceProjectBootstrap.prepareProject(projectDir);
         verifier.setAutoclean(false);
 

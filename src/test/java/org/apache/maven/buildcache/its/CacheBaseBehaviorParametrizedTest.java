@@ -18,30 +18,27 @@
  */
 package org.apache.maven.buildcache.its;
 
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.stream.Stream;
 
+import org.apache.maven.buildcache.its.junit.ForEachReferenceProject;
 import org.apache.maven.it.Verifier;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.DynamicTest;
-import org.junit.jupiter.api.TestFactory;
+import org.junit.jupiter.api.parallel.ResourceLock;
+import org.junit.jupiter.api.parallel.Resources;
 
 import static org.apache.maven.buildcache.its.CacheITUtils.CACHE_HIT;
 import static org.apache.maven.buildcache.its.CacheITUtils.CACHE_MISS;
 import static org.apache.maven.buildcache.its.CacheITUtils.CACHE_SAVED;
 import static org.apache.maven.buildcache.its.CacheITUtils.appendToFile;
 import static org.apache.maven.buildcache.its.CacheITUtils.findFirstMainSourceFile;
+import static org.apache.maven.buildcache.util.LogFileUtils.findFirstLineContainingTextsInLogs;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * Parametrized base test class that verifies core cache behaviors across all eligible
  * reference projects (P01–P12, P14–P17, P19).
  *
- * <p>Each {@code @TestFactory} method auto-discovers every project under
+ * <p>Each {@code @ForEachReferenceProject} method auto-discovers every project under
  * {@code src/test/projects/reference-test-projects/} (excluding P13 and P18, which
  * have special requirements) and runs the same assertion against all of them. This
  * produces <b>119 test runs</b> (17 projects × 7 scenarios).
@@ -53,30 +50,25 @@ import static org.junit.jupiter.api.Assertions.assertNull;
  * <p>These tests (BASE-01 through BASE-07) prove that the extension is truly
  * project-agnostic — every fundamental cache behavior works with every Maven
  * project flavor.
+ *
+ * <h3>JUnit Platform selection examples</h3>
+ * <pre>
+ * # Run all project-parametrized tests
+ * mvn verify -Prun-its -Dgroups=project-parametrized
+ *
+ * # Run one specific scenario across all projects
+ * mvn verify -Prun-its -Dit.test="CacheBaseBehaviorParametrizedTest#base01FirstBuildSavesSecondHits"
+ *
+ * # Run one scenario for one project
+ * mvn verify -Prun-its -Dit.test="CacheBaseBehaviorParametrizedTest#base01FirstBuildSavesSecondHits[p01-superpom-minimal]"
+ * </pre>
  */
+@ResourceLock(Resources.SYSTEM_PROPERTIES)
 class CacheBaseBehaviorParametrizedTest {
 
     @BeforeAll
-    static void setUpMaven() throws IOException {
-        Path basedir;
-        String basedirStr = System.getProperty("maven.basedir");
-        if (basedirStr == null) {
-            if (Files.exists(Paths.get("target/maven3"))) {
-                basedir = Paths.get("target/maven3");
-            } else if (Files.exists(Paths.get("target/maven4"))) {
-                basedir = Paths.get("target/maven4");
-            } else {
-                throw new IllegalStateException("Could not find maven home!");
-            }
-        } else {
-            basedir = Paths.get(basedirStr);
-        }
-        Path mavenHome = Files.list(basedir.toAbsolutePath())
-                .filter(p -> Files.exists(p.resolve("bin/mvn")))
-                .findAny()
-                .orElseThrow(() -> new IllegalStateException("Could not find maven home"));
-        System.setProperty("maven.home", mavenHome.toString());
-        mavenHome.resolve("bin/mvn").toFile().setExecutable(true);
+    static void setUpMaven() throws Exception {
+        MavenSetup.configureMavenHome();
     }
 
     // -------------------------------------------------------------------------
@@ -89,14 +81,8 @@ class CacheBaseBehaviorParametrizedTest {
      *
      * <p>Features: F1.1/F1.2 (extension loads), F5.1 (artifact restore).
      */
-    @TestFactory
-    Stream<DynamicTest> base01FirstBuildSavesSecondHits() throws IOException {
-        return eligibleProjects()
-                .map(projectDir ->
-                        DynamicTest.dynamicTest(projectDir.getFileName().toString(), () -> runBase01(projectDir)));
-    }
-
-    private static void runBase01(Path projectDir) throws Exception {
+    @ForEachReferenceProject
+    void base01FirstBuildSavesSecondHits(Path projectDir) throws Exception {
         Verifier verifier = ReferenceProjectBootstrap.prepareProject(projectDir, "BASE01");
         verifier.setAutoclean(false);
 
@@ -120,14 +106,8 @@ class CacheBaseBehaviorParametrizedTest {
      *
      * <p>Features: F2.6 (source file change → miss).
      */
-    @TestFactory
-    Stream<DynamicTest> base02SourceModificationCausesMiss() throws IOException {
-        return eligibleProjects()
-                .map(projectDir ->
-                        DynamicTest.dynamicTest(projectDir.getFileName().toString(), () -> runBase02(projectDir)));
-    }
-
-    private static void runBase02(Path projectDir) throws Exception {
+    @ForEachReferenceProject
+    void base02SourceModificationCausesMiss(Path projectDir) throws Exception {
         Verifier verifier = ReferenceProjectBootstrap.prepareProject(projectDir, "BASE02");
         verifier.setAutoclean(false);
 
@@ -142,8 +122,6 @@ class CacheBaseBehaviorParametrizedTest {
         appendToFile(srcFile, "\n// cache-invalidation marker\n");
 
         // Build 2: source changed → cache miss for the modified module
-        // Note: for multi-module projects, unmodified sibling modules may still hit the cache;
-        // we only assert that at least one miss occurred for the module whose source changed.
         verifier.setLogFileName("../log-2.txt");
         verifier.executeGoal("verify");
         verifier.verifyErrorFreeLog();
@@ -163,14 +141,8 @@ class CacheBaseBehaviorParametrizedTest {
      *
      * <p>Features: F2.6 / F2.9 (tracked input change → miss).
      */
-    @TestFactory
-    Stream<DynamicTest> base03InputChangeCausesMiss() throws IOException {
-        return eligibleProjects()
-                .map(projectDir ->
-                        DynamicTest.dynamicTest(projectDir.getFileName().toString(), () -> runBase03(projectDir)));
-    }
-
-    private static void runBase03(Path projectDir) throws Exception {
+    @ForEachReferenceProject
+    void base03InputChangeCausesMiss(Path projectDir) throws Exception {
         Verifier verifier = ReferenceProjectBootstrap.prepareProject(projectDir, "BASE03");
         verifier.setAutoclean(false);
 
@@ -181,8 +153,6 @@ class CacheBaseBehaviorParametrizedTest {
         verifier.verifyTextInLog(CACHE_SAVED);
 
         // Modify a source file — this changes the input file hash and invalidates the cache key.
-        // (Adding a POM <properties> entry does NOT cause a miss because properties are excluded
-        // from the normalized effective POM model.)
         appendToFile(findFirstMainSourceFile(verifier.getBasedir()), "\n// BASE-03 cache-invalidation marker\n");
 
         // Build 2: input changed → cache miss
@@ -202,14 +172,8 @@ class CacheBaseBehaviorParametrizedTest {
      *
      * <p>Features: F1.3, F11.3.
      */
-    @TestFactory
-    Stream<DynamicTest> base04EnabledFalseBypassesCache() throws IOException {
-        return eligibleProjects()
-                .map(projectDir ->
-                        DynamicTest.dynamicTest(projectDir.getFileName().toString(), () -> runBase04(projectDir)));
-    }
-
-    private static void runBase04(Path projectDir) throws Exception {
+    @ForEachReferenceProject
+    void base04EnabledFalseBypassesCache(Path projectDir) throws Exception {
         Verifier verifier = ReferenceProjectBootstrap.prepareProject(projectDir, "BASE04");
         verifier.setAutoclean(false);
 
@@ -225,8 +189,7 @@ class CacheBaseBehaviorParametrizedTest {
         verifier.executeGoal("verify");
         verifier.verifyErrorFreeLog();
         assertNull(
-                org.apache.maven.buildcache.util.LogFileUtils.findFirstLineContainingTextsInLogs(verifier, CACHE_HIT),
-                "Cache must be bypassed when enabled=false");
+                findFirstLineContainingTextsInLogs(verifier, CACHE_HIT), "Cache must be bypassed when enabled=false");
     }
 
     // -------------------------------------------------------------------------
@@ -239,14 +202,8 @@ class CacheBaseBehaviorParametrizedTest {
      *
      * <p>Features: F10.1, F8.7.
      */
-    @TestFactory
-    Stream<DynamicTest> base05SkipCacheRebuildsAndWrites() throws IOException {
-        return eligibleProjects()
-                .map(projectDir ->
-                        DynamicTest.dynamicTest(projectDir.getFileName().toString(), () -> runBase05(projectDir)));
-    }
-
-    private static void runBase05(Path projectDir) throws Exception {
+    @ForEachReferenceProject
+    void base05SkipCacheRebuildsAndWrites(Path projectDir) throws Exception {
         Verifier verifier = ReferenceProjectBootstrap.prepareProject(projectDir, "BASE05");
         verifier.setAutoclean(false);
 
@@ -262,9 +219,7 @@ class CacheBaseBehaviorParametrizedTest {
         verifier.executeGoal("verify");
         verifier.verifyErrorFreeLog();
         // skipCache means we don't restore from cache
-        assertNull(
-                org.apache.maven.buildcache.util.LogFileUtils.findFirstLineContainingTextsInLogs(verifier, CACHE_HIT),
-                "skipCache must prevent cache restore");
+        assertNull(findFirstLineContainingTextsInLogs(verifier, CACHE_HIT), "skipCache must prevent cache restore");
         // but still saves result
         verifier.verifyTextInLog(CACHE_SAVED);
     }
@@ -279,14 +234,8 @@ class CacheBaseBehaviorParametrizedTest {
      *
      * <p>Features: F10.2.
      */
-    @TestFactory
-    Stream<DynamicTest> base06SkipSaveHitsButDoesNotWrite() throws IOException {
-        return eligibleProjects()
-                .map(projectDir ->
-                        DynamicTest.dynamicTest(projectDir.getFileName().toString(), () -> runBase06(projectDir)));
-    }
-
-    private static void runBase06(Path projectDir) throws Exception {
+    @ForEachReferenceProject
+    void base06SkipSaveHitsButDoesNotWrite(Path projectDir) throws Exception {
         Verifier verifier = ReferenceProjectBootstrap.prepareProject(projectDir, "BASE06");
         verifier.setAutoclean(false);
 
@@ -303,8 +252,7 @@ class CacheBaseBehaviorParametrizedTest {
         verifier.verifyErrorFreeLog();
         verifier.verifyTextInLog(CACHE_HIT);
         assertNull(
-                org.apache.maven.buildcache.util.LogFileUtils.findFirstLineContainingTextsInLogs(verifier, CACHE_SAVED),
-                "skipSave must not write a new cache entry");
+                findFirstLineContainingTextsInLogs(verifier, CACHE_SAVED), "skipSave must not write a new cache entry");
     }
 
     // -------------------------------------------------------------------------
@@ -317,14 +265,8 @@ class CacheBaseBehaviorParametrizedTest {
      *
      * <p>Features: F9.5 (phase escalation).
      */
-    @TestFactory
-    Stream<DynamicTest> base07CompileToPackageEscalation() throws IOException {
-        return eligibleProjects()
-                .map(projectDir ->
-                        DynamicTest.dynamicTest(projectDir.getFileName().toString(), () -> runBase07(projectDir)));
-    }
-
-    private static void runBase07(Path projectDir) throws Exception {
+    @ForEachReferenceProject
+    void base07CompileToPackageEscalation(Path projectDir) throws Exception {
         Verifier verifier = ReferenceProjectBootstrap.prepareProject(projectDir, "BASE07");
         verifier.setAutoclean(false);
 
@@ -340,25 +282,5 @@ class CacheBaseBehaviorParametrizedTest {
         verifier.verifyErrorFreeLog();
         // After escalation, result is saved at the new (higher) phase
         verifier.verifyTextInLog(CACHE_SAVED);
-    }
-
-    // -------------------------------------------------------------------------
-    // Helpers
-    // -------------------------------------------------------------------------
-
-    /**
-     * Returns all eligible reference projects: all projects under
-     * {@code src/test/projects/reference-test-projects/} excluding P13 (toolchains) and
-     * P18 (Maven 4 only).
-     */
-    static Stream<Path> eligibleProjects() throws IOException {
-        return ReferenceProjectBootstrap.listProjects().filter(CacheBaseBehaviorParametrizedTest::isEligible);
-    }
-
-    private static boolean isEligible(Path projectDir) {
-        String name = projectDir.getFileName().toString();
-        // P13 requires JDK installations in toolchains.xml → conditional
-        // P18 requires Maven 4 → run only in Maven 4 CI job
-        return !Arrays.asList("p13-toolchains-jdk", "p18-maven4-native").contains(name);
     }
 }

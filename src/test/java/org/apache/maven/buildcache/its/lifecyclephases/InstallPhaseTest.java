@@ -21,12 +21,14 @@ package org.apache.maven.buildcache.its.lifecyclephases;
 import org.apache.maven.buildcache.its.junit.IntegrationTest;
 import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 /**
  * Verifies that {@code mvn install} saves a cache entry (including the installed artifact) and
  * that a second identical invocation is fully restored from cache (test 2.6).
  */
+@Tag("smoke")
 @IntegrationTest("src/test/projects/lifecycle-phases")
 class InstallPhaseTest {
 

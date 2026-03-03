@@ -63,13 +63,79 @@ public class ReferenceProjectBootstrap {
     private static final String TEST_WORK_DIR = "target/mvn-cache-tests/ReferenceProjectTest";
 
     /**
-     * Returns a sorted stream of every top-level directory inside
+     * Projects excluded from the standard parametrized suite regardless of Maven version.
+     *
+     * <ul>
+     *   <li><b>p13-toolchains-jdk</b> — requires specific JDK installations registered in
+     *       {@code toolchains.xml}; these paths are not available in a standard CI environment.</li>
+     * </ul>
+     *
+     * <p>Tests that need additional per-test exclusions beyond this baseline can still use the
+     * {@code exclude} attribute of {@link org.apache.maven.buildcache.its.junit.ForEachReferenceProject}.
+     */
+    private static final String ALWAYS_EXCLUDED = "p13-toolchains-jdk";
+
+    /**
+     * Project excluded only when running against Maven 3.
+     *
+     * <ul>
+     *   <li><b>p18-maven4-native</b> — uses Maven 4 semantics (e.g., {@code <subprojects>});
+     *       it is included when the harness runs Maven 4 and skipped when it runs Maven 3.</li>
+     * </ul>
+     */
+    private static final String MAVEN4_ONLY_PROJECT = "p18-maven4-native";
+
+    /**
+     * Returns a sorted stream of every eligible top-level directory inside
      * {@code src/test/projects/reference-test-projects}.
+     *
+     * <p>{@code p13-toolchains-jdk} is always excluded (requires locally-installed JDK toolchains).
+     * {@code p18-maven4-native} is excluded only when the test harness is running Maven 3.
      * New projects added to that directory are picked up automatically.
      */
     public static Stream<Path> listProjects() throws IOException {
         Path base = Paths.get(REFERENCE_PROJECTS_DIR).toAbsolutePath();
-        return Files.list(base).filter(Files::isDirectory).limit(1).sorted();
+        boolean maven4 = isMaven4();
+        return Files.list(base)
+                .filter(Files::isDirectory)
+                .filter(p -> {
+                    String name = p.getFileName().toString();
+                    if (ALWAYS_EXCLUDED.equals(name)) {
+                        return false;
+                    }
+                    return !MAVEN4_ONLY_PROJECT.equals(name) || maven4;
+                })
+                .sorted();
+    }
+
+    /**
+     * Returns {@code true} when the Maven installation targeted by the integration-test harness
+     * is Maven 4.
+     *
+     * <p>Detection order:
+     * <ol>
+     *   <li>If {@code maven.home} is already set (i.e. {@link MavenSetup#configureMavenHome()}
+     *       has run), inspect the parent directory name — {@code maven4} → Maven 4.</li>
+     *   <li>Otherwise mirror {@link MavenSetup}'s resolution logic: {@code target/maven3}
+     *       present → Maven 3; {@code target/maven4} present → Maven 4.</li>
+     * </ol>
+     */
+    static boolean isMaven4() {
+        String mavenHome = System.getProperty("maven.home");
+        if (mavenHome != null) {
+            Path parent = Paths.get(mavenHome).getParent();
+            if (parent != null && parent.getFileName() != null) {
+                return parent.getFileName().toString().startsWith("maven4");
+            }
+        }
+        // Fallback: same precedence as MavenSetup.configureMavenHome()
+        if (Files.isDirectory(Paths.get("target/maven3").toAbsolutePath())) {
+            return false;
+        }
+        if (Files.isDirectory(Paths.get("target/maven4").toAbsolutePath())) {
+            return true;
+        }
+        return false;
     }
 
     /**

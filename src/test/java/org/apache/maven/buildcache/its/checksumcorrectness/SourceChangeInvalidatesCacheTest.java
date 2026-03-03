@@ -28,6 +28,7 @@ import org.apache.maven.buildcache.its.junit.IntegrationTest;
 import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import static org.apache.maven.buildcache.util.LogFileUtils.findFirstLineContainingTextsInLogs;
@@ -35,6 +36,7 @@ import static org.apache.maven.buildcache.util.LogFileUtils.findFirstLineContain
 /**
  * Verifies that modifying a Java source file between builds produces a cache miss (test 6.1).
  */
+@Tag("smoke")
 @IntegrationTest("src/test/projects/checksum-correctness")
 class SourceChangeInvalidatesCacheTest {
 

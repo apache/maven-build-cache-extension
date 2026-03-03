@@ -18,16 +18,18 @@
  */
 package org.apache.maven.buildcache.its.pluginexecution;
 
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import org.apache.maven.buildcache.its.CacheITUtils;
+import org.apache.maven.buildcache.its.MavenSetup;
 import org.apache.maven.buildcache.its.ReferenceProjectBootstrap;
 import org.apache.maven.it.Verifier;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.ResourceLock;
+import org.junit.jupiter.api.parallel.Resources;
 
 /**
  * Verifies that a specific goal listed in {@code <runAlways><goalsLists>} executes even when the
@@ -37,29 +39,13 @@ import org.junit.jupiter.api.Test;
  * {@code maven-install-plugin} to the {@code <runAlways><goalsLists>} list. Build 1 saves to
  * cache. Build 2 restores from cache but must still execute the {@code install:install} goal.
  */
+@Tag("smoke")
+@ResourceLock(Resources.SYSTEM_PROPERTIES)
 class RunAlwaysByGoalTest {
 
     @BeforeAll
-    static void setUpMaven() throws IOException {
-        Path basedir;
-        String basedirStr = System.getProperty("maven.basedir");
-        if (basedirStr == null) {
-            if (Files.exists(Paths.get("target/maven3"))) {
-                basedir = Paths.get("target/maven3");
-            } else if (Files.exists(Paths.get("target/maven4"))) {
-                basedir = Paths.get("target/maven4");
-            } else {
-                throw new IllegalStateException("Could not find maven home!");
-            }
-        } else {
-            basedir = Paths.get(basedirStr);
-        }
-        Path mavenHome = Files.list(basedir.toAbsolutePath())
-                .filter(p -> Files.exists(p.resolve("bin/mvn")))
-                .findAny()
-                .orElseThrow(() -> new IllegalStateException("Could not find maven home"));
-        System.setProperty("maven.home", mavenHome.toString());
-        mavenHome.resolve("bin/mvn").toFile().setExecutable(true);
+    static void setUpMaven() throws Exception {
+        MavenSetup.configureMavenHome();
     }
 
     @Test

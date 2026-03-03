@@ -18,18 +18,20 @@
  */
 package org.apache.maven.buildcache.its.remote;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import org.apache.maven.buildcache.its.CacheITUtils;
+import org.apache.maven.buildcache.its.MavenSetup;
 import org.apache.maven.buildcache.its.ReferenceProjectBootstrap;
 import org.apache.maven.it.Verifier;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.ResourceLock;
+import org.junit.jupiter.api.parallel.Resources;
 
 /**
  * Verifies that when a remote cache server is unreachable, the build still uses the local cache
@@ -43,29 +45,12 @@ import org.junit.jupiter.api.Test;
  */
 @Disabled("Requires a WebDAV server or Docker environment for remote cache testing (TC-066, J-02)."
         + " Run manually with a configured remote cache server.")
+@ResourceLock(Resources.SYSTEM_PROPERTIES)
 class RemoteUnavailableFallbackTest {
 
     @BeforeAll
-    static void setUpMaven() throws IOException {
-        Path basedir;
-        String basedirStr = System.getProperty("maven.basedir");
-        if (basedirStr == null) {
-            if (Files.exists(Paths.get("target/maven3"))) {
-                basedir = Paths.get("target/maven3");
-            } else if (Files.exists(Paths.get("target/maven4"))) {
-                basedir = Paths.get("target/maven4");
-            } else {
-                throw new IllegalStateException("Could not find maven home!");
-            }
-        } else {
-            basedir = Paths.get(basedirStr);
-        }
-        Path mavenHome = Files.list(basedir.toAbsolutePath())
-                .filter(p -> Files.exists(p.resolve("bin/mvn")))
-                .findAny()
-                .orElseThrow(() -> new IllegalStateException("Could not find maven home"));
-        System.setProperty("maven.home", mavenHome.toString());
-        mavenHome.resolve("bin/mvn").toFile().setExecutable(true);
+    static void setUpMaven() throws Exception {
+        MavenSetup.configureMavenHome();
     }
 
     @Test

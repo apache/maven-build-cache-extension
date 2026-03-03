@@ -18,7 +18,6 @@
  */
 package org.apache.maven.buildcache.its.output;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -27,6 +26,7 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.util.Set;
 
 import org.apache.maven.buildcache.its.CacheITUtils;
+import org.apache.maven.buildcache.its.MavenSetup;
 import org.apache.maven.buildcache.its.ReferenceProjectBootstrap;
 import org.apache.maven.it.Verifier;
 import org.junit.jupiter.api.Assertions;
@@ -34,6 +34,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
+import org.junit.jupiter.api.parallel.ResourceLock;
+import org.junit.jupiter.api.parallel.Resources;
 
 /**
  * Verifies that file permissions (POSIX execute bits) are preserved when artifacts are restored
@@ -47,29 +49,12 @@ import org.junit.jupiter.api.condition.OS;
  * as would be expected (read/write for owner, read for group/other).
  */
 @EnabledOnOs(OS.LINUX)
+@ResourceLock(Resources.SYSTEM_PROPERTIES)
 class PermissionsPreservationTest {
 
     @BeforeAll
-    static void setUpMaven() throws IOException {
-        Path basedir;
-        String basedirStr = System.getProperty("maven.basedir");
-        if (basedirStr == null) {
-            if (Files.exists(Paths.get("target/maven3"))) {
-                basedir = Paths.get("target/maven3");
-            } else if (Files.exists(Paths.get("target/maven4"))) {
-                basedir = Paths.get("target/maven4");
-            } else {
-                throw new IllegalStateException("Could not find maven home!");
-            }
-        } else {
-            basedir = Paths.get(basedirStr);
-        }
-        Path mavenHome = Files.list(basedir.toAbsolutePath())
-                .filter(p -> Files.exists(p.resolve("bin/mvn")))
-                .findAny()
-                .orElseThrow(() -> new IllegalStateException("Could not find maven home"));
-        System.setProperty("maven.home", mavenHome.toString());
-        mavenHome.resolve("bin/mvn").toFile().setExecutable(true);
+    static void setUpMaven() throws Exception {
+        MavenSetup.configureMavenHome();
     }
 
     @Test

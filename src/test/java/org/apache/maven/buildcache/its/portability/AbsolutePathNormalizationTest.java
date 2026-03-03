@@ -18,19 +18,18 @@
  */
 package org.apache.maven.buildcache.its.portability;
 
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.stream.Stream;
 
 import org.apache.maven.buildcache.its.CacheITUtils;
+import org.apache.maven.buildcache.its.MavenSetup;
 import org.apache.maven.buildcache.its.ReferenceProjectBootstrap;
+import org.apache.maven.buildcache.its.junit.ForEachReferenceProject;
 import org.apache.maven.it.Verifier;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.DynamicTest;
-import org.junit.jupiter.api.TestFactory;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.parallel.ResourceLock;
+import org.junit.jupiter.api.parallel.Resources;
 
 /**
  * Verifies that absolute project paths are normalised in the cache key, so that a build in
@@ -45,39 +44,17 @@ import org.junit.jupiter.api.TestFactory;
  *
  * <p>Projects P13 (toolchains) and P18 (Maven 4) are excluded.
  */
+@Tag("smoke")
+@ResourceLock(Resources.SYSTEM_PROPERTIES)
 class AbsolutePathNormalizationTest {
 
     @BeforeAll
-    static void setUpMaven() throws IOException {
-        Path basedir;
-        String basedirStr = System.getProperty("maven.basedir");
-        if (basedirStr == null) {
-            if (Files.exists(Paths.get("target/maven3"))) {
-                basedir = Paths.get("target/maven3");
-            } else if (Files.exists(Paths.get("target/maven4"))) {
-                basedir = Paths.get("target/maven4");
-            } else {
-                throw new IllegalStateException("Could not find maven home!");
-            }
-        } else {
-            basedir = Paths.get(basedirStr);
-        }
-        Path mavenHome = Files.list(basedir.toAbsolutePath())
-                .filter(p -> Files.exists(p.resolve("bin/mvn")))
-                .findAny()
-                .orElseThrow(() -> new IllegalStateException("Could not find maven home"));
-        System.setProperty("maven.home", mavenHome.toString());
-        mavenHome.resolve("bin/mvn").toFile().setExecutable(true);
+    static void setUpMaven() throws Exception {
+        MavenSetup.configureMavenHome();
     }
 
-    @TestFactory
-    Stream<DynamicTest> absolutePathNormalizationRoundTrip() throws IOException {
-        return eligibleProjects()
-                .map(projectDir -> DynamicTest.dynamicTest(
-                        projectDir.getFileName().toString(), () -> runPortabilityTest(projectDir)));
-    }
-
-    static void runPortabilityTest(Path projectDir) throws Exception {
+    @ForEachReferenceProject
+    void absolutePathNormalizationRoundTrip(Path projectDir) throws Exception {
         // Build A: first location — produces the cache entry
         Verifier verifierA = ReferenceProjectBootstrap.prepareProject(projectDir, "PORTABILITY-A");
         verifierA.setAutoclean(false);
@@ -102,11 +79,5 @@ class AbsolutePathNormalizationTest {
         verifierB.verifyErrorFreeLog();
         // If absolute paths are normalised in the cache key, Build B must hit the cache
         verifierB.verifyTextInLog(CacheITUtils.CACHE_HIT);
-    }
-
-    static Stream<Path> eligibleProjects() throws IOException {
-        return ReferenceProjectBootstrap.listProjects()
-                .filter(p -> !Arrays.asList("p13-toolchains-jdk", "p18-maven4-native")
-                        .contains(p.getFileName().toString()));
     }
 }
