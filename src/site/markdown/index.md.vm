@@ -18,7 +18,7 @@
 Getting Started
 ---------------
 
-**The build-cache extension will be activated only when using Apache Maven from 3.9.x.**
+**The build-cache extension requires Apache Maven 3.9.0 or later (including Maven 4).**
 
 To onboard the build-cache extension you need to complete several steps:
 
@@ -87,10 +87,12 @@ See [Remote cache setup](remote-cache.html) for a detailed description of the re
 
 ## See also
 
-* [Usage](usage.html) - shared cache setup procedure
+* [Usage](usage.html) - usage and activation details
 * [Remote cache setup](remote-cache.html) - shared cache setup procedure
 * [How-To](how-to.html) - cookbook for typical scenarios
 * [Performance](performance.html) - performance tuning
 * [Cache Parameters](parameters.html) - description of supported parameters
 * [Sample config file](maven-build-cache-config.xml)
-* [Concepts](concepts.html) - getting starting with cache and usage manual
+* [Concepts](concepts.html) - getting started with cache concepts
+
+> **Maven 4 note:** The extension is compatible with Maven 4.x. No additional configuration is required.

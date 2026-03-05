@@ -20,6 +20,7 @@ package org.apache.maven.buildcache;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -33,6 +34,7 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -42,8 +44,8 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
-import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
+import org.apache.commons.compress.archivers.zip.ZipFile;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
 import org.apache.commons.lang3.mutable.MutableBoolean;
@@ -73,7 +75,7 @@ public class CacheUtils {
     }
 
     public static boolean isSnapshot(String version) {
-        return version.endsWith(SNAPSHOT_VERSION) || version.endsWith(LATEST_VERSION);
+        return version != null && (version.endsWith(SNAPSHOT_VERSION) || version.endsWith(LATEST_VERSION));
     }
 
     public static String normalizedName(Artifact artifact) {
@@ -170,7 +172,8 @@ public class CacheUtils {
      * @return true if at least one file has been included in the zip.
      * @throws IOException
      */
-    public static boolean zip(final Path dir, final Path zip, final String glob, boolean preservePermissions, boolean preserveTimestamps)
+    public static boolean zip(
+            final Path dir, final Path zip, final String glob, boolean preservePermissions, boolean preserveTimestamps)
             throws IOException {
         final MutableBoolean hasFiles = new MutableBoolean();
         // Check once if filesystem supports POSIX permissions instead of catching exceptions for every file
@@ -218,7 +221,8 @@ public class CacheUtils {
 
                         // Preserve timestamp if requested
                         if (preserveTimestamps) {
-                            zipEntry.setTime(basicFileAttributes.lastModifiedTime().toMillis());
+                            zipEntry.setTime(
+                                    basicFileAttributes.lastModifiedTime().toMillis());
                         }
 
                         // Preserve Unix permissions if requested and filesystem supports it
@@ -264,15 +268,17 @@ public class CacheUtils {
         return hasFiles.booleanValue();
     }
 
-    public static void unzip(Path zip, Path out, boolean preservePermissions, boolean preserveTimestamps) throws IOException {
+    public static void unzip(Path zip, Path out, boolean preservePermissions, boolean preserveTimestamps)
+            throws IOException {
         // Check once if filesystem supports POSIX permissions instead of catching exceptions for every file
         final boolean supportsPosix = preservePermissions
                 && out.getFileSystem().supportedFileAttributeViews().contains("posix");
 
         Map<Path, Long> directoryTimestamps = preserveTimestamps ? new HashMap<>() : Collections.emptyMap();
-        try (ZipArchiveInputStream zis = new ZipArchiveInputStream(Files.newInputStream(zip))) {
-            ZipArchiveEntry entry = zis.getNextEntry();
-            while (entry != null) {
+        try (ZipFile zipFile = ZipFile.builder().setFile(zip.toFile()).get()) {
+            Enumeration<ZipArchiveEntry> entries = zipFile.getEntries();
+            while (entries.hasMoreElements()) {
+                ZipArchiveEntry entry = entries.nextElement();
                 Path file = out.resolve(entry.getName());
                 if (!file.normalize().startsWith(out.normalize())) {
                     throw new RuntimeException("Bad zip entry");
@@ -287,7 +293,9 @@ public class CacheUtils {
                     if (parent != null) {
                         Files.createDirectories(parent);
                     }
-                    Files.copy(zis, file, StandardCopyOption.REPLACE_EXISTING);
+                    try (InputStream is = zipFile.getInputStream(entry)) {
+                        Files.copy(is, file, StandardCopyOption.REPLACE_EXISTING);
+                    }
 
                     if (preserveTimestamps) {
                         // Set file timestamp with error handling
@@ -308,7 +316,6 @@ public class CacheUtils {
                         }
                     }
                 }
-                entry = zis.getNextEntry();
             }
         }
 

@@ -61,11 +61,9 @@ public class ModuleInfoCachingTest {
         CacheUtils.unzip(zipFile, extractDir, true);
 
         Path extractedModuleInfo = extractDir.resolve("module-info.class");
-        assertTrue(Files.exists(extractedModuleInfo),
-            "module-info.class should be present after extraction");
+        assertTrue(Files.exists(extractedModuleInfo), "module-info.class should be present after extraction");
 
         Path extractedRegularClass = extractDir.resolve("com/example/MyClass.class");
-        assertTrue(Files.exists(extractedRegularClass),
-            "Regular .class file should be present after extraction");
+        assertTrue(Files.exists(extractedRegularClass), "Regular .class file should be present after extraction");
     }
 }

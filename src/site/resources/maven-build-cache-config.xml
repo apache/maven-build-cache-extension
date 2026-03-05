@@ -24,6 +24,8 @@
 
     <configuration>
         <enabled>true</enabled>
+        <!-- The default algorithm is XX (fastest, non-cryptographic). SHA-256 is used here for stronger
+             integrity guarantees suitable for a production template. See performance.html for all options. -->
         <hashAlgorithm>SHA-256</hashAlgorithm>
         <validateXml>true</validateXml>
         <remote enabled="true">

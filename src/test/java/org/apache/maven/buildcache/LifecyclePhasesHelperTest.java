@@ -30,7 +30,6 @@ import org.apache.maven.lifecycle.Lifecycle;
 import org.apache.maven.lifecycle.internal.stub.LifecyclesTestUtils;
 import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.project.MavenProject;
-import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -158,17 +157,13 @@ class LifecyclePhasesHelperTest {
         assertFalse(lifecyclePhasesHelper.isLaterPhase("test", "site"));
         assertFalse(lifecyclePhasesHelper.isLaterPhase("clean", "site"));
 
-        assertThrows(IllegalArgumentException.class, () -> {
-            lifecyclePhasesHelper.isLaterPhase("install", null);
-        });
+        assertThrows(IllegalArgumentException.class, () -> lifecyclePhasesHelper.isLaterPhase("install", null));
 
-        assertThrows(IllegalArgumentException.class, () -> {
-            lifecyclePhasesHelper.isLaterPhase("install", "unknown phase");
-        });
+        assertThrows(
+                IllegalArgumentException.class, () -> lifecyclePhasesHelper.isLaterPhase("install", "unknown phase"));
 
-        assertThrows(IllegalArgumentException.class, () -> {
-            lifecyclePhasesHelper.isLaterPhase("unknown phase", "install");
-        });
+        assertThrows(
+                IllegalArgumentException.class, () -> lifecyclePhasesHelper.isLaterPhase("unknown phase", "install"));
     }
 
     @Test
@@ -366,7 +361,6 @@ class LifecyclePhasesHelperTest {
         lifecyclePhasesHelper.forkedProjectStarted(eventMock);
     }
 
-    @NotNull
     private static MojoExecution mockedMojoExecution(String phase) {
         MojoExecution mojoExecution = mock(MojoExecution.class);
         when(mojoExecution.getLifecyclePhase()).thenReturn(phase);

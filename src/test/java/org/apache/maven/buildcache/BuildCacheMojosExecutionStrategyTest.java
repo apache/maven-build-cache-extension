@@ -34,7 +34,6 @@ import org.apache.maven.execution.scope.internal.MojoExecutionScope;
 import org.apache.maven.plugin.MavenPluginManager;
 import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.project.MavenProject;
-import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -191,7 +190,6 @@ class BuildCacheMojosExecutionStrategyTest {
             assertFalse(strategy.isParamsMatched(projectMock, executionMock, testMojo, cacheRecordMock));
         }
 
-        @NotNull
         private Pair<TrackedProperty, PropertyValue> setupProperty(String propertyName, String value) {
             TrackedProperty config = new TrackedProperty();
             config.setPropertyName(propertyName);

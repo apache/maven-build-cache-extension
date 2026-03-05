@@ -25,6 +25,7 @@ import javax.inject.Named;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URI;
 import java.nio.file.Files;
@@ -33,8 +34,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.http.HttpStatus;
-import org.apache.http.client.HttpResponseException;
 import org.apache.maven.SessionScoped;
 import org.apache.maven.buildcache.checksum.MavenProjectInput;
 import org.apache.maven.buildcache.xml.Build;
@@ -161,9 +160,7 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
         } catch (Exception e) {
             // this can be wagon used so the exception may be different
             // we want wagon users not flooded with logs when not found
-            if ((e instanceof HttpResponseException
-                            || e.getClass().getName().equals(HttpResponseException.class.getName()))
-                    && getStatusCode(e) == HttpStatus.SC_NOT_FOUND) {
+            if (isHttpResponseException(e) && getStatusCode(e) == 404) {
                 logNotFound(fullUrl, e);
                 return Optional.empty();
             }
@@ -177,7 +174,20 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
         }
     }
 
-    private int getStatusCode(Exception ex) {
+    private boolean isHttpResponseException(Exception ex) {
+        Class<?> currentClass = ex.getClass();
+
+        while (currentClass != null) {
+            if ("org.apache.http.client.HttpResponseException".equals(currentClass.getName())) {
+                return true;
+            }
+            currentClass = currentClass.getSuperclass();
+        }
+
+        return false;
+    }
+
+    private int getStatusCode(Exception exception) {
         // just to avoid this when using wagon provide
         // java.lang.ClassCastException: class org.apache.http.client.HttpResponseException cannot be cast to class
         // org.apache.http.client.HttpResponseException
@@ -185,10 +195,10 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
         // org.codehaus.plexus.classworlds.realm.ClassRealm @23cd4ff2;
         //
         try {
-            Method method = ex.getClass().getMethod("getStatusCode");
-            return (int) method.invoke(ex);
-        } catch (Throwable t) {
-            LOGGER.debug(t.getMessage(), t);
+            Method method = exception.getClass().getMethod("getStatusCode");
+            return (int) method.invoke(exception);
+        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException | RuntimeException ex) {
+            LOGGER.debug(ex.getMessage(), ex);
             return 0;
         }
     }

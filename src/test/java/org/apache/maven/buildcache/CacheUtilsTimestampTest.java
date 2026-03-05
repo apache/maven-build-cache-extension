@@ -18,9 +18,6 @@
  */
 package org.apache.maven.buildcache;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
@@ -38,7 +35,9 @@ import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -270,11 +269,11 @@ class CacheUtilsTimestampTest {
         if (restoredTimestamp > jarTimestamp) {
             long diffSeconds = (restoredTimestamp - jarTimestamp) / 1000;
             fail(String.format(
-                    "[WARNING] File 'target/classes/com/example/Service.class' is more recent%n" +
-                    "          than the packaged artifact 'my-module-1.0.jar'%n" +
-                    "          (difference: %d seconds)%n" +
-                    "          Please run a full 'mvn clean package' build%n%n" +
-                    "This indicates timestamps are not being preserved correctly during cache restoration.",
+                    "[WARNING] File 'target/classes/com/example/Service.class' is more recent%n"
+                            + "          than the packaged artifact 'my-module-1.0.jar'%n"
+                            + "          (difference: %d seconds)%n"
+                            + "          Please run a full 'mvn clean package' build%n%n"
+                            + "This indicates timestamps are not being preserved correctly during cache restoration.",
                     diffSeconds));
         }
 
@@ -299,8 +298,7 @@ class CacheUtilsTimestampTest {
                 packageDir.resolve("Service.class"),
                 packageDir.resolve("Repository.class"),
                 packageDir.resolve("Controller.class"),
-                packageDir.resolve("Model.class")
-        );
+                packageDir.resolve("Model.class"));
 
         for (Path file : files) {
             writeString(file, "// " + file.getFileName() + " content");
@@ -365,17 +363,22 @@ class CacheUtilsTimestampTest {
         long diffFromCurrent = Math.abs(extractedTimestamp - currentTime);
 
         // The extracted file should be much closer to current time than to the old timestamp
-        assertTrue(diffFromCurrent < diffFromOriginal,
-                String.format("When preserveTimestamps=false, extracted file timestamp should be close to current time.%n" +
-                        "Original timestamp (1 hour ago): %s (%d)%n" +
-                        "Extracted timestamp: %s (%d)%n" +
-                        "Current time: %s (%d)%n" +
-                        "Diff from original: %d seconds%n" +
-                        "Diff from current: %d seconds%n" +
-                        "Expected: diff from current < diff from original",
-                        Instant.ofEpochMilli(originalTimestamp), originalTimestamp,
-                        Instant.ofEpochMilli(extractedTimestamp), extractedTimestamp,
-                        Instant.ofEpochMilli(currentTime), currentTime,
+        assertTrue(
+                diffFromCurrent < diffFromOriginal,
+                String.format(
+                        "When preserveTimestamps=false, extracted file timestamp should be close to current time.%n"
+                                + "Original timestamp (1 hour ago): %s (%d)%n"
+                                + "Extracted timestamp: %s (%d)%n"
+                                + "Current time: %s (%d)%n"
+                                + "Diff from original: %d seconds%n"
+                                + "Diff from current: %d seconds%n"
+                                + "Expected: diff from current < diff from original",
+                        Instant.ofEpochMilli(originalTimestamp),
+                        originalTimestamp,
+                        Instant.ofEpochMilli(extractedTimestamp),
+                        extractedTimestamp,
+                        Instant.ofEpochMilli(currentTime),
+                        currentTime,
                         diffFromOriginal / 1000,
                         diffFromCurrent / 1000));
     }
@@ -390,15 +393,14 @@ class CacheUtilsTimestampTest {
 
         if (diffMs > TIMESTAMP_TOLERANCE_MS) {
             String errorMessage = String.format(
-                    "%s%n" +
-                    "File: %s%n" +
-                    "Expected timestamp: %s (%d)%n" +
-                    "Actual timestamp:   %s (%d)%n" +
-                    "Difference:         %d seconds (%.2f hours)%n" +
-                    "%n" +
-                    "Timestamps must be preserved within %d ms tolerance.%n" +
-                    "This failure indicates CacheUtils.zip() or CacheUtils.unzip() is not%n" +
-                    "correctly preserving file/directory timestamps.",
+                    "%s%n" + "File: %s%n"
+                            + "Expected timestamp: %s (%d)%n"
+                            + "Actual timestamp:   %s (%d)%n"
+                            + "Difference:         %d seconds (%.2f hours)%n"
+                            + "%n"
+                            + "Timestamps must be preserved within %d ms tolerance.%n"
+                            + "This failure indicates CacheUtils.zip() or CacheUtils.unzip() is not%n"
+                            + "correctly preserving file/directory timestamps.",
                     message,
                     fileName,
                     Instant.ofEpochMilli(expectedMs),
