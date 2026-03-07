@@ -309,16 +309,17 @@ This reference drives the correctness test cases in Group Q and `CacheInvalidati
 
 ### F8 Multi-Module / Reactor
 
-| ID   | Feature                                             | XML / System Property                           | Criticality | Status | Test Reference                                       |
-|------|-----------------------------------------------------|-------------------------------------------------|-------------|--------|------------------------------------------------------|
-| F8.1 | Full reactor — each module independently cached     | implicit                                        | P0          | ✅      | `Issue21Test`                                        |
-| F8.2 | Reactor cascade — upstream change → downstream miss | implicit                                        | P1          | ✅      | `multimodule/UpstreamModuleChangeDownstreamMissTest` |
-| F8.3 | Partial reactor `-pl`                               | implicit `-pl`                                  | P1          | ✅      | `multimodule/MultiModulePartialBuildTest`            |
-| F8.4 | Partial reactor `-pl -am` upstream restore          | implicit `-pl -am`                              | P1          | ✅      | `multimodule/MultiModulePartialWithAmTest`           |
-| F8.5 | Parallel builds `-T` — no corruption                | implicit `-T`                                   | P1          | ✅      | `multimodule/ParallelBuildTest`                      |
-| F8.6 | `scanProfiles` — profiles in multi-module key       | `<multiModule><scanProfiles>`                   | P2          | ✅      | `multimodule/ScanProfilesTest`                       |
-| F8.7 | Per-module `skipCache` via POM property             | `maven.build.cache.skipCache` in `<properties>` | P1          | ✅      | `PerModuleFlagsTest`                                 |
-| F8.8 | Per-module cache disabled via POM property          | `maven.build.cache.enabled` in `<properties>`   | P1          | ✅      | `PerModuleFlagsTest`                                 |
+| ID   | Feature                                                 | XML / System Property                           | Criticality | Status | Test Reference                                                          |
+|------|---------------------------------------------------------|-------------------------------------------------|-------------|--------|-------------------------------------------------------------------------|
+| F8.1 | Full reactor — each module independently cached         | implicit                                        | P0          | ✅      | `Issue21Test`, `UpstreamModuleChangeDownstreamMissTest`                 |
+| F8.2 | Partial reactor (`-pl`) — targeted modules cached       | implicit `-pl`                                  | P1          | ✅      | `multimodule/MultiModulePartialBuildTest`                               |
+| F8.3 | Partial reactor with upstream restore (`-pl -am`)       | implicit `-pl -am`                              | P1          | ✅      | `multimodule/MultiModulePartialWithAmTest`                              |
+| F8.4 | Parallel builds (`-T`) — no cross-thread corruption     | implicit `-T`                                   | P1          | ✅      | `multimodule/ParallelBuildTest`                                         |
+| F8.5 | `scanProfiles` — include active profiles in cache key   | `<multiModule><scanProfiles>`                   | P1          | ✅      | `multimodule/ScanProfilesTest`                                          |
+| F8.6 | Per-module `skipCache` / `enabled` override via POM     | `maven.build.cache.skipCache` / `.enabled`      | P1          | ✅      | `PerModuleFlagsTest`                                                    |
+| F8.7 | Subtree build of leaf module — cache hit via `rootDirectory` anchor     | implicit (`.mvn/` traversal)                    | P2          | ✅      | `multimodule/SubtreeBuildCacheHitTest#subtreeBuildHitsCacheAfterFullReactorBuild`                          |
+| F8.8 | Partial reactor with upstream dep — `-am` puts B in `session.getProjects()` so checksum matches; no discovery config | implicit `-pl -am`                              | P2          | ✅      | `multimodule/SubtreeBuildCacheHitTest#partialReactorWithAmHitsCacheWithoutDiscovery`                       |
+| F8.9 | Subtree build with upstream dep + `<discovery><scanProfiles>` — full re-scan from root activates profile, discovers B with matching effective model | `<multiModule><discovery><scanProfiles>`         | P2          | ✅      | `multimodule/SubtreeBuildCacheHitTest#subtreeWithDiscoveryAndScanProfileHitsCacheAfterFullReactorBuild`    |
 
 ---
 
@@ -510,7 +511,7 @@ cache behaviors are project-agnostic.
 
 | ID   | Scenario                                      | Features    | Reference Project | Status                                                           |
 |------|-----------------------------------------------|-------------|-------------------|------------------------------------------------------------------|
-| G-01 | `skipCache=true` forces rebuild, still writes | F10.1, F8.7 | PARAM P01-P19     | ✅ `PerModuleFlagsTest` + BASE-05                                 |
+| G-01 | `skipCache=true` forces rebuild, still writes | F10.1, F8.6 | PARAM P01-P19     | ✅ `PerModuleFlagsTest` + BASE-05                                 |
 | G-02 | `skipSave=true` reads from cache, no write    | F10.2       | PARAM P01-P19     | ✅ `BuildExtensionTest.skipSaving` + BASE-06                      |
 | G-03 | `mandatoryClean=true` blocks save             | F9.8, F10.4 | PARAM P01-P19     | ✅ `MandatoryCleanTest`                                           |
 | G-04 | Mid-reactor failure → no partial entry        | F10.5       | **P06**           | ✅ `BuildFailsMidwayNoCacheTest`                                  |
@@ -538,11 +539,15 @@ cache behaviors are project-agnostic.
 | ID   | Scenario                                          | Features   | Reference Project         | Status                                                 |
 |------|---------------------------------------------------|------------|---------------------------|--------------------------------------------------------|
 | I-01 | Full reactor: each module independently cached    | F8.1       | legacy: `build-extension` | ✅ `Issue21Test`                                        |
-| I-02 | Per-module skipCache / disabled via POM           | F8.7, F8.8 | **P10**                   | ✅ `PerModuleFlagsTest`                                 |
-| I-03 | Upstream module change → downstream miss          | F8.2       | **P02**                   | ✅ `multimodule/UpstreamModuleChangeDownstreamMissTest` |
-| I-04 | Partial reactor `-pl module`                      | F8.3       | **P10**                   | ✅ `multimodule/MultiModulePartialBuildTest`            |
-| I-05 | Partial reactor `-pl module -am` upstream restore | F8.4       | **P10**                   | ✅ `multimodule/MultiModulePartialWithAmTest`           |
-| I-06 | Parallel build `-T2` cache correctness            | F8.5       | **P11**                   | ✅ `multimodule/ParallelBuildTest`                      |
+| I-02 | Per-module skipCache / disabled via POM           | F8.6       | **P10**                   | ✅ `PerModuleFlagsTest`                                 |
+| I-03 | Upstream module change → downstream miss          | F8.1       | **P02**                   | ✅ `multimodule/UpstreamModuleChangeDownstreamMissTest` |
+| I-04 | Partial reactor `-pl module`                      | F8.2       | **P10**                   | ✅ `multimodule/MultiModulePartialBuildTest`            |
+| I-05 | Partial reactor `-pl module -am` upstream restore | F8.3       | **P10**                   | ✅ `multimodule/MultiModulePartialWithAmTest`           |
+| I-06 | Parallel build `-T2` cache correctness            | F8.4       | **P11**                   | ✅ `multimodule/ParallelBuildTest`                      |
+| I-07 | scanProfiles includes active profile in cache key | F8.5       | **P08**                   | ✅ `multimodule/ScanProfilesTest`                       |
+| I-08 | Subtree build of leaf (no deps): Maven finds `.mvn/` by traversal; cache key is identical from root or subdir because both anchor to the same `rootDirectory` | F8.7 | **P02** | ✅ `SubtreeBuildCacheHitTest#subtreeBuildHitsCacheAfterFullReactorBuild`                       |
+| I-09 | Partial reactor (`-pl C -am`), no `<discovery>`: `-am` includes B in `session.getProjects()`, so the extension computes C's multi-module checksum with B as a reactor sibling (not an external dep) → same key as full build → cache hit | F8.8 | **P02** | ✅ `SubtreeBuildCacheHitTest#partialReactorWithAmHitsCacheWithoutDiscovery`                    |
+| I-10 | Subtree from C's dir, `<discovery><scanProfiles>`: only C in `session.getProjects()`; extension detects submodule context, re-scans from root pom activating `full-reactor` profile (via `scanProfiles`), discovers B with same effective model as full build → C's checksum matches → cache hit | F8.9 | **P02** | ✅ `SubtreeBuildCacheHitTest#subtreeWithDiscoveryAndScanProfileHitsCacheAfterFullReactorBuild` |
 
 ### Group J: Remote Cache (P1/P2)
 
@@ -626,9 +631,9 @@ Primary test class: `CacheInvalidationProjectTraitsTest`.
 | Q-13 | Profile file-trigger activates → effective POM changes → miss           | F2.21       | **P08**           | ✅ `CacheInvalidationProjectTraitsTest.profileFileActivationInvalidates`           |
 | Q-14 | `settings.xml` profile property change → dep version or param → miss    | F2.9, F2.21 | **P08**           | ✅ `inputfiltering/SettingsProfilePropertyChangeInvalidatesTest`                   |
 | Q-15 | `activeByDefault` profile resets when another activates → miss          | F2.21       | **P08**           | ✅ `inputfiltering/ActiveByDefaultResetInvalidatesTest`                            |
-| Q-16 | Unchanged module not evicted when leaf module changes                   | F8.2        | **P02**           | ✅ `CacheInvalidationProjectTraitsTest.unchangedModuleStaysInCache`                |
-| Q-17 | Parallel build: one module change invalidates only dependents           | F8.5        | **P11**           | ✅ `CacheInvalidationProjectTraitsTest.parallelBuildModuleChangeInvalidates`       |
-| Q-18 | Reactor SNAPSHOT source change propagates to all dependent modules      | F8.2        | **P16**           | ✅ `CacheInvalidationProjectTraitsTest.reactorSnapshotSourceChangeInvalidates`     |
+| Q-16 | Unchanged module not evicted when leaf module changes                   | F8.1        | **P02**           | ✅ `CacheInvalidationProjectTraitsTest.unchangedModuleStaysInCache`                |
+| Q-17 | Parallel build: one module change invalidates only dependents           | F8.4        | **P11**           | ✅ `CacheInvalidationProjectTraitsTest.parallelBuildModuleChangeInvalidates`       |
+| Q-18 | Reactor SNAPSHOT source change propagates to all dependent modules      | F8.1        | **P16**           | ✅ `CacheInvalidationProjectTraitsTest.reactorSnapshotSourceChangeInvalidates`     |
 | Q-19 | WAR profile-filtered resource change → WAR module miss                  | F2.21, N    | **P17**           | ✅ `CacheInvalidationProjectTraitsTest.warProfileFilterChangeInvalidates`          |
 | Q-20 | CI-driven version change without source change → cache hit              | F12.4       | **P04**           | ✅ `versioning/CiBuildDrivenProjectVersionChangeCachedTest`                        |
 
@@ -762,6 +767,9 @@ Master traceability table mapping behaviors to test classes and reference projec
 | TC-116 | Reactor SNAPSHOT source change propagates to all dependent modules         | `CacheInvalidationProjectTraitsTest`                          | P16                               | P1       | ✅      |
 | TC-117 | WAR profile-filtered resource change → WAR module miss                     | `CacheInvalidationProjectTraitsTest`                          | P17                               | P1       | ✅      |
 | TC-118 | `maven-plugin` packaging: build+restore round-trip succeeds                | `CacheInvalidationProjectTraitsTest`                          | P07                               | P1       | ✅      |
+| TC-119 | Subtree build of leaf module-api (no inter-module deps) from its own directory: Maven traverses up to `.mvn/`; cache key anchored to `rootDirectory` is identical to the full-reactor key → cache hit | `SubtreeBuildCacheHitTest#subtreeBuildHitsCacheAfterFullReactorBuild` | P02 | P2 | ✅ |
+| TC-120 | Partial reactor `-pl module-core -am` (no discovery): `-am` puts module-api into `session.getProjects()`; extension computes module-core's checksum with module-api as a reactor sibling, matching the full-reactor key → cache hit for both B and C | `SubtreeBuildCacheHitTest#partialReactorWithAmHitsCacheWithoutDiscovery` | P02 | P2 | ✅ |
+| TC-121 | Subtree build from module-core's dir with `<discovery><scanProfiles><scanProfile>full-reactor</scanProfile></scanProfiles>`: only C in reactor; extension detects non-root context, re-scans from root pom activating the `full-reactor` profile (whose property is in every module's effective POM), discovers module-api with the same checksum as the full-reactor build → cache hit for C | `SubtreeBuildCacheHitTest#subtreeWithDiscoveryAndScanProfileHitsCacheAfterFullReactorBuild` | P02 | P2 | ✅ |
 
 **Summary:**
 
@@ -769,9 +777,9 @@ Master traceability table mapping behaviors to test classes and reference projec
 |-----------|-----------|------------|-----------|
 | P0        | 25        | 25         | 0         |
 | P1        | 55        | 55         | 0         |
-| P2        | 31        | 29         | 2         |
+| P2        | 34        | 32         | 2         |
 | P3        | 7         | 7          | 0         |
-| **Total** | **118**   | **116**    | **2**     |
+| **Total** | **121**   | **119**    | **2**     |
 
 ---
 
