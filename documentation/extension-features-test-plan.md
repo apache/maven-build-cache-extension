@@ -41,7 +41,6 @@ verified by the test suite.
 | Goal                                            | Where to look                   |
 |-------------------------------------------------|---------------------------------|
 | Find the test that covers a specific feature    | §2 Feature Catalog → §4 TC# row |
-| Check coverage by priority level                | §4 Summary table                |
 | Plan which tests to implement next              | §5 Implementation Backlog       |
 | Look up a system property or its XML equivalent | §7 Appendix: Property Reference |
 
@@ -166,15 +165,6 @@ This reference drives the correctness test cases in Group Q and `CacheInvalidati
 
 ## 2. Feature Catalog
 
-### Criticality scale
-
-| Label  | Meaning                                                   |
-|--------|-----------------------------------------------------------|
-| **P0** | Core correctness — wrong artifacts or silent misses       |
-| **P1** | Visible user-facing behavior — broken in normal workflows |
-| **P2** | Advanced / edge-case correctness                          |
-| **P3** | Diagnostic / observability — invisible in typical use     |
-
 ### Test status legend
 
 | Symbol | Meaning                                                            |
@@ -187,206 +177,206 @@ This reference drives the correctness test cases in Group Q and `CacheInvalidati
 
 ### F1 Core Enablement
 
-| ID   | Feature                                       | XML / System Property                       | Criticality | Status | Test Reference                                                             |
-|------|-----------------------------------------------|---------------------------------------------|-------------|--------|----------------------------------------------------------------------------|
-| F1.1 | Build extension via POM `<build><extensions>` | `pom.xml <extensions>`                      | P0          | ✅      | `BuildExtensionTest`                                                       |
-| F1.2 | Core extension via `.mvn/extensions.xml`      | `.mvn/extensions.xml`                       | P0          | ✅      | `CoreExtensionTest`                                                        |
-| F1.3 | Global enable/disable (XML or CLI)            | `<enabled>` / `-Dmaven.build.cache.enabled` | P0          | ✅      | `BuildExtensionTest`, `SkipBuildExtensionTest.cacheDisabledViaCommandLine` |
-| F1.4 | Config path override                          | `-Dmaven.build.cache.configPath`            | P1          | ✅      | `config/CustomConfigPathTest`                                              |
-| F1.5 | Defaults-only mode (no XML file present)      | implicit                                    | P1          | ✅      | `config/NoConfigFileDefaultsTest`                                          |
-| F1.6 | Maven version guard (requires ≥ 3.9.0)        | `CacheConfigImpl.initialize()`              | P1          | ❌      | —                                                                          |
-| F1.7 | XML config validation                         | `<validateXml>`                             | P2          | ❌      | —                                                                          |
-| F1.8 | Malformed XML → descriptive startup error     | implicit                                    | P1          | ✅      | `config/InvalidConfigXmlTest`                                              |
+| ID   | Feature                                       | XML / System Property                       | Status | Test Reference                                                             |
+|------|-----------------------------------------------|---------------------------------------------|--------|----------------------------------------------------------------------------|
+| F1.1 | Build extension via POM `<build><extensions>` | `pom.xml <extensions>`                      | ✅      | `BuildExtensionTest`                                                       |
+| F1.2 | Core extension via `.mvn/extensions.xml`      | `.mvn/extensions.xml`                       | ✅      | `CoreExtensionTest`                                                        |
+| F1.3 | Global enable/disable (XML or CLI)            | `<enabled>` / `-Dmaven.build.cache.enabled` | ✅      | `BuildExtensionTest`, `SkipBuildExtensionTest.cacheDisabledViaCommandLine` |
+| F1.4 | Config path override                          | `-Dmaven.build.cache.configPath`            | ✅      | `config/CustomConfigPathTest`                                              |
+| F1.5 | Defaults-only mode (no XML file present)      | implicit                                    | ✅      | `config/NoConfigFileDefaultsTest`                                          |
+| F1.6 | Maven version guard (requires ≥ 3.9.0)        | `CacheConfigImpl.initialize()`              | ❌      | —                                                                          |
+| F1.7 | XML config validation                         | `<validateXml>`                             | ❌      | —                                                                          |
+| F1.8 | Malformed XML → descriptive startup error     | implicit                                    | ✅      | `config/InvalidConfigXmlTest`                                              |
 
 ---
 
 ### F2 Input Fingerprinting
 
-| ID    | Feature                                               | XML / System Property                                       | Criticality | Status | Test Reference                                                    |
-|-------|-------------------------------------------------------|-------------------------------------------------------------|-------------|--------|-------------------------------------------------------------------|
-| F2.1  | Global glob pattern                                   | `<input><global><glob>` / `maven.build.cache.input.glob`    | P0          | ✅      | `IncludeExcludeTest`                                              |
-| F2.2  | Global include paths                                  | `<input><global><includes>` / `maven.build.cache.input`     | P0          | ✅      | `IncludeExcludeTest`                                              |
-| F2.3  | Global exclude paths                                  | `<input><global><excludes>` / `maven.build.cache.exclude.*` | P0          | ✅      | `IncludeExcludeTest`                                              |
-| F2.4  | Source file added → cache miss                        | implicit                                                    | P0          | ✅      | `checksumcorrectness/AddedSourceFileInvalidatesCacheTest`         |
-| F2.5  | Source file deleted → cache miss                      | implicit                                                    | P0          | ✅      | `checksumcorrectness/DeletedSourceFileInvalidatesCacheTest`       |
-| F2.6  | Source file modified → cache miss                     | implicit                                                    | P0          | ✅      | `checksumcorrectness/SourceChangeInvalidatesCacheTest`            |
-| F2.7  | POM functional change → cache miss                    | implicit                                                    | P0          | ✅      | `checksumcorrectness/PomChangeInvalidatesCacheTest`               |
-| F2.8  | POM whitespace-only change → cache hit                | implicit                                                    | P0          | ✅      | `checksumcorrectness/WhitespaceOnlyPomChangeNoCacheMissTest`      |
-| F2.9  | Property change → cache miss                          | `<properties>`                                              | P0          | ✅      | `checksumcorrectness/PropertyChangeInvalidatesCacheTest`          |
-| F2.10 | Resource file change → cache miss                     | `src/main/resources`                                        | P0          | ✅      | `checksumcorrectness/ResourceChangeInvalidatesCacheTest`          |
-| F2.11 | Test source change → cache miss                       | `src/test/java`                                             | P0          | ✅      | `checksumcorrectness/TestSourceChangeInvalidatesCacheTest`        |
-| F2.12 | Dependency version change → cache miss                | effective POM                                               | P0          | ✅      | `checksumcorrectness/DependencyVersionChangeInvalidatesCacheTest` |
-| F2.13 | Per-plugin `dirScan` configuration                    | `<input><plugins><plugin><dirScan>`                         | P1          | ❌      | —                                                                 |
-| F2.14 | Per-execution `dirScan` override                      | `<input><plugins><plugin><executions>`                      | P2          | ❌      | —                                                                 |
-| F2.15 | Effective POM property exclusion per plugin           | `<plugin><effectivePom><excludeProperties>`                 | P1          | ✅      | `inputfiltering/EffectivePomExcludePropertyTest`                  |
-| F2.16 | Plugin dependency exclusion from fingerprint          | `<plugin><excludeDependencies>`                             | P2          | ❌      | —                                                                 |
-| F2.17 | `processPlugins` flag                                 | `maven.build.cache.processPlugins`                          | P1          | ✅      | `inputfiltering/ProcessPluginsDisabledTest`                       |
-| F2.18 | Project-level glob override (POM property)            | `maven.build.cache.input.glob` in `<properties>`            | P1          | ✅      | `inputfiltering/PerProjectGlobOverrideTest`                       |
-| F2.19 | Project-level additional include (POM property)       | `maven.build.cache.input.*` in `<properties>`               | P1          | ✅      | `inputfiltering/ProjectLevelIncludeTest`                          |
-| F2.20 | Project-level exclude (POM property)                  | `maven.build.cache.exclude.*` in `<properties>`             | P1          | ❌      | —                                                                 |
-| F2.21 | Profile activation changes effective POM → cache miss | `-P profile`                                                | P1          | ✅      | `inputfiltering/ProfileCliActivationInvalidatesTest`              |
-| F2.22 | Hidden files excluded automatically                   | implicit                                                    | P2          | ❌      | —                                                                 |
+| ID    | Feature                                               | XML / System Property                                       | Status | Test Reference                                                    |
+|-------|-------------------------------------------------------|-------------------------------------------------------------|--------|-------------------------------------------------------------------|
+| F2.1  | Global glob pattern                                   | `<input><global><glob>` / `maven.build.cache.input.glob`    | ✅      | `IncludeExcludeTest`                                              |
+| F2.2  | Global include paths                                  | `<input><global><includes>` / `maven.build.cache.input`     | ✅      | `IncludeExcludeTest`                                              |
+| F2.3  | Global exclude paths                                  | `<input><global><excludes>` / `maven.build.cache.exclude.*` | ✅      | `IncludeExcludeTest`                                              |
+| F2.4  | Source file added → cache miss                        | implicit                                                    | ✅      | `checksumcorrectness/AddedSourceFileInvalidatesCacheTest`         |
+| F2.5  | Source file deleted → cache miss                      | implicit                                                    | ✅      | `checksumcorrectness/DeletedSourceFileInvalidatesCacheTest`       |
+| F2.6  | Source file modified → cache miss                     | implicit                                                    | ✅      | `checksumcorrectness/SourceChangeInvalidatesCacheTest`            |
+| F2.7  | POM functional change → cache miss                    | implicit                                                    | ✅      | `checksumcorrectness/PomChangeInvalidatesCacheTest`               |
+| F2.8  | POM whitespace-only change → cache hit                | implicit                                                    | ✅      | `checksumcorrectness/WhitespaceOnlyPomChangeNoCacheMissTest`      |
+| F2.9  | Property change → cache miss                          | `<properties>`                                              | ✅      | `checksumcorrectness/PropertyChangeInvalidatesCacheTest`          |
+| F2.10 | Resource file change → cache miss                     | `src/main/resources`                                        | ✅      | `checksumcorrectness/ResourceChangeInvalidatesCacheTest`          |
+| F2.11 | Test source change → cache miss                       | `src/test/java`                                             | ✅      | `checksumcorrectness/TestSourceChangeInvalidatesCacheTest`        |
+| F2.12 | Dependency version change → cache miss                | effective POM                                               | ✅      | `checksumcorrectness/DependencyVersionChangeInvalidatesCacheTest` |
+| F2.13 | Per-plugin `dirScan` configuration                    | `<input><plugins><plugin><dirScan>`                         | ❌      | —                                                                 |
+| F2.14 | Per-execution `dirScan` override                      | `<input><plugins><plugin><executions>`                      | ❌      | —                                                                 |
+| F2.15 | Effective POM property exclusion per plugin           | `<plugin><effectivePom><excludeProperties>`                 | ✅      | `inputfiltering/EffectivePomExcludePropertyTest`                  |
+| F2.16 | Plugin dependency exclusion from fingerprint          | `<plugin><excludeDependencies>`                             | ❌      | —                                                                 |
+| F2.17 | `processPlugins` flag                                 | `maven.build.cache.processPlugins`                          | ✅      | `inputfiltering/ProcessPluginsDisabledTest`                       |
+| F2.18 | Project-level glob override (POM property)            | `maven.build.cache.input.glob` in `<properties>`            | ✅      | `inputfiltering/PerProjectGlobOverrideTest`                       |
+| F2.19 | Project-level additional include (POM property)       | `maven.build.cache.input.*` in `<properties>`               | ✅      | `inputfiltering/ProjectLevelIncludeTest`                          |
+| F2.20 | Project-level exclude (POM property)                  | `maven.build.cache.exclude.*` in `<properties>`             | ❌      | —                                                                 |
+| F2.21 | Profile activation changes effective POM → cache miss | `-P profile`                                                | ✅      | `inputfiltering/ProfileCliActivationInvalidatesTest`              |
+| F2.22 | Hidden files excluded automatically                   | implicit                                                    | ❌      | —                                                                 |
 
 ---
 
 ### F3 Hash Algorithms
 
-| ID   | Feature                                                                        | XML / System Property              | Criticality | Status | Test Reference                                            |
-|------|--------------------------------------------------------------------------------|------------------------------------|-------------|--------|-----------------------------------------------------------|
-| F3.1 | Default algorithm: XX (XXHash64)                                               | `<hashAlgorithm>XX`                | P0          | ✅      | (all existing ITs)                                        |
-| F3.2 | All non-MM algorithms round-trip (SHA-1, SHA-256, SHA-384, SHA-512, METRO, XX) | `<hashAlgorithm>SHA-1\|SHA-256\|…` | P2          | ✅      | `hashalgorithm/HashAlgorithmRoundTripTest` (parametrized) |
-| F3.3 | XXMM (memory-mapped, needs `--add-opens`)                                      | `<hashAlgorithm>XXMM`              | P2          | ❌      | —                                                         |
-| F3.4 | METRO+MM (memory-mapped, needs `--add-opens`)                                  | `<hashAlgorithm>METRO+MM`          | P2          | ❌      | —                                                         |
-| F3.5 | Invalid algorithm → startup failure                                            | `<hashAlgorithm>BOGUS`             | P1          | ✅      | `hashalgorithm/InvalidHashAlgorithmTest`                  |
-| F3.6 | Algorithm change between builds → cache miss                                   | config change                      | P2          | ✅      | `hashalgorithm/HashAlgorithmChangeCacheMissTest`          |
+| ID   | Feature                                                                        | XML / System Property              | Status | Test Reference                                            |
+|------|--------------------------------------------------------------------------------|------------------------------------|--------|-----------------------------------------------------------|
+| F3.1 | Default algorithm: XX (XXHash64)                                               | `<hashAlgorithm>XX`                | ✅      | (all existing ITs)                                        |
+| F3.2 | All non-MM algorithms round-trip (SHA-1, SHA-256, SHA-384, SHA-512, METRO, XX) | `<hashAlgorithm>SHA-1\|SHA-256\|…` | ✅      | `hashalgorithm/HashAlgorithmRoundTripTest` (parametrized) |
+| F3.3 | XXMM (memory-mapped, needs `--add-opens`)                                      | `<hashAlgorithm>XXMM`              | ❌      | —                                                         |
+| F3.4 | METRO+MM (memory-mapped, needs `--add-opens`)                                  | `<hashAlgorithm>METRO+MM`          | ❌      | —                                                         |
+| F3.5 | Invalid algorithm → startup failure                                            | `<hashAlgorithm>BOGUS`             | ✅      | `hashalgorithm/InvalidHashAlgorithmTest`                  |
+| F3.6 | Algorithm change between builds → cache miss                                   | config change                      | ✅      | `hashalgorithm/HashAlgorithmChangeCacheMissTest`          |
 
 ---
 
 ### F4 Execution Control
 
-| ID    | Feature                                    | XML / System Property                       | Criticality | Status | Test Reference                                             |
-|-------|--------------------------------------------|---------------------------------------------|-------------|--------|------------------------------------------------------------|
-| F4.1  | `runAlways` by plugin coordinates          | `<executionControl><runAlways><plugins>`    | P1          | ✅      | `pluginexecution/RunAlwaysPluginTest`                      |
-| F4.2  | `runAlways` by goal name                   | `<executionControl><runAlways><goalsLists>` | P1          | ✅      | `pluginexecution/RunAlwaysByGoalTest`                      |
-| F4.3  | `runAlways` by execution ID                | `<executionControl><runAlways><executions>` | P1          | ✅      | `pluginexecution/RunAlwaysByExecutionIdTest`               |
-| F4.4  | `alwaysRunPlugins` CLI property            | `-Dmaven.build.cache.alwaysRunPlugins`      | P1          | ✅      | `pluginexecution/AlwaysRunPluginsCliTest`                  |
-| F4.5  | `ignoreMissing` — skip absent executions   | `<executionControl><ignoreMissing>`         | P1          | ✅      | `pluginexecution/IgnoreMissingPluginTest`                  |
-| F4.6  | Reconcile: `skipValue` allows cache hit    | `<property skipValue="…">`                  | P0          | ✅      | `pluginexecution/TrackedPropertySkipValueAllowsReuseTest`  |
-| F4.7  | Reconcile: mismatch → cache miss           | `<reconcile>…<property>`                    | P0          | ✅      | `pluginexecution/TrackedPropertyMismatchCacheMissTest`     |
-| F4.8  | Reconcile: match → cache hit               | `<reconcile>…<property>`                    | P0          | ✅      | `pluginexecution/TrackedPropertyMatchCacheHitTest`         |
-| F4.9  | Reconcile: `defaultValue` used when absent | `<property defaultValue="…">`               | P1          | ✅      | `pluginexecution/TrackedPropertyDefaultValueTest`          |
-| F4.10 | Reconcile: `logAll` flag on goal           | `<reconcile><plugin logAll="true">`         | P3          | ✅      | `pluginexecution/LogAllPropertiesTest`                     |
-| F4.11 | Reconcile: `nolog` suppresses property     | `<property nolog="true">`                   | P3          | ✅      | `pluginexecution/TrackedPropertyNologTest`                 |
-| F4.12 | `logAllProperties` global flag             | `<reconcile><logAllProperties>`             | P3          | ✅      | `pluginexecution/LogAllPropertiesGlobalTest`               |
-| F4.13 | Forked execution tracked correctly         | implicit                                    | P1          | ✅      | `ForkedExecutionsTest`, `ForkedExecutionCoreExtensionTest` |
-| F4.14 | Duplicate goal executions within one build | implicit                                    | P1          | ✅      | `DuplicateGoalsTest`                                       |
-| F4.15 | Missing cached execution → full rebuild    | `Build.getMissingExecutions()`              | P1          | ✅      | `pluginexecution/MissingExecutionTriggerRebuildTest`       |
+| ID    | Feature                                    | XML / System Property                       | Status | Test Reference                                             |
+|-------|--------------------------------------------|---------------------------------------------|--------|------------------------------------------------------------|
+| F4.1  | `runAlways` by plugin coordinates          | `<executionControl><runAlways><plugins>`    | ✅      | `pluginexecution/RunAlwaysPluginTest`                      |
+| F4.2  | `runAlways` by goal name                   | `<executionControl><runAlways><goalsLists>` | ✅      | `pluginexecution/RunAlwaysByGoalTest`                      |
+| F4.3  | `runAlways` by execution ID                | `<executionControl><runAlways><executions>` | ✅      | `pluginexecution/RunAlwaysByExecutionIdTest`               |
+| F4.4  | `alwaysRunPlugins` CLI property            | `-Dmaven.build.cache.alwaysRunPlugins`      | ✅      | `pluginexecution/AlwaysRunPluginsCliTest`                  |
+| F4.5  | `ignoreMissing` — skip absent executions   | `<executionControl><ignoreMissing>`         | ✅      | `pluginexecution/IgnoreMissingPluginTest`                  |
+| F4.6  | Reconcile: `skipValue` allows cache hit    | `<property skipValue="…">`                  | ✅      | `pluginexecution/TrackedPropertySkipValueAllowsReuseTest`  |
+| F4.7  | Reconcile: mismatch → cache miss           | `<reconcile>…<property>`                    | ✅      | `pluginexecution/TrackedPropertyMismatchCacheMissTest`     |
+| F4.8  | Reconcile: match → cache hit               | `<reconcile>…<property>`                    | ✅      | `pluginexecution/TrackedPropertyMatchCacheHitTest`         |
+| F4.9  | Reconcile: `defaultValue` used when absent | `<property defaultValue="…">`               | ✅      | `pluginexecution/TrackedPropertyDefaultValueTest`          |
+| F4.10 | Reconcile: `logAll` flag on goal           | `<reconcile><plugin logAll="true">`         | ✅      | `pluginexecution/LogAllPropertiesTest`                     |
+| F4.11 | Reconcile: `nolog` suppresses property     | `<property nolog="true">`                   | ✅      | `pluginexecution/TrackedPropertyNologTest`                 |
+| F4.12 | `logAllProperties` global flag             | `<reconcile><logAllProperties>`             | ✅      | `pluginexecution/LogAllPropertiesGlobalTest`               |
+| F4.13 | Forked execution tracked correctly         | implicit                                    | ✅      | `ForkedExecutionsTest`, `ForkedExecutionCoreExtensionTest` |
+| F4.14 | Duplicate goal executions within one build | implicit                                    | ✅      | `DuplicateGoalsTest`                                       |
+| F4.15 | Missing cached execution → full rebuild    | `Build.getMissingExecutions()`              | ✅      | `pluginexecution/MissingExecutionTriggerRebuildTest`       |
 
 ---
 
 ### F5 Artifact Restore
 
-| ID   | Feature                                         | XML / System Property                         | Criticality | Status | Test Reference                               |
-|------|-------------------------------------------------|-----------------------------------------------|-------------|--------|----------------------------------------------|
-| F5.1 | Standard artifact restore (JAR → local repo)    | implicit                                      | P0          | ✅      | `BuildExtensionTest.simple`                  |
-| F5.2 | Classified artifact restore (sources, javadoc)  | implicit                                      | P1          | ✅      | `IncrementalRestoreTest`                     |
-| F5.3 | `lazyRestore` — defer remote download           | `-Dmaven.build.cache.lazyRestore`             | P1          | ✅      | `IncrementalRestoreTest`                     |
-| F5.4 | `restoreGeneratedSources=false`                 | `-Dmaven.build.cache.restoreGeneratedSources` | P1          | ✅      | `artifacts/RestoreGeneratedSourcesFalseTest` |
-| F5.5 | `restoreOnDiskArtifacts=false`                  | `-Dmaven.build.cache.restoreOnDiskArtifacts`  | P1          | ✅      | `artifacts/RestoreOnDiskArtifactsFalseTest`  |
-| F5.6 | Corrupted/truncated ZIP handled gracefully      | implicit                                      | P1          | ✅      | `failurerecovery/CorruptedZipCacheEntryTest` |
-| F5.7 | NORMALIZED_VERSION → SNAPSHOT bump is cache hit | `calculateProjectVersionChecksum=false`       | P2          | ✅      | `versioning/SnapshotVersionBumpCacheHitTest` |
+| ID   | Feature                                         | XML / System Property                         | Status | Test Reference                               |
+|------|-------------------------------------------------|-----------------------------------------------|--------|----------------------------------------------|
+| F5.1 | Standard artifact restore (JAR → local repo)    | implicit                                      | ✅      | `BuildExtensionTest.simple`                  |
+| F5.2 | Classified artifact restore (sources, javadoc)  | implicit                                      | ✅      | `IncrementalRestoreTest`                     |
+| F5.3 | `lazyRestore` — defer remote download           | `-Dmaven.build.cache.lazyRestore`             | ✅      | `IncrementalRestoreTest`                     |
+| F5.4 | `restoreGeneratedSources=false`                 | `-Dmaven.build.cache.restoreGeneratedSources` | ✅      | `artifacts/RestoreGeneratedSourcesFalseTest` |
+| F5.5 | `restoreOnDiskArtifacts=false`                  | `-Dmaven.build.cache.restoreOnDiskArtifacts`  | ✅      | `artifacts/RestoreOnDiskArtifactsFalseTest`  |
+| F5.6 | Corrupted/truncated ZIP handled gracefully      | implicit                                      | ✅      | `failurerecovery/CorruptedZipCacheEntryTest` |
+| F5.7 | NORMALIZED_VERSION → SNAPSHOT bump is cache hit | `calculateProjectVersionChecksum=false`       | ✅      | `versioning/SnapshotVersionBumpCacheHitTest` |
 
 ---
 
 ### F6 Output Management
 
-| ID   | Feature                                          | XML / System Property                       | Criticality | Status | Test Reference                                                |
-|------|--------------------------------------------------|---------------------------------------------|-------------|--------|---------------------------------------------------------------|
-| F6.1 | Primary artifact stored/restored                 | implicit                                    | P0          | ✅      | `BuildExtensionTest.simple`                                   |
-| F6.2 | `attachedOutputs` — additional directories       | `<attachedOutputs><dirName glob="…">`       | P1          | ✅      | `IncrementalRestoreTest` (extra-resources/, other-resources/) |
-| F6.3 | `preservePermissions` — POSIX permissions        | `<attachedOutputs preservePermissions="…">` | P2          | ✅      | `output/PermissionsPreservationTest`                          |
-| F6.4 | Output exclude patterns (regex)                  | `<output><exclude><patterns>`               | P1          | ✅      | `output/OutputExcludePatternTest`                             |
-| F6.5 | `maxBuildsCached` LRU eviction                   | `<local><maxBuildsCached>`                  | P2          | ✅      | `output/MaxLocalBuildsCachedTest`                             |
-| F6.6 | Custom local cache location                      | `-Dmaven.build.cache.location`              | P2          | ✅      | `BuildExtensionTest.skipSaving`                               |
-| F6.7 | Stale artifacts in `target/` not leaked to cache | `stagePreExistingArtifacts` internal        | P2          | ✅      | `internal/StagingRemovesStaleClassesTest`                     |
+| ID   | Feature                                          | XML / System Property                       | Status | Test Reference                                                |
+|------|--------------------------------------------------|---------------------------------------------|--------|---------------------------------------------------------------|
+| F6.1 | Primary artifact stored/restored                 | implicit                                    | ✅      | `BuildExtensionTest.simple`                                   |
+| F6.2 | `attachedOutputs` — additional directories       | `<attachedOutputs><dirName glob="…">`       | ✅      | `IncrementalRestoreTest` (extra-resources/, other-resources/) |
+| F6.3 | `preservePermissions` — POSIX permissions        | `<attachedOutputs preservePermissions="…">` | ✅      | `output/PermissionsPreservationTest`                          |
+| F6.4 | Output exclude patterns (regex)                  | `<output><exclude><patterns>`               | ✅      | `output/OutputExcludePatternTest`                             |
+| F6.5 | `maxBuildsCached` LRU eviction                   | `<local><maxBuildsCached>`                  | ✅      | `output/MaxLocalBuildsCachedTest`                             |
+| F6.6 | Custom local cache location                      | `-Dmaven.build.cache.location`              | ✅      | `BuildExtensionTest.skipSaving`                               |
+| F6.7 | Stale artifacts in `target/` not leaked to cache | `stagePreExistingArtifacts` internal        | ✅      | `internal/StagingRemovesStaleClassesTest`                     |
 
 ---
 
 ### F7 Remote Cache
 
-| ID   | Feature                                      | XML / System Property                                                 | Criticality | Status | Test Reference                         |
-|------|----------------------------------------------|-----------------------------------------------------------------------|-------------|--------|----------------------------------------|
-| F7.1 | Remote cache read                            | `<remote><url>` / `-Dmaven.build.cache.remote.url`                    | P1          | ✅      | `RemoteCacheDavTest`                   |
-| F7.2 | Remote cache enable/disable                  | `<remote enabled="…">` / `-Dmaven.build.cache.remote.enabled`         | P1          | ✅      | `RemoteCacheDavTest`                   |
-| F7.3 | Remote save (push)                           | `<remote><save><enabled>` / `-Dmaven.build.cache.remote.save.enabled` | P1          | ✅      | `RemoteCacheDavTest`                   |
-| F7.4 | `save.final` — prohibit overwrite            | `-Dmaven.build.cache.remote.save.final`                               | P2          | ✅      | `remote/SaveFinalRemoteTest`           |
-| F7.5 | Server authentication via settings.xml       | `<remote id="…">` / `-Dmaven.build.cache.remote.server.id`            | P1          | ✅      | `RemoteCacheDavTest`                   |
-| F7.6 | Remote unavailable → graceful local fallback | implicit                                                              | P2          | ✅      | `remote/RemoteUnavailableFallbackTest` |
-| F7.7 | `failFast` on remote restore failure         | `-Dmaven.build.cache.failFast`                                        | P2          | ✅      | `admin/FailFastTest`                   |
-| F7.8 | `baselineUrl` diff report                    | `-Dmaven.build.cache.baselineUrl`                                     | P3          | ✅      | `remote/BaselineDiffTest`              |
+| ID   | Feature                                      | XML / System Property                                                 | Status | Test Reference                         |
+|------|----------------------------------------------|-----------------------------------------------------------------------|--------|----------------------------------------|
+| F7.1 | Remote cache read                            | `<remote><url>` / `-Dmaven.build.cache.remote.url`                    | ✅      | `RemoteCacheDavTest`                   |
+| F7.2 | Remote cache enable/disable                  | `<remote enabled="…">` / `-Dmaven.build.cache.remote.enabled`         | ✅      | `RemoteCacheDavTest`                   |
+| F7.3 | Remote save (push)                           | `<remote><save><enabled>` / `-Dmaven.build.cache.remote.save.enabled` | ✅      | `RemoteCacheDavTest`                   |
+| F7.4 | `save.final` — prohibit overwrite            | `-Dmaven.build.cache.remote.save.final`                               | ✅      | `remote/SaveFinalRemoteTest`           |
+| F7.5 | Server authentication via settings.xml       | `<remote id="…">` / `-Dmaven.build.cache.remote.server.id`            | ✅      | `RemoteCacheDavTest`                   |
+| F7.6 | Remote unavailable → graceful local fallback | implicit                                                              | ✅      | `remote/RemoteUnavailableFallbackTest` |
+| F7.7 | `failFast` on remote restore failure         | `-Dmaven.build.cache.failFast`                                        | ✅      | `admin/FailFastTest`                   |
+| F7.8 | `baselineUrl` diff report                    | `-Dmaven.build.cache.baselineUrl`                                     | ✅      | `remote/BaselineDiffTest`              |
 
 ---
 
 ### F8 Multi-Module / Reactor
 
-| ID   | Feature                                                 | XML / System Property                           | Criticality | Status | Test Reference                                                          |
-|------|---------------------------------------------------------|-------------------------------------------------|-------------|--------|-------------------------------------------------------------------------|
-| F8.1 | Full reactor — each module independently cached         | implicit                                        | P0          | ✅      | `Issue21Test`, `UpstreamModuleChangeDownstreamMissTest`                 |
-| F8.2 | Partial reactor (`-pl`) — targeted modules cached       | implicit `-pl`                                  | P1          | ✅      | `multimodule/MultiModulePartialBuildTest`                               |
-| F8.3 | Partial reactor with upstream restore (`-pl -am`)       | implicit `-pl -am`                              | P1          | ✅      | `multimodule/MultiModulePartialWithAmTest`                              |
-| F8.4 | Parallel builds (`-T`) — no cross-thread corruption     | implicit `-T`                                   | P1          | ✅      | `multimodule/ParallelBuildTest`                                         |
-| F8.5 | `scanProfiles` — include active profiles in cache key   | `<multiModule><scanProfiles>`                   | P1          | ✅      | `multimodule/ScanProfilesTest`                                          |
-| F8.6 | Per-module `skipCache` / `enabled` override via POM     | `maven.build.cache.skipCache` / `.enabled`      | P1          | ✅      | `PerModuleFlagsTest`                                                    |
-| F8.7 | Subtree build of leaf module — cache hit via `rootDirectory` anchor     | implicit (`.mvn/` traversal)                    | P2          | ✅      | `multimodule/SubtreeBuildCacheHitTest#subtreeBuildHitsCacheAfterFullReactorBuild`                          |
-| F8.8 | Partial reactor with upstream dep — `-am` puts B in `session.getProjects()` so checksum matches; no discovery config | implicit `-pl -am`                              | P2          | ✅      | `multimodule/SubtreeBuildCacheHitTest#partialReactorWithAmHitsCacheWithoutDiscovery`                       |
-| F8.9 | Subtree build with upstream dep + `<discovery><scanProfiles>` — full re-scan from root activates profile, discovers B with matching effective model | `<multiModule><discovery><scanProfiles>`         | P2          | ✅      | `multimodule/SubtreeBuildCacheHitTest#subtreeWithDiscoveryAndScanProfileHitsCacheAfterFullReactorBuild`    |
+| ID   | Feature                                                 | XML / System Property                           | Status | Test Reference                                                          |
+|------|---------------------------------------------------------|-------------------------------------------------|--------|-------------------------------------------------------------------------|
+| F8.1 | Full reactor — each module independently cached         | implicit                                        | ✅      | `Issue21Test`, `UpstreamModuleChangeDownstreamMissTest`                 |
+| F8.2 | Partial reactor (`-pl`) — targeted modules cached       | implicit `-pl`                                  | ✅      | `multimodule/MultiModulePartialBuildTest`                               |
+| F8.3 | Partial reactor with upstream restore (`-pl -am`)       | implicit `-pl -am`                              | ✅      | `multimodule/MultiModulePartialWithAmTest`                              |
+| F8.4 | Parallel builds (`-T`) — no cross-thread corruption     | implicit `-T`                                   | ✅      | `multimodule/ParallelBuildTest`                                         |
+| F8.5 | `scanProfiles` — include active profiles in cache key   | `<multiModule><scanProfiles>`                   | ✅      | `multimodule/ScanProfilesTest`                                          |
+| F8.6 | Per-module `skipCache` / `enabled` override via POM     | `maven.build.cache.skipCache` / `.enabled`      | ✅      | `PerModuleFlagsTest`                                                    |
+| F8.7 | Subtree build of leaf module — cache hit via `rootDirectory` anchor     | implicit (`.mvn/` traversal)                    | ✅      | `multimodule/SubtreeBuildCacheHitTest#subtreeBuildHitsCacheAfterFullReactorBuild`                          |
+| F8.8 | Partial reactor with upstream dep — `-am` puts B in `session.getProjects()` so checksum matches; no discovery config | implicit `-pl -am`                              | ✅      | `multimodule/SubtreeBuildCacheHitTest#partialReactorWithAmHitsCacheWithoutDiscovery`                       |
+| F8.9 | Subtree build with upstream dep + `<discovery><scanProfiles>` — full re-scan from root activates profile, discovers B with matching effective model | `<multiModule><discovery><scanProfiles>`         | ✅      | `multimodule/SubtreeBuildCacheHitTest#subtreeWithDiscoveryAndScanProfileHitsCacheAfterFullReactorBuild`    |
 
 ---
 
 ### F9 Lifecycle Phases
 
-| ID   | Feature                                                 | XML / System Property                                     | Criticality | Status | Test Reference                                                         |
-|------|---------------------------------------------------------|-----------------------------------------------------------|-------------|--------|------------------------------------------------------------------------|
-| F9.1 | `compile` phase cached and restored                     | implicit                                                  | P0          | ✅      | `lifecyclephases/CompilePhaseDefaultCachedTest`                        |
-| F9.2 | `test-compile` phase cached                             | implicit                                                  | P0          | ✅      | `lifecyclephases/TestCompilePhaseTest`                                 |
-| F9.3 | `package` phase cached                                  | implicit                                                  | P0          | ✅      | `lifecyclephases/CompileThenPackageEscalationTest`                     |
-| F9.4 | `install` phase cached                                  | implicit                                                  | P0          | ✅      | `lifecyclephases/InstallPhaseTest`                                     |
-| F9.5 | Phase escalation → prior phase restored, new phase runs | implicit                                                  | P0          | ✅      | `CompileThenPackageEscalationTest`, `PackageThenInstallEscalationTest` |
-| F9.6 | `clean`-only run → cache bypassed entirely              | implicit                                                  | P1          | ✅      | `SkipBuildExtensionTest.simple`                                        |
-| F9.7 | `clean verify` → clean runs first, then cache           | implicit                                                  | P1          | ✅      | `lifecyclephases/CleanVerifyTest`                                      |
-| F9.8 | `mandatoryClean` blocks save without prior clean        | `<mandatoryClean>` / `-Dmaven.build.cache.mandatoryClean` | P1          | ✅      | `MandatoryCleanTest`                                                   |
-| F9.9 | `verify` phase (with integration tests) cached          | implicit                                                  | P1          | ✅      | `BuildExtensionTest.simple`                                            |
+| ID   | Feature                                                 | XML / System Property                                     | Status | Test Reference                                                         |
+|------|---------------------------------------------------------|-----------------------------------------------------------|--------|------------------------------------------------------------------------|
+| F9.1 | `compile` phase cached and restored                     | implicit                                                  | ✅      | `lifecyclephases/CompilePhaseDefaultCachedTest`                        |
+| F9.2 | `test-compile` phase cached                             | implicit                                                  | ✅      | `lifecyclephases/TestCompilePhaseTest`                                 |
+| F9.3 | `package` phase cached                                  | implicit                                                  | ✅      | `lifecyclephases/CompileThenPackageEscalationTest`                     |
+| F9.4 | `install` phase cached                                  | implicit                                                  | ✅      | `lifecyclephases/InstallPhaseTest`                                     |
+| F9.5 | Phase escalation → prior phase restored, new phase runs | implicit                                                  | ✅      | `CompileThenPackageEscalationTest`, `PackageThenInstallEscalationTest` |
+| F9.6 | `clean`-only run → cache bypassed entirely              | implicit                                                  | ✅      | `SkipBuildExtensionTest.simple`                                        |
+| F9.7 | `clean verify` → clean runs first, then cache           | implicit                                                  | ✅      | `lifecyclephases/CleanVerifyTest`                                      |
+| F9.8 | `mandatoryClean` blocks save without prior clean        | `<mandatoryClean>` / `-Dmaven.build.cache.mandatoryClean` | ✅      | `MandatoryCleanTest`                                                   |
+| F9.9 | `verify` phase (with integration tests) cached          | implicit                                                  | ✅      | `BuildExtensionTest.simple`                                            |
 
 ---
 
 ### F10 Admin Controls
 
-| ID    | Feature                                      | XML / System Property                | Criticality | Status | Test Reference                                |
-|-------|----------------------------------------------|--------------------------------------|-------------|--------|-----------------------------------------------|
-| F10.1 | `skipCache` — force rebuild, still writes    | `-Dmaven.build.cache.skipCache`      | P1          | ✅      | `PerModuleFlagsTest`                          |
-| F10.2 | `skipSave` — read-only cache usage           | `-Dmaven.build.cache.skipSave`       | P1          | ✅      | `BuildExtensionTest.skipSaving`               |
-| F10.3 | `failFast` — abort on restore failure        | `-Dmaven.build.cache.failFast`       | P2          | ✅      | `admin/FailFastTest`                          |
-| F10.4 | `mandatoryClean` — require clean before save | `-Dmaven.build.cache.mandatoryClean` | P1          | ✅      | `MandatoryCleanTest`                          |
-| F10.5 | Mid-build failure → no partial cache entry   | implicit                             | P0          | ✅      | `failurerecovery/BuildFailsMidwayNoCacheTest` |
-| F10.6 | `maxBuildsCached` LRU eviction               | `<local><maxBuildsCached>`           | P2          | ✅      | `output/MaxLocalBuildsCachedTest`             |
+| ID    | Feature                                      | XML / System Property                | Status | Test Reference                                |
+|-------|----------------------------------------------|--------------------------------------|--------|-----------------------------------------------|
+| F10.1 | `skipCache` — force rebuild, still writes    | `-Dmaven.build.cache.skipCache`      | ✅      | `PerModuleFlagsTest`                          |
+| F10.2 | `skipSave` — read-only cache usage           | `-Dmaven.build.cache.skipSave`       | ✅      | `BuildExtensionTest.skipSaving`               |
+| F10.3 | `failFast` — abort on restore failure        | `-Dmaven.build.cache.failFast`       | ✅      | `admin/FailFastTest`                          |
+| F10.4 | `mandatoryClean` — require clean before save | `-Dmaven.build.cache.mandatoryClean` | ✅      | `MandatoryCleanTest`                          |
+| F10.5 | Mid-build failure → no partial cache entry   | implicit                             | ✅      | `failurerecovery/BuildFailsMidwayNoCacheTest` |
+| F10.6 | `maxBuildsCached` LRU eviction               | `<local><maxBuildsCached>`           | ✅      | `output/MaxLocalBuildsCachedTest`             |
 
 ---
 
 ### F11 Configuration Injection
 
-| ID    | Feature                                | Mechanism                              | Criticality | Status | Test Reference                                            |
-|-------|----------------------------------------|----------------------------------------|-------------|--------|-----------------------------------------------------------|
-| F11.1 | XML file at default path               | `.mvn/maven-build-cache-config.xml`    | P0          | ✅      | all standard ITs                                          |
-| F11.2 | XML file at custom path                | `-Dmaven.build.cache.configPath`       | P1          | ✅      | `config/CustomConfigPathTest`                             |
-| F11.3 | CLI `-D` system property overrides XML | `-D<property>`                         | P1          | ✅      | `BuildExtensionTest.skipSaving`, `SkipBuildExtensionTest` |
-| F11.4 | POM `<properties>` per-module override | `<properties>`                         | P1          | ✅      | `PerModuleFlagsTest`                                      |
-| F11.5 | No XML file → built-in defaults active | implicit                               | P1          | ✅      | `config/NoConfigFileDefaultsTest`                         |
-| F11.6 | `alwaysRunPlugins` CLI comma-list      | `-Dmaven.build.cache.alwaysRunPlugins` | P1          | ✅      | `pluginexecution/AlwaysRunPluginsCliTest`                 |
+| ID    | Feature                                | Mechanism                              | Status | Test Reference                                            |
+|-------|----------------------------------------|----------------------------------------|--------|-----------------------------------------------------------|
+| F11.1 | XML file at default path               | `.mvn/maven-build-cache-config.xml`    | ✅      | all standard ITs                                          |
+| F11.2 | XML file at custom path                | `-Dmaven.build.cache.configPath`       | ✅      | `config/CustomConfigPathTest`                             |
+| F11.3 | CLI `-D` system property overrides XML | `-D<property>`                         | ✅      | `BuildExtensionTest.skipSaving`, `SkipBuildExtensionTest` |
+| F11.4 | POM `<properties>` per-module override | `<properties>`                         | ✅      | `PerModuleFlagsTest`                                      |
+| F11.5 | No XML file → built-in defaults active | implicit                               | ✅      | `config/NoConfigFileDefaultsTest`                         |
+| F11.6 | `alwaysRunPlugins` CLI comma-list      | `-Dmaven.build.cache.alwaysRunPlugins` | ✅      | `pluginexecution/AlwaysRunPluginsCliTest`                 |
 
 ---
 
 ### F12 Project Versioning
 
-| ID    | Feature                                       | XML / System Property                                  | Criticality | Status | Test Reference                                       |
-|-------|-----------------------------------------------|--------------------------------------------------------|-------------|--------|------------------------------------------------------|
-| F12.1 | `adjustMetaInf` — normalize MANIFEST.MF       | `<projectVersioning><adjustMetaInf>`                   | P2          | ✅      | `versioning/MetaInfVersionAdjustmentTest`            |
-| F12.2 | `calculateProjectVersionChecksum`             | `<projectVersioning><calculateProjectVersionChecksum>` | P2          | ✅      | `versioning/SnapshotVersionBumpWithChecksumFlagTest` |
-| F12.3 | NORMALIZED_VERSION: SNAPSHOT bump → cache hit | implicit (default)                                     | P2          | ✅      | `versioning/SnapshotVersionBumpCacheHitTest`         |
-| F12.4 | CI-friendly `${revision}` version stability   | flatten-maven-plugin pattern                           | P1          | ✅      | `versioning/CIFriendlyRevisionVersionTest`           |
+| ID    | Feature                                       | XML / System Property                                  | Status | Test Reference                                       |
+|-------|-----------------------------------------------|--------------------------------------------------------|--------|------------------------------------------------------|
+| F12.1 | `adjustMetaInf` — normalize MANIFEST.MF       | `<projectVersioning><adjustMetaInf>`                   | ✅      | `versioning/MetaInfVersionAdjustmentTest`            |
+| F12.2 | `calculateProjectVersionChecksum`             | `<projectVersioning><calculateProjectVersionChecksum>` | ✅      | `versioning/SnapshotVersionBumpWithChecksumFlagTest` |
+| F12.3 | NORMALIZED_VERSION: SNAPSHOT bump → cache hit | implicit (default)                                     | ✅      | `versioning/SnapshotVersionBumpCacheHitTest`         |
+| F12.4 | CI-friendly `${revision}` version stability   | flatten-maven-plugin pattern                           | ✅      | `versioning/CIFriendlyRevisionVersionTest`           |
 
 ---
 
 ### F13 Diagnostics
 
-| ID    | Feature                                             | XML / System Property                 | Criticality | Status | Test Reference                               |
-|-------|-----------------------------------------------------|---------------------------------------|-------------|--------|----------------------------------------------|
-| F13.1 | Per-goal `logAll` flag                              | `<reconcile><plugin logAll="true">`   | P3          | ✅      | `pluginexecution/LogAllPropertiesTest`       |
-| F13.2 | `logAllProperties` global flag                      | `<reconcile><logAllProperties>`       | P3          | ✅      | `pluginexecution/LogAllPropertiesGlobalTest` |
-| F13.3 | `buildinfo.xml` FileHash debug                      | `<debugs><debug>FileHash</debug>`     | P3          | ✅      | `reports/BuildInfoXmlDebugTest`              |
-| F13.4 | `buildinfo.xml` EffectivePom debug                  | `<debugs><debug>EffectivePom</debug>` | P3          | ❌      | —                                            |
-| F13.5 | `build-cache-report.xml` generated per build        | implicit                              | P2          | ✅      | `reports/CacheReportGeneratedTest`           |
-| F13.6 | `buildsdiff.xml` generated with baselineUrl         | `-Dmaven.build.cache.baselineUrl`     | P3          | ✅      | `remote/BaselineDiffTest`                    |
-| F13.7 | CacheSource field (LOCAL/REMOTE/BUILD) in buildinfo | `Build.source`                        | P3          | ✅      | `internal/CacheSourceTrackingTest`           |
+| ID    | Feature                                             | XML / System Property                 | Status | Test Reference                               |
+|-------|-----------------------------------------------------|---------------------------------------|--------|----------------------------------------------|
+| F13.1 | Per-goal `logAll` flag                              | `<reconcile><plugin logAll="true">`   | ✅      | `pluginexecution/LogAllPropertiesTest`       |
+| F13.2 | `logAllProperties` global flag                      | `<reconcile><logAllProperties>`       | ✅      | `pluginexecution/LogAllPropertiesGlobalTest` |
+| F13.3 | `buildinfo.xml` FileHash debug                      | `<debugs><debug>FileHash</debug>`     | ✅      | `reports/BuildInfoXmlDebugTest`              |
+| F13.4 | `buildinfo.xml` EffectivePom debug                  | `<debugs><debug>EffectivePom</debug>` | ❌      | —                                            |
+| F13.5 | `build-cache-report.xml` generated per build        | implicit                              | ✅      | `reports/CacheReportGeneratedTest`           |
+| F13.6 | `buildsdiff.xml` generated with baselineUrl         | `-Dmaven.build.cache.baselineUrl`     | ✅      | `remote/BaselineDiffTest`                    |
+| F13.7 | CacheSource field (LOCAL/REMOTE/BUILD) in buildinfo | `Build.source`                        | ✅      | `internal/CacheSourceTrackingTest`           |
 
 ---
 
@@ -428,7 +418,7 @@ cache behaviors are project-agnostic.
 
 ---
 
-### Group A: Core Checksum Correctness (P0)
+### Group A: Core Checksum Correctness
 
 | ID   | Scenario                                                    | Features         | Reference Project              | Status                                                                                   |
 |------|-------------------------------------------------------------|------------------|--------------------------------|------------------------------------------------------------------------------------------|
@@ -447,7 +437,7 @@ cache behaviors are project-agnostic.
 | A-13 | Parent property bump propagates to declared dep → miss      | F2.12            | **P02**                        | ✅ `CacheInvalidationProjectTraitsTest.parentPropertyChangeInvalidates`                   |
 | A-14 | BOM-managed unused dep version change → no miss (cache hit) | F2.12/BOM        | **P06**                        | ✅ `CacheInvalidationProjectTraitsTest.bomManagedUnusedDepVersionChangeDoesNotInvalidate` |
 
-### Group B: Input Filtering (P0/P1)
+### Group B: Input Filtering
 
 | ID   | Scenario                                                   | Features  | Reference Project         | Status                                                 |
 |------|------------------------------------------------------------|-----------|---------------------------|--------------------------------------------------------|
@@ -460,7 +450,7 @@ cache behaviors are project-agnostic.
 | B-07 | Profile activation changes effective POM → miss            | F2.21     | **P08**                   | ✅ `inputfiltering/ProfileCliActivationInvalidatesTest` |
 | B-08 | OS env-var profile activation changes effective POM → miss | F2.21     | **P08**                   | ✅ `inputfiltering/EnvVariableChangeInvalidatesTest`    |
 
-### Group C: Lifecycle Phases & Escalation (P0)
+### Group C: Lifecycle Phases & Escalation
 
 | ID   | Scenario                                 | Features   | Reference Project          | Status                                         |
 |------|------------------------------------------|------------|----------------------------|------------------------------------------------|
@@ -472,7 +462,7 @@ cache behaviors are project-agnostic.
 | C-06 | Clean-only run → cache bypassed          | F9.6       | PARAM P01-P19              | ✅ `SkipBuildExtensionTest.simple`              |
 | C-07 | `clean verify` — clean then cached build | F9.7       | PARAM P01-P19              | ✅ `lifecyclephases/CleanVerifyTest`            |
 
-### Group D: Plugin Execution & Reconciliation (P0/P1)
+### Group D: Plugin Execution & Reconciliation
 
 | ID   | Scenario                                     | Features     | Reference Project | Status                                                 |
 |------|----------------------------------------------|--------------|-------------------|--------------------------------------------------------|
@@ -490,7 +480,7 @@ cache behaviors are project-agnostic.
 | D-12 | Reconcile `defaultValue` for absent property | F4.9         | **P19**           | ✅ `pluginexecution/TrackedPropertyDefaultValueTest`    |
 | D-13 | Missing cached execution → full rebuild      | F4.15        | **P19**           | ✅ `pluginexecution/MissingExecutionTriggerRebuildTest` |
 
-### Group E: Artifact Restore (P1)
+### Group E: Artifact Restore
 
 | ID   | Scenario                                          | Features         | Reference Project                 | Status                                         |
 |------|---------------------------------------------------|------------------|-----------------------------------|------------------------------------------------|
@@ -499,7 +489,7 @@ cache behaviors are project-agnostic.
 | E-03 | `restoreOnDiskArtifacts=false` skips target/      | F5.5             | **P01**                           | ✅ `artifacts/RestoreOnDiskArtifactsFalseTest`  |
 | E-04 | Corrupted ZIP entry → clean rebuild               | F5.6             | legacy: `failure-recovery`        | ✅ `CorruptedZipCacheEntryTest`                 |
 
-### Group F: Output Management (P1/P2)
+### Group F: Output Management
 
 | ID   | Scenario                                        | Features    | Reference Project | Status                                 |
 |------|-------------------------------------------------|-------------|-------------------|----------------------------------------|
@@ -507,7 +497,7 @@ cache behaviors are project-agnostic.
 | F-02 | `preservePermissions=true` restores POSIX bits  | F6.3        | **P01**           | ✅ `output/PermissionsPreservationTest` |
 | F-03 | `maxBuildsCached` evicts oldest entries         | F6.5, F10.6 | **P01**           | ✅ `output/MaxLocalBuildsCachedTest`    |
 
-### Group G: Admin Controls (P1)
+### Group G: Admin Controls
 
 | ID   | Scenario                                      | Features    | Reference Project | Status                                                           |
 |------|-----------------------------------------------|-------------|-------------------|------------------------------------------------------------------|
@@ -518,7 +508,7 @@ cache behaviors are project-agnostic.
 | G-05 | `-Dmaven.build.cache.enabled=false` via CLI   | F1.3, F11.3 | PARAM P01-P19     | ✅ `SkipBuildExtensionTest.cacheDisabledViaCommandLine` + BASE-04 |
 | G-06 | `failFast=true` aborts on restore failure     | F7.7, F10.3 | **P01**           | ✅ `admin/FailFastTest`                                           |
 
-### Group H: Configuration Injection (P1)
+### Group H: Configuration Injection
 
 | ID   | Scenario                                     | Features    | Reference Project         | Status                              |
 |------|----------------------------------------------|-------------|---------------------------|-------------------------------------|
@@ -534,7 +524,7 @@ cache behaviors are project-agnostic.
 >
 > **H-05 note:** Test sets up P01 without a `.mvn/maven-build-cache-config.xml` file.
 
-### Group I: Multi-Module & Reactor (P1)
+### Group I: Multi-Module & Reactor
 
 | ID   | Scenario                                          | Features   | Reference Project         | Status                                                 |
 |------|---------------------------------------------------|------------|---------------------------|--------------------------------------------------------|
@@ -549,7 +539,7 @@ cache behaviors are project-agnostic.
 | I-09 | Partial reactor (`-pl C -am`), no `<discovery>`: `-am` includes B in `session.getProjects()`, so the extension computes C's multi-module checksum with B as a reactor sibling (not an external dep) → same key as full build → cache hit | F8.8 | **P02** | ✅ `SubtreeBuildCacheHitTest#partialReactorWithAmHitsCacheWithoutDiscovery`                    |
 | I-10 | Subtree from C's dir, `<discovery><scanProfiles>`: only C in `session.getProjects()`; extension detects submodule context, re-scans from root pom activating `full-reactor` profile (via `scanProfiles`), discovers B with same effective model as full build → C's checksum matches → cache hit | F8.9 | **P02** | ✅ `SubtreeBuildCacheHitTest#subtreeWithDiscoveryAndScanProfileHitsCacheAfterFullReactorBuild` |
 
-### Group J: Remote Cache (P1/P2)
+### Group J: Remote Cache
 
 | ID   | Scenario                             | Features        | Reference Project  | Status                                   |
 |------|--------------------------------------|-----------------|--------------------|------------------------------------------|
@@ -558,14 +548,14 @@ cache behaviors are project-agnostic.
 | J-03 | `save.final=true` — no overwrite     | F7.4            | **P01** (WireMock) | ✅ `remote/SaveFinalRemoteTest`           |
 | J-04 | Baseline URL diff report             | F7.8, F13.6     | **P01** (WireMock) | ✅ `remote/BaselineDiffTest`              |
 
-### Group K: Hash Algorithms (P2)
+### Group K: Hash Algorithms
 
 | ID   | Scenario                            | Features | Reference Project | Status                                     |
 |------|-------------------------------------|----------|-------------------|--------------------------------------------|
 | K-01 | SHA-256 algorithm correct hit/miss  | F3.2     | **P01**           | ✅ `hashalgorithm/HashAlgorithmRoundTripTest`  |
 | K-02 | Invalid algorithm → startup failure | F3.7     | **P01**           | ✅ `hashalgorithm/InvalidHashAlgorithmTest` |
 
-### Group L: Project Versioning (P2)
+### Group L: Project Versioning
 
 | ID   | Scenario                                                 | Features    | Reference Project | Status                                                  |
 |------|----------------------------------------------------------|-------------|-------------------|---------------------------------------------------------|
@@ -576,14 +566,14 @@ cache behaviors are project-agnostic.
 | L-05 | External parent version bump (relativePath) → miss       | F12, F2.12  | **P10**           | ✅ `versioning/ExternalParentVersionBumpInvalidatesTest` |
 | L-06 | Remote parent version bump (local-repo) → miss           | F12, F2.12  | **P10**           | ✅ `versioning/RemoteParentVersionBumpInvalidatesTest`   |
 
-### Group M: Portability & Cross-Environment (P2)
+### Group M: Portability & Cross-Environment
 
 | ID   | Scenario                                                             | Features    | Reference Project | Status                                               |
 |------|----------------------------------------------------------------------|-------------|-------------------|------------------------------------------------------|
 | M-01 | Absolute path stripped from effective POM → same key across machines | portability | PARAM P01-P19     | ✅ `portability/AbsolutePathNormalizationTest`        |
 | M-02 | Tracked `File` property normalized to relative                       | portability | **P19**           | ✅ `portability/TrackedPropertyPathNormalizationTest` |
 
-### Group N: Project Type Variations (P1/P2)
+### Group N: Project Type Variations
 
 | ID   | Scenario                                                 | Features | Reference Project              | Status                                              |
 |------|----------------------------------------------------------|----------|--------------------------------|-----------------------------------------------------|
@@ -593,7 +583,7 @@ cache behaviors are project-agnostic.
 | N-04 | Shade plugin: shaded JAR is the cached artifact          | F6.1     | new: `shade-plugin-project`    | ✅ `projecttypes/ShadePluginArtifactReplacementTest` |
 | N-05 | Assembly plugin: exclusion pattern prevents ZIP in cache | F6.4     | new: `assembly-plugin-project` | ✅ `projecttypes/AssemblyPluginZipExcludeTest`       |
 
-### Group O: Report Generation & Diagnostics (P2/P3)
+### Group O: Report Generation & Diagnostics
 
 | ID   | Scenario                                        | Features | Reference Project | Status                               |
 |------|-------------------------------------------------|----------|-------------------|--------------------------------------|
@@ -601,7 +591,7 @@ cache behaviors are project-agnostic.
 | O-02 | Report shows CACHED / REBUILT status per module | F13.5    | **P02**           | ✅ `reports/CacheReportStatusTest`    |
 | O-03 | `buildinfo.xml` FileHash debug entries          | F13.3    | **P01**           | ✅ `reports/BuildInfoXmlDebugTest`    |
 
-### Group P: Internal Architecture (P2/P3)
+### Group P: Internal Architecture
 
 | ID   | Scenario                                              | Features   | Reference Project | Status                                        |
 |------|-------------------------------------------------------|------------|-------------------|-----------------------------------------------|
@@ -609,7 +599,7 @@ cache behaviors are project-agnostic.
 | P-02 | Extra CLI goal after lifecycle goal (regression #399) | implicit   | **P01**           | ✅ `internal/AdditionalGoalAfterLifecycleTest` |
 | P-03 | `Build` round-trip serialization (unit test)          | XmlService | —                 | ✅ `internal/BuildSerializationRoundTripTest`  |
 
-### Group Q: Cache Invalidation — Project Traits (P1/P2)
+### Group Q: Cache Invalidation — Project Traits
 
 Tests verifying that each unique Maven input category correctly invalidates the cache.
 Primary test class: `CacheInvalidationProjectTraitsTest`.
@@ -647,139 +637,135 @@ Master traceability table mapping behaviors to test classes and reference projec
 **Reference Project:** `P<n>` = reference project · `PARAM` = parametrized across P01-P19
 · `legacy: <name>` = existing non-reference project · `new: <name>` = new project needed
 
-| TC#    | Behavior / Test Case                                                       | Test Class                                                    | Reference Project                 | Priority | Status |
-|--------|----------------------------------------------------------------------------|---------------------------------------------------------------|-----------------------------------|----------|--------|
-| TC-001 | Build extension loads; first build saved, second restored                  | `BuildExtensionTest.simple`                                   | PARAM P01-P19                     | P0       | ✅      |
-| TC-002 | Core extension loads; same hit/miss cycle                                  | `CoreExtensionTest`                                           | PARAM P01-P19                     | P0       | ✅      |
-| TC-003 | `maven.build.cache.enabled=false` via CLI disables cache                   | `SkipBuildExtensionTest.cacheDisabledViaCommandLine`          | PARAM P01-P19                     | P0       | ✅      |
-| TC-004 | Adding a source file invalidates cache                                     | `AddedSourceFileInvalidatesCacheTest`                         | legacy: `checksum-correctness`    | P0       | ✅      |
-| TC-005 | Deleting a source file invalidates cache                                   | `DeletedSourceFileInvalidatesCacheTest`                       | legacy: `checksum-correctness`    | P0       | ✅      |
-| TC-006 | Modifying a source file invalidates cache                                  | `SourceChangeInvalidatesCacheTest`                            | PARAM P01-P19                     | P0       | ✅      |
-| TC-007 | Modifying POM (functional change) invalidates cache                        | `PomChangeInvalidatesCacheTest`                               | legacy: `checksum-correctness`    | P0       | ✅      |
-| TC-008 | Whitespace-only POM change is a cache hit                                  | `WhitespaceOnlyPomChangeNoCacheMissTest`                      | legacy: `checksum-correctness`    | P0       | ✅      |
-| TC-009 | Resource file change invalidates cache                                     | `ResourceChangeInvalidatesCacheTest`                          | legacy: `checksum-correctness`    | P0       | ✅      |
-| TC-010 | Test source change invalidates cache                                       | `TestSourceChangeInvalidatesCacheTest`                        | legacy: `checksum-correctness`    | P0       | ✅      |
-| TC-011 | POM `<properties>` value change invalidates cache                          | `PropertyChangeInvalidatesCacheTest`                          | PARAM P01-P19                     | P0       | ✅      |
-| TC-012 | Dependency version change in POM invalidates cache                         | `DependencyVersionChangeInvalidatesCacheTest`                 | P01                               | P0       | ✅      |
-| TC-013 | `compile` phase cached and restored                                        | `CompilePhaseDefaultCachedTest`                               | legacy: `lifecycle-phases`        | P0       | ✅      |
-| TC-014 | `test-compile` phase cached and restored                                   | `TestCompilePhaseTest`                                        | legacy: `lifecycle-phases`        | P0       | ✅      |
-| TC-015 | Phase escalation: compile→package forces rebuild                           | `CompileThenPackageEscalationTest`                            | PARAM P01-P19                     | P0       | ✅      |
-| TC-016 | Phase escalation: package→install forces rebuild                           | `PackageThenInstallEscalationTest`                            | legacy: `lifecycle-phases`        | P0       | ✅      |
-| TC-017 | Install phase: artifact available in local repo after restore              | `InstallPhaseTest`                                            | legacy: `lifecycle-phases`        | P0       | ✅      |
-| TC-018 | Tracked property match → cache hit                                         | `TrackedPropertyMatchCacheHitTest`                            | P19                               | P0       | ✅      |
-| TC-019 | Tracked property mismatch → cache miss                                     | `TrackedPropertyMismatchCacheMissTest`                        | P19                               | P0       | ✅      |
-| TC-020 | skipValue allows cache hit when skip property set                          | `TrackedPropertySkipValueAllowsReuseTest`                     | P19                               | P0       | ✅      |
-| TC-021 | Full reactor: modules cached independently                                 | `Issue21Test`                                                 | P02, P10, P11                     | P0       | ✅      |
-| TC-022 | Mid-build failure: nothing written to cache                                | `BuildFailsMidwayNoCacheTest`                                 | P06                               | P0       | ✅      |
-| TC-023 | Global include paths restrict fingerprinted sources                        | `IncludeExcludeTest`                                          | legacy: `include-exclude`         | P0       | ✅      |
-| TC-024 | Global exclude paths ignore matching files                                 | `IncludeExcludeTest`                                          | legacy: `include-exclude`         | P0       | ✅      |
-| TC-025 | Global glob pattern selects source subset                                  | `IncludeExcludeTest`                                          | legacy: `include-exclude`         | P0       | ✅      |
-| TC-026 | Incremental restore + extra output dirs + classifiers                      | `IncrementalRestoreTest`                                      | legacy: `mbuildcache-incremental` | P1       | ✅      |
-| TC-027 | Forked lifecycle execution tracked and cached                              | `ForkedExecutionsTest`                                        | P12                               | P1       | ✅      |
-| TC-028 | Duplicate goal executions deduped correctly                                | `DuplicateGoalsTest`                                          | P01                               | P1       | ✅      |
-| TC-029 | logAll flag dumps all mojo properties                                      | `LogAllPropertiesTest`                                        | P19                               | P1       | ✅      |
-| TC-030 | Per-module skipCache via POM property                                      | `PerModuleFlagsTest`                                          | P10                               | P1       | ✅      |
-| TC-031 | Per-module cache disabled via POM property                                 | `PerModuleFlagsTest`                                          | P10                               | P1       | ✅      |
-| TC-032 | `skipCache=true` global: rebuilds all, still writes                        | `SkipBuildExtensionTest`                                      | PARAM P01-P19                     | P1       | ✅      |
-| TC-033 | `skipSave=true`: reads cache, does not write                               | `BuildExtensionTest.skipSaving`                               | PARAM P01-P19                     | P1       | ✅      |
-| TC-034 | `mandatoryClean=true`: save blocked without clean                          | `MandatoryCleanTest`                                          | PARAM P01-P19                     | P1       | ✅      |
-| TC-035 | Corrupted ZIP cache entry: rebuild triggered                               | `CorruptedZipCacheEntryTest`                                  | PARAM P01-P19                     | P1       | ✅      |
-| TC-036 | Remote cache read and write (WebDAV)                                       | `RemoteCacheDavTest`                                          | legacy: `dav`                     | P1       | ✅      |
-| TC-037 | clean-only run: cache bypassed, no lookup                                  | `SkipBuildExtensionTest.simple`                               | PARAM P01-P19                     | P1       | ✅      |
-| TC-038 | Upstream reactor module change → downstream cache miss                     | `UpstreamModuleChangeDownstreamMissTest`                      | P02                               | P1       | ✅      |
-| TC-039 | No `.mvn/maven-build-cache-config.xml`: defaults active                    | `NoConfigFileDefaultsTest`                                    | P01 (no-config)                   | P1       | ✅      |
-| TC-040 | configPath override: non-default XML loaded                                | `CustomConfigPathTest`                                        | P01                               | P1       | ✅      |
-| TC-041 | Malformed XML config: descriptive error at startup                         | `InvalidConfigXmlTest`                                        | P01                               | P1       | ✅      |
-| TC-042 | Profile activation changes effective POM → cache miss                      | `ProfileCliActivationInvalidatesTest`                         | P08                               | P1       | ✅      |
-| TC-043 | `processPlugins=false`: plugin params not introspected                     | `ProcessPluginsDisabledTest`                                  | P01                               | P1       | ✅      |
-| TC-044 | Project-level glob override in POM `<properties>`                          | `PerProjectGlobOverrideTest`                                  | P02                               | P1       | ✅      |
-| TC-045 | Project-level additional include via POM properties                        | `ProjectLevelIncludeTest`                                     | P02                               | P1       | ✅      |
-| TC-046 | Effective POM property exclusion for specific plugin                       | `EffectivePomExcludePropertyTest`                             | P19                               | P1       | ✅      |
-| TC-047 | `runAlways` by plugin coordinates: plugin always executes                  | `RunAlwaysPluginTest`                                         | P19                               | P1       | ✅      |
-| TC-048 | `runAlways` by goal name                                                   | `RunAlwaysByGoalTest`                                         | P19                               | P1       | ✅      |
-| TC-049 | `runAlways` by execution ID                                                | `RunAlwaysByExecutionIdTest`                                  | P19                               | P1       | ✅      |
-| TC-050 | `alwaysRunPlugins` CLI: comma-list of plugin:goal pairs                    | `AlwaysRunPluginsCliTest`                                     | P01                               | P1       | ✅      |
-| TC-051 | `ignoreMissing`: absent cached execution skipped                           | `IgnoreMissingPluginTest`                                     | P19                               | P1       | ✅      |
-| TC-052 | Reconcile `defaultValue` used when property absent                         | `TrackedPropertyDefaultValueTest`                             | P19                               | P1       | ✅      |
-| TC-053 | Missing cached execution triggers full rebuild                             | `MissingExecutionTriggerRebuildTest`                          | P19                               | P1       | ✅      |
-| TC-054 | `restoreGeneratedSources=false`: generated sources not restored            | `RestoreGeneratedSourcesFalseTest`                            | P01                               | P1       | ✅      |
-| TC-055 | `restoreOnDiskArtifacts=false`: target/ artifacts not restored             | `RestoreOnDiskArtifactsFalseTest`                             | P01                               | P1       | ✅      |
-| TC-056 | Partial reactor `-pl module-a`: targeted module only                       | `MultiModulePartialBuildTest`                                 | P10                               | P1       | ✅      |
-| TC-057 | Partial reactor `-pl module-b -am`: upstream restored                      | `MultiModulePartialWithAmTest`                                | P10                               | P1       | ✅      |
-| TC-058 | WAR packaging: web resources cached and restored                           | `WarPackagingTest`                                            | P17                               | P1       | ✅      |
-| TC-059 | POM packaging: no source scan, effective POM is key                        | `PomPackagingTest`                                            | P02                               | P1       | ✅      |
-| TC-060 | CI-friendly `${revision}` version: cache key stable                        | `CIFriendlyRevisionVersionTest`                               | P04                               | P1       | ✅      |
-| TC-061 | `clean verify`: clean runs before cache lookup                             | `CleanVerifyTest`                                             | PARAM P01-P19                     | P1       | ✅      |
-| TC-062 | Output exclude regex pattern filters files from entry                      | `OutputExcludePatternTest`                                    | P17                               | P2       | ✅      |
-| TC-063 | `preservePermissions=true`: POSIX bits restored                            | `PermissionsPreservationTest`                                 | P01 (Linux only)                  | P2       | ✅      |
-| TC-064 | `maxBuildsCached=2`: third build evicts oldest entry                       | `MaxLocalBuildsCachedTest`                                    | P01                               | P2       | ✅      |
-| TC-065 | `save.final=true`: `<final>true</final>` embedded in pushed buildinfo      | `SaveFinalRemoteTest`                                         | P01 (WireMock)                    | P2       | ✅      |
-| TC-066 | Remote server unavailable: falls back to local cache                       | `RemoteUnavailableFallbackTest`                               | P01 (unreachable URL)             | P2       | ✅      |
-| TC-067 | `failFast=true`: build aborts on restore failure                           | `FailFastTest`                                                | P01                               | P2       | ✅      |
-| TC-068 | Parallel build `-T2`: cache correctness maintained                         | `ParallelBuildTest`                                           | P11                               | P2       | ✅      |
-| TC-069 | Per-plugin `dirScan` limits paths scanned                                  | `PerPluginDirScanTest`                                        | P19                               | P2       | ❌      |
-| TC-070 | Plugin dependency exclusion from fingerprint                               | `ExcludeDependenciesPluginTest`                               | P07                               | P2       | ❌      |
-| TC-071 | SHA-256 algorithm: correct hit/miss behavior                               | `HashAlgorithmRoundTripTest`                                  | P01                               | P2       | ✅      |
-| TC-072 | Invalid hash algorithm: descriptive startup failure                        | `InvalidHashAlgorithmTest`                                    | P01                               | P2       | ✅      |
-| TC-073 | SNAPSHOT version bump → cache hit (NORMALIZED_VERSION)                     | `SnapshotVersionBumpCacheHitTest`                             | P16                               | P2       | ✅      |
-| TC-074 | SNAPSHOT bump + `calculateProjectVersionChecksum` → miss                   | `SnapshotVersionBumpWithChecksumFlagTest`                     | P16                               | P2       | ✅      |
-| TC-075 | `adjustMetaInf=true`: MANIFEST.MF version normalized                       | `MetaInfVersionAdjustmentTest`                                | P01                               | P2       | ✅      |
-| TC-076 | Absolute path stripped → same cache key across workspaces                  | `AbsolutePathNormalizationTest`                               | PARAM P01-P19                     | P2       | ✅      |
-| TC-077 | Tracked `File` property normalized to relative path                        | `TrackedPropertyPathNormalizationTest`                        | P19                               | P2       | ✅      |
-| TC-078 | Test-jar classifier artifact cached and restored                           | `TestJarProjectTest`                                          | P06                               | P2       | ✅      |
-| TC-079 | Shade plugin: shaded JAR (not empty original) is cached                    | `ShadePluginArtifactReplacementTest`                          | new: `shade-plugin-project`       | P2       | ✅      |
-| TC-080 | Assembly plugin: output exclusion prevents ZIP in cache                    | `AssemblyPluginZipExcludeTest`                                | new: `assembly-plugin-project`    | P2       | ✅      |
-| TC-081 | Extra CLI goal after lifecycle goal (regression #399)                      | `AdditionalGoalAfterLifecycleTest`                            | P01                               | P2       | ✅      |
-| TC-082 | `build-cache-report.xml` generated after each build                        | `CacheReportGeneratedTest`                                    | P01                               | P2       | ✅      |
-| TC-083 | Report shows correct CACHED/REBUILT per module                             | `CacheReportStatusTest`                                       | P02                               | P2       | ✅      |
-| TC-084 | Stale `target/` files not included in new cache entry                      | `StagingRemovesStaleClassesTest`                              | P01                               | P2       | ✅      |
-| TC-085 | `scanProfiles` includes active profiles in reactor key                     | `ScanProfilesTest`                                            | P08                               | P2       | ✅      |
-| TC-086 | `logAllProperties` global flag dumps all params                            | `LogAllPropertiesGlobalTest`                                  | P19                               | P3       | ✅      |
-| TC-087 | `buildinfo.xml` debug: FileHash entries present                            | `BuildInfoXmlDebugTest`                                       | P01                               | P3       | ✅      |
-| TC-088 | CacheSource field: LOCAL after local hit                                   | `CacheSourceTrackingTest`                                     | P01                               | P3       | ✅      |
-| TC-089 | `baselineUrl` diff: `buildsdiff.xml` generated                             | `BaselineDiffTest`                                            | P01 + remote                      | P3       | ✅      |
-| TC-090 | `Build` object serializes and deserializes cleanly                         | `BuildSerializationRoundTripTest`                             | —                                 | P3       | ✅      |
-| TC-091 | Exclusion FILENAME vs PATH rule types (unit)                               | `ExclusionRuleTypesTest`                                      | —                                 | P3       | ✅      |
-| TC-092 | `nolog` suppresses property from reconcile output                          | `TrackedPropertyNologTest`                                    | P19                               | P3       | ✅      |
-| TC-093 | System-scope JAR content change (SNAPSHOT ver.) → cache miss               | `CacheInvalidationProjectTraitsTest`                          | P01                               | P2       | ✅      |
-| TC-094 | Parent `<properties>` bump propagates to declared dep → miss               | `CacheInvalidationProjectTraitsTest`                          | P02                               | P2       | ✅      |
-| TC-095 | BOM-managed unused dep version change → cache hit (no miss)                | `CacheInvalidationProjectTraitsTest`                          | P06                               | P2       | ✅      |
-| TC-096 | OS env-var activates profile → effective POM changes → miss                | `EnvVariableChangeInvalidatesTest`                            | P08                               | P2       | ✅      |
-| TC-097 | External parent version bump (relativePath) → cache miss                   | `ExternalParentVersionBumpInvalidatesTest`                    | P10                               | P2       | ✅      |
-| TC-098 | Remote parent version bump (local-repo install) → cache miss               | `RemoteParentVersionBumpInvalidatesTest`                      | P10                               | P2       | ✅      |
-| TC-099 | WAR webapp file change → webapp-war misses; webapp-lib hits                | `CacheInvalidationProjectTraitsTest`                          | P17                               | P1       | ✅      |
-| TC-100 | Parent-managed dep version change → all child modules miss                 | `CacheInvalidationProjectTraitsTest`                          | P02                               | P1       | ✅      |
-| TC-101 | Plugin version change in POM → cache miss                                  | `CacheInvalidationProjectTraitsTest`                          | P01                               | P1       | ✅      |
-| TC-102 | BOM version change for a used dep → resolved version changes → miss        | `CacheInvalidationProjectTraitsTest`                          | P05                               | P1       | ✅      |
-| TC-103 | BOM import order swap (first-wins) → different resolved version → miss     | `CacheInvalidationProjectTraitsTest`                          | P06                               | P1       | ✅      |
-| TC-104 | Transitive exclusion removed → effective classpath changes → miss          | `CacheInvalidationProjectTraitsTest`                          | P06                               | P1       | ✅      |
-| TC-105 | `<optional>true</optional>` removed → effective POM dep changes → miss     | `CacheInvalidationProjectTraitsTest`                          | P06                               | P1       | ✅      |
-| TC-106 | Classifier dep removed → resolved artifact coordinates change → miss       | `CacheInvalidationProjectTraitsTest`                          | P06                               | P1       | ✅      |
-| TC-107 | Plugin `<phase>` rebinding change → effective lifecycle map changes → miss | `CacheInvalidationProjectTraitsTest`                          | P07                               | P1       | ✅      |
-| TC-108 | Plugin `<dependencies>` version change → plugin classpath → miss           | `CacheInvalidationProjectTraitsTest`                          | P07                               | P1       | ✅      |
-| TC-109 | Plugin goal prefix config change → plugin descriptor changed → miss        | `pluginexecution/PluginGoalPrefixChangeInvalidatesTest`       | P07                               | P2       | ✅      |
-| TC-110 | Profile file-trigger activates → effective POM changes → miss              | `CacheInvalidationProjectTraitsTest`                          | P08                               | P1       | ✅      |
-| TC-111 | `settings.xml` profile property change → effective-POM dep/param → miss    | `inputfiltering/SettingsProfilePropertyChangeInvalidatesTest` | P08                               | P1       | ✅      |
-| TC-112 | `activeByDefault` profile resets when another profile activates → miss     | `inputfiltering/ActiveByDefaultResetInvalidatesTest`          | P08                               | P1       | ✅      |
-| TC-113 | CI-driven version changes without source change → cache hit                | `versioning/CiBuildDrivenProjectVersionChangeCachedTest`      | P04                               | P1       | ✅      |
-| TC-114 | Unchanged module not evicted when only a leaf module changes               | `CacheInvalidationProjectTraitsTest`                          | P02                               | P1       | ✅      |
-| TC-115 | Parallel build: one module change invalidates its dependents only          | `CacheInvalidationProjectTraitsTest`                          | P11                               | P1       | ✅      |
-| TC-116 | Reactor SNAPSHOT source change propagates to all dependent modules         | `CacheInvalidationProjectTraitsTest`                          | P16                               | P1       | ✅      |
-| TC-117 | WAR profile-filtered resource change → WAR module miss                     | `CacheInvalidationProjectTraitsTest`                          | P17                               | P1       | ✅      |
-| TC-118 | `maven-plugin` packaging: build+restore round-trip succeeds                | `CacheInvalidationProjectTraitsTest`                          | P07                               | P1       | ✅      |
-| TC-119 | Subtree build of leaf module-api (no inter-module deps) from its own directory: Maven traverses up to `.mvn/`; cache key anchored to `rootDirectory` is identical to the full-reactor key → cache hit | `SubtreeBuildCacheHitTest#subtreeBuildHitsCacheAfterFullReactorBuild` | P02 | P2 | ✅ |
-| TC-120 | Partial reactor `-pl module-core -am` (no discovery): `-am` puts module-api into `session.getProjects()`; extension computes module-core's checksum with module-api as a reactor sibling, matching the full-reactor key → cache hit for both B and C | `SubtreeBuildCacheHitTest#partialReactorWithAmHitsCacheWithoutDiscovery` | P02 | P2 | ✅ |
-| TC-121 | Subtree build from module-core's dir with `<discovery><scanProfiles><scanProfile>full-reactor</scanProfile></scanProfiles>`: only C in reactor; extension detects non-root context, re-scans from root pom activating the `full-reactor` profile (whose property is in every module's effective POM), discovers module-api with the same checksum as the full-reactor build → cache hit for C | `SubtreeBuildCacheHitTest#subtreeWithDiscoveryAndScanProfileHitsCacheAfterFullReactorBuild` | P02 | P2 | ✅ |
+| TC#    | Behavior / Test Case                                                       | Test Class                                                    | Reference Project                 | Status |
+|--------|----------------------------------------------------------------------------|---------------------------------------------------------------|-----------------------------------|--------|
+| TC-001 | Build extension loads; first build saved, second restored                  | `BuildExtensionTest.simple`                                   | PARAM P01-P19                     | ✅      |
+| TC-002 | Core extension loads; same hit/miss cycle                                  | `CoreExtensionTest`                                           | PARAM P01-P19                     | ✅      |
+| TC-003 | `maven.build.cache.enabled=false` via CLI disables cache                   | `SkipBuildExtensionTest.cacheDisabledViaCommandLine`          | PARAM P01-P19                     | ✅      |
+| TC-004 | Adding a source file invalidates cache                                     | `AddedSourceFileInvalidatesCacheTest`                         | legacy: `checksum-correctness`    | ✅      |
+| TC-005 | Deleting a source file invalidates cache                                   | `DeletedSourceFileInvalidatesCacheTest`                       | legacy: `checksum-correctness`    | ✅      |
+| TC-006 | Modifying a source file invalidates cache                                  | `SourceChangeInvalidatesCacheTest`                            | PARAM P01-P19                     | ✅      |
+| TC-007 | Modifying POM (functional change) invalidates cache                        | `PomChangeInvalidatesCacheTest`                               | legacy: `checksum-correctness`    | ✅      |
+| TC-008 | Whitespace-only POM change is a cache hit                                  | `WhitespaceOnlyPomChangeNoCacheMissTest`                      | legacy: `checksum-correctness`    | ✅      |
+| TC-009 | Resource file change invalidates cache                                     | `ResourceChangeInvalidatesCacheTest`                          | legacy: `checksum-correctness`    | ✅      |
+| TC-010 | Test source change invalidates cache                                       | `TestSourceChangeInvalidatesCacheTest`                        | legacy: `checksum-correctness`    | ✅      |
+| TC-011 | POM `<properties>` value change invalidates cache                          | `PropertyChangeInvalidatesCacheTest`                          | PARAM P01-P19                     | ✅      |
+| TC-012 | Dependency version change in POM invalidates cache                         | `DependencyVersionChangeInvalidatesCacheTest`                 | P01                               | ✅      |
+| TC-013 | `compile` phase cached and restored                                        | `CompilePhaseDefaultCachedTest`                               | legacy: `lifecycle-phases`        | ✅      |
+| TC-014 | `test-compile` phase cached and restored                                   | `TestCompilePhaseTest`                                        | legacy: `lifecycle-phases`        | ✅      |
+| TC-015 | Phase escalation: compile→package forces rebuild                           | `CompileThenPackageEscalationTest`                            | PARAM P01-P19                     | ✅      |
+| TC-016 | Phase escalation: package→install forces rebuild                           | `PackageThenInstallEscalationTest`                            | legacy: `lifecycle-phases`        | ✅      |
+| TC-017 | Install phase: artifact available in local repo after restore              | `InstallPhaseTest`                                            | legacy: `lifecycle-phases`        | ✅      |
+| TC-018 | Tracked property match → cache hit                                         | `TrackedPropertyMatchCacheHitTest`                            | P19                               | ✅      |
+| TC-019 | Tracked property mismatch → cache miss                                     | `TrackedPropertyMismatchCacheMissTest`                        | P19                               | ✅      |
+| TC-020 | skipValue allows cache hit when skip property set                          | `TrackedPropertySkipValueAllowsReuseTest`                     | P19                               | ✅      |
+| TC-021 | Full reactor: modules cached independently                                 | `Issue21Test`                                                 | P02, P10, P11                     | ✅      |
+| TC-022 | Mid-build failure: nothing written to cache                                | `BuildFailsMidwayNoCacheTest`                                 | P06                               | ✅      |
+| TC-023 | Global include paths restrict fingerprinted sources                        | `IncludeExcludeTest`                                          | legacy: `include-exclude`         | ✅      |
+| TC-024 | Global exclude paths ignore matching files                                 | `IncludeExcludeTest`                                          | legacy: `include-exclude`         | ✅      |
+| TC-025 | Global glob pattern selects source subset                                  | `IncludeExcludeTest`                                          | legacy: `include-exclude`         | ✅      |
+| TC-026 | Incremental restore + extra output dirs + classifiers                      | `IncrementalRestoreTest`                                      | legacy: `mbuildcache-incremental` | ✅      |
+| TC-027 | Forked lifecycle execution tracked and cached                              | `ForkedExecutionsTest`                                        | P12                               | ✅      |
+| TC-028 | Duplicate goal executions deduped correctly                                | `DuplicateGoalsTest`                                          | P01                               | ✅      |
+| TC-029 | logAll flag dumps all mojo properties                                      | `LogAllPropertiesTest`                                        | P19                               | ✅      |
+| TC-030 | Per-module skipCache via POM property                                      | `PerModuleFlagsTest`                                          | P10                               | ✅      |
+| TC-031 | Per-module cache disabled via POM property                                 | `PerModuleFlagsTest`                                          | P10                               | ✅      |
+| TC-032 | `skipCache=true` global: rebuilds all, still writes                        | `SkipBuildExtensionTest`                                      | PARAM P01-P19                     | ✅      |
+| TC-033 | `skipSave=true`: reads cache, does not write                               | `BuildExtensionTest.skipSaving`                               | PARAM P01-P19                     | ✅      |
+| TC-034 | `mandatoryClean=true`: save blocked without clean                          | `MandatoryCleanTest`                                          | PARAM P01-P19                     | ✅      |
+| TC-035 | Corrupted ZIP cache entry: rebuild triggered                               | `CorruptedZipCacheEntryTest`                                  | PARAM P01-P19                     | ✅      |
+| TC-036 | Remote cache read and write (WebDAV)                                       | `RemoteCacheDavTest`                                          | legacy: `dav`                     | ✅      |
+| TC-037 | clean-only run: cache bypassed, no lookup                                  | `SkipBuildExtensionTest.simple`                               | PARAM P01-P19                     | ✅      |
+| TC-038 | Upstream reactor module change → downstream cache miss                     | `UpstreamModuleChangeDownstreamMissTest`                      | P02                               | ✅      |
+| TC-039 | No `.mvn/maven-build-cache-config.xml`: defaults active                    | `NoConfigFileDefaultsTest`                                    | P01 (no-config)                   | ✅      |
+| TC-040 | configPath override: non-default XML loaded                                | `CustomConfigPathTest`                                        | P01                               | ✅      |
+| TC-041 | Malformed XML config: descriptive error at startup                         | `InvalidConfigXmlTest`                                        | P01                               | ✅      |
+| TC-042 | Profile activation changes effective POM → cache miss                      | `ProfileCliActivationInvalidatesTest`                         | P08                               | ✅      |
+| TC-043 | `processPlugins=false`: plugin params not introspected                     | `ProcessPluginsDisabledTest`                                  | P01                               | ✅      |
+| TC-044 | Project-level glob override in POM `<properties>`                          | `PerProjectGlobOverrideTest`                                  | P02                               | ✅      |
+| TC-045 | Project-level additional include via POM properties                        | `ProjectLevelIncludeTest`                                     | P02                               | ✅      |
+| TC-046 | Effective POM property exclusion for specific plugin                       | `EffectivePomExcludePropertyTest`                             | P19                               | ✅      |
+| TC-047 | `runAlways` by plugin coordinates: plugin always executes                  | `RunAlwaysPluginTest`                                         | P19                               | ✅      |
+| TC-048 | `runAlways` by goal name                                                   | `RunAlwaysByGoalTest`                                         | P19                               | ✅      |
+| TC-049 | `runAlways` by execution ID                                                | `RunAlwaysByExecutionIdTest`                                  | P19                               | ✅      |
+| TC-050 | `alwaysRunPlugins` CLI: comma-list of plugin:goal pairs                    | `AlwaysRunPluginsCliTest`                                     | P01                               | ✅      |
+| TC-051 | `ignoreMissing`: absent cached execution skipped                           | `IgnoreMissingPluginTest`                                     | P19                               | ✅      |
+| TC-052 | Reconcile `defaultValue` used when property absent                         | `TrackedPropertyDefaultValueTest`                             | P19                               | ✅      |
+| TC-053 | Missing cached execution triggers full rebuild                             | `MissingExecutionTriggerRebuildTest`                          | P19                               | ✅      |
+| TC-054 | `restoreGeneratedSources=false`: generated sources not restored            | `RestoreGeneratedSourcesFalseTest`                            | P01                               | ✅      |
+| TC-055 | `restoreOnDiskArtifacts=false`: target/ artifacts not restored             | `RestoreOnDiskArtifactsFalseTest`                             | P01                               | ✅      |
+| TC-056 | Partial reactor `-pl module-a`: targeted module only                       | `MultiModulePartialBuildTest`                                 | P10                               | ✅      |
+| TC-057 | Partial reactor `-pl module-b -am`: upstream restored                      | `MultiModulePartialWithAmTest`                                | P10                               | ✅      |
+| TC-058 | WAR packaging: web resources cached and restored                           | `WarPackagingTest`                                            | P17                               | ✅      |
+| TC-059 | POM packaging: no source scan, effective POM is key                        | `PomPackagingTest`                                            | P02                               | ✅      |
+| TC-060 | CI-friendly `${revision}` version: cache key stable                        | `CIFriendlyRevisionVersionTest`                               | P04                               | ✅      |
+| TC-061 | `clean verify`: clean runs before cache lookup                             | `CleanVerifyTest`                                             | PARAM P01-P19                     | ✅      |
+| TC-062 | Output exclude regex pattern filters files from entry                      | `OutputExcludePatternTest`                                    | P17                               | ✅      |
+| TC-063 | `preservePermissions=true`: POSIX bits restored                            | `PermissionsPreservationTest`                                 | P01 (Linux only)                  | ✅      |
+| TC-064 | `maxBuildsCached=2`: third build evicts oldest entry                       | `MaxLocalBuildsCachedTest`                                    | P01                               | ✅      |
+| TC-065 | `save.final=true`: `<final>true</final>` embedded in pushed buildinfo      | `SaveFinalRemoteTest`                                         | P01 (WireMock)                    | ✅      |
+| TC-066 | Remote server unavailable: falls back to local cache                       | `RemoteUnavailableFallbackTest`                               | P01 (unreachable URL)             | ✅      |
+| TC-067 | `failFast=true`: build aborts on restore failure                           | `FailFastTest`                                                | P01                               | ✅      |
+| TC-068 | Parallel build `-T2`: cache correctness maintained                         | `ParallelBuildTest`                                           | P11                               | ✅      |
+| TC-069 | Per-plugin `dirScan` limits paths scanned                                  | `PerPluginDirScanTest`                                        | P19                               | ❌      |
+| TC-070 | Plugin dependency exclusion from fingerprint                               | `ExcludeDependenciesPluginTest`                               | P07                               | ❌      |
+| TC-071 | SHA-256 algorithm: correct hit/miss behavior                               | `HashAlgorithmRoundTripTest`                                  | P01                               | ✅      |
+| TC-072 | Invalid hash algorithm: descriptive startup failure                        | `InvalidHashAlgorithmTest`                                    | P01                               | ✅      |
+| TC-073 | SNAPSHOT version bump → cache hit (NORMALIZED_VERSION)                     | `SnapshotVersionBumpCacheHitTest`                             | P16                               | ✅      |
+| TC-074 | SNAPSHOT bump + `calculateProjectVersionChecksum` → miss                   | `SnapshotVersionBumpWithChecksumFlagTest`                     | P16                               | ✅      |
+| TC-075 | `adjustMetaInf=true`: MANIFEST.MF version normalized                       | `MetaInfVersionAdjustmentTest`                                | P01                               | ✅      |
+| TC-076 | Absolute path stripped → same cache key across workspaces                  | `AbsolutePathNormalizationTest`                               | PARAM P01-P19                     | ✅      |
+| TC-077 | Tracked `File` property normalized to relative path                        | `TrackedPropertyPathNormalizationTest`                        | P19                               | ✅      |
+| TC-078 | Test-jar classifier artifact cached and restored                           | `TestJarProjectTest`                                          | P06                               | ✅      |
+| TC-079 | Shade plugin: shaded JAR (not empty original) is cached                    | `ShadePluginArtifactReplacementTest`                          | new: `shade-plugin-project`       | ✅      |
+| TC-080 | Assembly plugin: output exclusion prevents ZIP in cache                    | `AssemblyPluginZipExcludeTest`                                | new: `assembly-plugin-project`    | ✅      |
+| TC-081 | Extra CLI goal after lifecycle goal (regression #399)                      | `AdditionalGoalAfterLifecycleTest`                            | P01                               | ✅      |
+| TC-082 | `build-cache-report.xml` generated after each build                        | `CacheReportGeneratedTest`                                    | P01                               | ✅      |
+| TC-083 | Report shows correct CACHED/REBUILT per module                             | `CacheReportStatusTest`                                       | P02                               | ✅      |
+| TC-084 | Stale `target/` files not included in new cache entry                      | `StagingRemovesStaleClassesTest`                              | P01                               | ✅      |
+| TC-085 | `scanProfiles` includes active profiles in reactor key                     | `ScanProfilesTest`                                            | P08                               | ✅      |
+| TC-086 | `logAllProperties` global flag dumps all params                            | `LogAllPropertiesGlobalTest`                                  | P19                               | ✅      |
+| TC-087 | `buildinfo.xml` debug: FileHash entries present                            | `BuildInfoXmlDebugTest`                                       | P01                               | ✅      |
+| TC-088 | CacheSource field: LOCAL after local hit                                   | `CacheSourceTrackingTest`                                     | P01                               | ✅      |
+| TC-089 | `baselineUrl` diff: `buildsdiff.xml` generated                             | `BaselineDiffTest`                                            | P01 + remote                      | ✅      |
+| TC-090 | `Build` object serializes and deserializes cleanly                         | `BuildSerializationRoundTripTest`                             | —                                 | ✅      |
+| TC-091 | Exclusion FILENAME vs PATH rule types (unit)                               | `ExclusionRuleTypesTest`                                      | —                                 | ✅      |
+| TC-092 | `nolog` suppresses property from reconcile output                          | `TrackedPropertyNologTest`                                    | P19                               | ✅      |
+| TC-093 | System-scope JAR content change (SNAPSHOT ver.) → cache miss               | `CacheInvalidationProjectTraitsTest`                          | P01                               | ✅      |
+| TC-094 | Parent `<properties>` bump propagates to declared dep → miss               | `CacheInvalidationProjectTraitsTest`                          | P02                               | ✅      |
+| TC-095 | BOM-managed unused dep version change → cache hit (no miss)                | `CacheInvalidationProjectTraitsTest`                          | P06                               | ✅      |
+| TC-096 | OS env-var activates profile → effective POM changes → miss                | `EnvVariableChangeInvalidatesTest`                            | P08                               | ✅      |
+| TC-097 | External parent version bump (relativePath) → cache miss                   | `ExternalParentVersionBumpInvalidatesTest`                    | P10                               | ✅      |
+| TC-098 | Remote parent version bump (local-repo install) → cache miss               | `RemoteParentVersionBumpInvalidatesTest`                      | P10                               | ✅      |
+| TC-099 | WAR webapp file change → webapp-war misses; webapp-lib hits                | `CacheInvalidationProjectTraitsTest`                          | P17                               | ✅      |
+| TC-100 | Parent-managed dep version change → all child modules miss                 | `CacheInvalidationProjectTraitsTest`                          | P02                               | ✅      |
+| TC-101 | Plugin version change in POM → cache miss                                  | `CacheInvalidationProjectTraitsTest`                          | P01                               | ✅      |
+| TC-102 | BOM version change for a used dep → resolved version changes → miss        | `CacheInvalidationProjectTraitsTest`                          | P05                               | ✅      |
+| TC-103 | BOM import order swap (first-wins) → different resolved version → miss     | `CacheInvalidationProjectTraitsTest`                          | P06                               | ✅      |
+| TC-104 | Transitive exclusion removed → effective classpath changes → miss          | `CacheInvalidationProjectTraitsTest`                          | P06                               | ✅      |
+| TC-105 | `<optional>true</optional>` removed → effective POM dep changes → miss     | `CacheInvalidationProjectTraitsTest`                          | P06                               | ✅      |
+| TC-106 | Classifier dep removed → resolved artifact coordinates change → miss       | `CacheInvalidationProjectTraitsTest`                          | P06                               | ✅      |
+| TC-107 | Plugin `<phase>` rebinding change → effective lifecycle map changes → miss | `CacheInvalidationProjectTraitsTest`                          | P07                               | ✅      |
+| TC-108 | Plugin `<dependencies>` version change → plugin classpath → miss           | `CacheInvalidationProjectTraitsTest`                          | P07                               | ✅      |
+| TC-109 | Plugin goal prefix config change → plugin descriptor changed → miss        | `pluginexecution/PluginGoalPrefixChangeInvalidatesTest`       | P07                               | ✅      |
+| TC-110 | Profile file-trigger activates → effective POM changes → miss              | `CacheInvalidationProjectTraitsTest`                          | P08                               | ✅      |
+| TC-111 | `settings.xml` profile property change → effective-POM dep/param → miss    | `inputfiltering/SettingsProfilePropertyChangeInvalidatesTest` | P08                               | ✅      |
+| TC-112 | `activeByDefault` profile resets when another profile activates → miss     | `inputfiltering/ActiveByDefaultResetInvalidatesTest`          | P08                               | ✅      |
+| TC-113 | CI-driven version changes without source change → cache hit                | `versioning/CiBuildDrivenProjectVersionChangeCachedTest`      | P04                               | ✅      |
+| TC-114 | Unchanged module not evicted when only a leaf module changes               | `CacheInvalidationProjectTraitsTest`                          | P02                               | ✅      |
+| TC-115 | Parallel build: one module change invalidates its dependents only          | `CacheInvalidationProjectTraitsTest`                          | P11                               | ✅      |
+| TC-116 | Reactor SNAPSHOT source change propagates to all dependent modules         | `CacheInvalidationProjectTraitsTest`                          | P16                               | ✅      |
+| TC-117 | WAR profile-filtered resource change → WAR module miss                     | `CacheInvalidationProjectTraitsTest`                          | P17                               | ✅      |
+| TC-118 | `maven-plugin` packaging: build+restore round-trip succeeds                | `CacheInvalidationProjectTraitsTest`                          | P07                               | ✅      |
+| TC-119 | Subtree build of leaf module-api (no inter-module deps) from its own directory: Maven traverses up to `.mvn/`; cache key anchored to `rootDirectory` is identical to the full-reactor key → cache hit | `SubtreeBuildCacheHitTest#subtreeBuildHitsCacheAfterFullReactorBuild` | P02 | ✅ |
+| TC-120 | Partial reactor `-pl module-core -am` (no discovery): `-am` puts module-api into `session.getProjects()`; extension computes module-core's checksum with module-api as a reactor sibling, matching the full-reactor key → cache hit for both B and C | `SubtreeBuildCacheHitTest#partialReactorWithAmHitsCacheWithoutDiscovery` | P02 | ✅ |
+| TC-121 | Subtree build from module-core's dir with `<discovery><scanProfiles><scanProfile>full-reactor</scanProfile></scanProfiles>`: only C in reactor; extension detects non-root context, re-scans from root pom activating the `full-reactor` profile (whose property is in every module's effective POM), discovers module-api with the same checksum as the full-reactor build → cache hit for C | `SubtreeBuildCacheHitTest#subtreeWithDiscoveryAndScanProfileHitsCacheAfterFullReactorBuild` | P02 | ✅ |
 
 **Summary:**
 
-| Priority  | Total TCs | ✅ Existing | ❌ Missing |
-|-----------|-----------|------------|-----------|
-| P0        | 25        | 25         | 0         |
-| P1        | 55        | 55         | 0         |
-| P2        | 34        | 32         | 2         |
-| P3        | 7         | 7          | 0         |
-| **Total** | **121**   | **119**    | **2**     |
+| Total TCs | ✅ Existing | ❌ Missing |
+|-----------|------------|-----------|
+| **121**   | **119**    | **2**     |
 
 ---
 
