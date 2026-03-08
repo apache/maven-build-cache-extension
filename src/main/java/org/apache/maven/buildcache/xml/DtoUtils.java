@@ -18,8 +18,6 @@
  */
 package org.apache.maven.buildcache.xml;
 
-import javax.annotation.Nonnull;
-
 import java.util.List;
 
 import org.apache.commons.lang3.ArrayUtils;
@@ -31,6 +29,8 @@ import org.apache.maven.buildcache.xml.build.DigestItem;
 import org.apache.maven.buildcache.xml.build.PropertyValue;
 import org.apache.maven.buildcache.xml.config.TrackedProperty;
 import org.apache.maven.model.Dependency;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -109,7 +109,11 @@ public class DtoUtils {
     }
 
     public static void addProperty(
-            CompletedExecution execution, String propertyName, Object value, String baseDirPath, boolean tracked) {
+            CompletedExecution execution,
+            String propertyName,
+            @Nullable Object value,
+            String baseDirPath,
+            boolean tracked) {
         final PropertyValue valueType = new PropertyValue();
         valueType.setName(propertyName);
         if (value != null && value.getClass().isArray()) {
@@ -129,7 +133,7 @@ public class DtoUtils {
      * @return                   true if all tracked properties are listed in the cache record
      */
     public static boolean containsAllProperties(
-            @Nonnull CompletedExecution cachedExecution, List<TrackedProperty> trackedProperties) {
+            @NonNull CompletedExecution cachedExecution, @Nullable List<TrackedProperty> trackedProperties) {
         if (trackedProperties == null || trackedProperties.isEmpty()) {
             return true;
         }

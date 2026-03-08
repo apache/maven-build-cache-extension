@@ -18,8 +18,6 @@
  */
 package org.apache.maven.buildcache.checksum;
 
-import javax.annotation.Nonnull;
-
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -90,6 +88,7 @@ import org.eclipse.aether.artifact.DefaultArtifactType;
 import org.eclipse.aether.resolution.ArtifactRequest;
 import org.eclipse.aether.resolution.ArtifactResolutionException;
 import org.eclipse.aether.resolution.ArtifactResult;
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -819,7 +818,7 @@ public class MavenProjectInput {
         return result;
     }
 
-    @Nonnull
+    @NonNull
     private DigestItem resolveArtifact(final Dependency dependency)
             throws IOException, ArtifactResolutionException, InvalidVersionSpecificationException {
 

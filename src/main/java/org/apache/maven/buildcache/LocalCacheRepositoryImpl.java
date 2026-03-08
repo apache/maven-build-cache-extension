@@ -18,7 +18,6 @@
  */
 package org.apache.maven.buildcache;
 
-import javax.annotation.Nonnull;
 import javax.inject.Inject;
 import javax.inject.Named;
 
@@ -57,6 +56,7 @@ import org.apache.maven.buildcache.xml.report.CacheReport;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.project.MavenProject;
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -100,7 +100,7 @@ public class LocalCacheRepositoryImpl implements LocalCacheRepository {
         this.cacheConfig = cacheConfig;
     }
 
-    @Nonnull
+    @NonNull
     @Override
     public Optional<Build> findLocalBuild(CacheContext context) throws IOException {
         Path localBuildInfoPath = localBuildPath(context, BUILDINFO_XML, false);
@@ -119,7 +119,7 @@ public class LocalCacheRepositoryImpl implements LocalCacheRepository {
         return Optional.empty();
     }
 
-    @Nonnull
+    @NonNull
     @Override
     public Optional<Build> findBuild(CacheContext context) throws IOException {
         Path buildInfoPath = remoteBuildPath(context, BUILDINFO_XML);
@@ -218,13 +218,13 @@ public class LocalCacheRepositoryImpl implements LocalCacheRepository {
         }
     }
 
-    @Nonnull
+    @NonNull
     @Override
     public Optional<Build> findBestMatchingBuild(MavenSession session, Dependency dependency) {
         return bestBuildCache.computeIfAbsent(Pair.of(session, dependency), this::findBestMatchingBuildImpl);
     }
 
-    @Nonnull
+    @NonNull
     private Optional<Build> findBestMatchingBuildImpl(Pair<MavenSession, Dependency> dependencySession) {
         try {
             final MavenSession session = dependencySession.getLeft();
