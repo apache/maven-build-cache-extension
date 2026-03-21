@@ -23,8 +23,6 @@ import javax.annotation.Nonnull;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.Writer;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -82,9 +80,8 @@ import org.apache.maven.model.Model;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.model.PluginExecution;
 import org.apache.maven.model.Resource;
-import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
+import org.apache.maven.model.io.DefaultModelWriter;
 import org.apache.maven.project.MavenProject;
-import org.codehaus.plexus.util.WriterFactory;
 import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.artifact.DefaultArtifactType;
 import org.eclipse.aether.resolution.ArtifactRequest;
@@ -216,8 +213,6 @@ public class MavenProjectInput {
             projectVersion.setIsText("yes");
             projectVersion.setValue(project.getVersion());
             items.add(projectVersion);
-
-            checksum.update(project.getVersion().getBytes(StandardCharsets.UTF_8));
         }
 
         DigestItem effectivePomChecksum = DigestUtils.pom(checksum, effectivePom);
@@ -341,15 +336,12 @@ public class MavenProjectInput {
      */
     private String getEffectivePom(Model prototype) throws IOException {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
+        new DefaultModelWriter().write(output, null, prototype);
 
-        try (Writer writer = WriterFactory.newXmlWriter(output)) {
-            new MavenXpp3Writer().write(writer, prototype);
-
-            // normalize env specifics
-            final String[] searchList = {baseDirPath.toString(), "\\", "windows", "linux"};
-            final String[] replacementList = {"", "/", "os.classifier", "os.classifier"};
-            return replaceEachRepeatedly(output.toString(), searchList, replacementList);
-        }
+        // normalize env specifics
+        final String[] searchList = {baseDirPath.toString(), "\\", "windows", "linux"};
+        final String[] replacementList = {"", "/", "os.classifier", "os.classifier"};
+        return replaceEachRepeatedly(output.toString(), searchList, replacementList);
     }
 
     private SortedSet<Path> getInputFiles() {
