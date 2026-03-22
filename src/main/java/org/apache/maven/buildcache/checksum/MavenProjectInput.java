@@ -336,7 +336,7 @@ public class MavenProjectInput {
      */
     private String getEffectivePom(Model prototype) throws IOException {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
-        new DefaultModelWriter().write(output, null, prototype);
+        new DefaultModelWriter().write(output, Collections.emptyMap(), prototype);
 
         // normalize env specifics
         final String[] searchList = {baseDirPath.toString(), "\\", "windows", "linux"};
