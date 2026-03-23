@@ -18,7 +18,6 @@
  */
 package org.apache.maven.buildcache;
 
-import javax.annotation.Nonnull;
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -40,6 +39,7 @@ import org.apache.maven.lifecycle.DefaultLifecycles;
 import org.apache.maven.lifecycle.Lifecycle;
 import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.project.MavenProject;
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -103,7 +103,7 @@ public class LifecyclePhasesHelper extends AbstractExecutionListener {
         forkedProjectToOrigin.remove(event.getProject(), event.getMojoExecution());
     }
 
-    @Nonnull
+    @NonNull
     public String resolveHighestLifecyclePhase(MavenProject project, List<MojoExecution> mojoExecutions) {
         return resolveMojoExecutionLifecyclePhase(project, CacheUtils.getLast(mojoExecutions));
     }

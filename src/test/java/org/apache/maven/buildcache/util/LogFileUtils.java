@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 
 import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Utils to inspect the generated log file
@@ -42,6 +43,7 @@ public final class LogFileUtils {
      * @return the first matching string or null
      * @throws VerificationException
      */
+    @Nullable
     public static String findFirstLineContainingTextsInLogs(final Verifier verifier, final String... texts)
             throws VerificationException {
         List<String> lines = verifier.loadFile(verifier.getBasedir(), verifier.getLogFileName(), false);
