@@ -19,9 +19,13 @@
 package org.apache.maven.buildcache.hash;
 
 import java.io.IOException;
+import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
+
+import static java.nio.channels.FileChannel.MapMode.READ_ONLY;
+import static java.nio.file.StandardOpenOption.READ;
 
 /**
  * SHA
@@ -32,9 +36,11 @@ public class SHA implements Hash.Factory {
     private static final ThreadLocal<MessageDigest> CHECKSUM = new ThreadLocal<>();
 
     private final String algorithm;
+    private final Hash.MemoryPolicy memoryPolicy;
 
-    SHA(String algorithm) {
+    SHA(String algorithm, Hash.MemoryPolicy memoryPolicy) {
         this.algorithm = algorithm;
+        this.memoryPolicy = memoryPolicy != null ? memoryPolicy : Hash.MemoryPolicy.Standard;
     }
 
     @Override
@@ -44,7 +50,12 @@ public class SHA implements Hash.Factory {
 
     @Override
     public Hash.Algorithm algorithm() {
-        return new SHA.Algorithm(ThreadLocalDigest.get(ALGORITHM, algorithm));
+        switch (memoryPolicy) {
+            case MemoryMappedBuffers:
+                return new AlgorithmWithMM(ThreadLocalDigest.get(ALGORITHM, algorithm));
+            default:
+                return new SHA.Algorithm(ThreadLocalDigest.get(ALGORITHM, algorithm));
+        }
     }
 
     @Override
@@ -68,6 +79,28 @@ public class SHA implements Hash.Factory {
         @Override
         public byte[] hash(Path path) throws IOException {
             return hash(Files.readAllBytes(path));
+        }
+    }
+
+    private static class AlgorithmWithMM implements Hash.Algorithm {
+        private final MessageDigest digest;
+
+        private AlgorithmWithMM(MessageDigest digest) {
+            this.digest = digest;
+        }
+
+        @Override
+        public byte[] hash(byte[] array) {
+            return digest.digest(array);
+        }
+
+        @Override
+        public byte[] hash(Path path) throws IOException {
+            try (FileChannel channel = FileChannel.open(path, READ);
+                    CloseableBuffer buffer = CloseableBuffer.mappedBuffer(channel, READ_ONLY)) {
+                digest.update(buffer.getBuffer());
+                return digest.digest();
+            }
         }
     }
 
