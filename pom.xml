@@ -103,6 +103,13 @@ under the License.
         <type>pom</type>
         <scope>import</scope>
       </dependency>
+      <!-- Testcontainers 2.x requires jackson-annotations >= 2.15 (for JsonFormat.Feature.READ_UNKNOWN_ENUM_VALUES_USING_DEFAULT_VALUE),
+           but wiremock-jre8 brings in 2.13.x. Force the newer version for the test classpath. -->
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-annotations</artifactId>
+        <version>2.15.4</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
