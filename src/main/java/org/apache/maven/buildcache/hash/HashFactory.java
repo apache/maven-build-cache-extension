@@ -29,13 +29,13 @@ import net.openhft.hashing.LongHashFunction;
  */
 public enum HashFactory {
     SHA1(new SHA("SHA-1", Hash.MemoryPolicy.Standard)),
-    SHA1_MM(new SHA("SHA-1", Hash.MemoryPolicy.MemoryMappedBuffers)),
+    SHA1_MM(new SHA("SHA-1+MM", Hash.MemoryPolicy.MemoryMappedBuffers)),
     SHA256(new SHA("SHA-256", Hash.MemoryPolicy.Standard)),
-    SHA256_MM(new SHA("SHA-256", Hash.MemoryPolicy.MemoryMappedBuffers)),
+    SHA256_MM(new SHA("SHA-256+MM", Hash.MemoryPolicy.MemoryMappedBuffers)),
     SHA384(new SHA("SHA-384", Hash.MemoryPolicy.Standard)),
-    SHA384_MM(new SHA("SHA-384", Hash.MemoryPolicy.MemoryMappedBuffers)),
+    SHA384_MM(new SHA("SHA-384+MM", Hash.MemoryPolicy.MemoryMappedBuffers)),
     SHA512(new SHA("SHA-512", Hash.MemoryPolicy.Standard)),
-    SHA512_MM(new SHA("SHA-512", Hash.MemoryPolicy.MemoryMappedBuffers)),
+    SHA512_MM(new SHA("SHA-512+MM", Hash.MemoryPolicy.MemoryMappedBuffers)),
     XX(new Zah("XX", LongHashFunction.xx(), Hash.MemoryPolicy.Standard)),
     XXMM(new Zah("XXMM", LongHashFunction.xx(), Hash.MemoryPolicy.MemoryMappedBuffers)),
     METRO(new Zah("METRO", LongHashFunction.metro(), Hash.MemoryPolicy.Standard)),
