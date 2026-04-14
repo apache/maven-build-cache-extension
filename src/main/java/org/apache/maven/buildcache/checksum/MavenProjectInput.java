@@ -341,8 +341,13 @@ public class MavenProjectInput {
         // normalize env specifics
         final String[] searchList = {baseDirPath.toString(), "\\", "windows", "linux"};
         final String[] replacementList = {"", "/", "os.classifier", "os.classifier"};
-        return replaceEachRepeatedly(
-                output.toString(java.nio.charset.StandardCharsets.UTF_8.name()), searchList, replacementList);
+
+        //Normalize output to ensure consistent encoding, line ending, and whitespace
+        String result = output.toString(java.nio.charset.StandardCharsets.UTF_8.name());
+        result = result.replace("\r\n", "\n");
+        result = result.trim();
+
+        return replaceEachRepeatedly(result, searchList, replacementList);
     }
 
     private SortedSet<Path> getInputFiles() {
