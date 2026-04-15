@@ -35,17 +35,19 @@ public class SHA implements Hash.Factory {
     private static final ThreadLocal<MessageDigest> ALGORITHM = new ThreadLocal<>();
     private static final ThreadLocal<MessageDigest> CHECKSUM = new ThreadLocal<>();
 
+    private final String name;
     private final String algorithm;
     private final Hash.MemoryPolicy memoryPolicy;
 
-    SHA(String algorithm, Hash.MemoryPolicy memoryPolicy) {
+    SHA(String name, String algorithm, Hash.MemoryPolicy memoryPolicy) {
+        this.name = name;
         this.algorithm = algorithm;
         this.memoryPolicy = memoryPolicy != null ? memoryPolicy : Hash.MemoryPolicy.Standard;
     }
 
     @Override
     public String getAlgorithm() {
-        return algorithm;
+        return name;
     }
 
     @Override
