@@ -153,10 +153,15 @@ public final class CacheITUtils {
     public static Path findFirstMainSourceFile(String verifierBasedir) throws IOException {
         // Walk the entire project tree so that multi-module projects are supported:
         // the root may have no src/main/java, but child modules do.
+        // Exclude files under src/it/ directories — those belong to maven-invoker-plugin
+        // test projects and are not part of any module's cache checksum (see p12).
         return Files.walk(Paths.get(verifierBasedir))
                 .filter(p -> !Files.isDirectory(p))
                 .filter(p -> p.toString().endsWith(".java"))
-                .filter(p -> p.toString().replace('\\', '/').contains("/src/main/java/"))
+                .filter(p -> {
+                    String normalized = p.toString().replace('\\', '/');
+                    return normalized.contains("/src/main/java/") && !normalized.contains("/src/it/");
+                })
                 .findFirst()
                 .orElseThrow(() ->
                         new IllegalStateException("No .java file found under any src/main/java in " + verifierBasedir));
