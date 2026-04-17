@@ -61,7 +61,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static java.nio.file.StandardOpenOption.CREATE;
-import static java.nio.file.StandardOpenOption.CREATE_NEW;
 import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
 import static java.util.concurrent.TimeUnit.DAYS;
 import static java.util.concurrent.TimeUnit.HOURS;
@@ -125,26 +124,32 @@ public class LocalCacheRepositoryImpl implements LocalCacheRepository {
         Path buildInfoPath = remoteBuildPath(context, BUILDINFO_XML);
         LOGGER.debug("Checking if build is already downloaded: {}", buildInfoPath);
 
-        if (Files.exists(buildInfoPath)) {
-            LOGGER.info(
-                    "Downloaded build found by checksum {}",
-                    context.getInputInfo().getChecksum());
-            try {
-                org.apache.maven.buildcache.xml.build.Build dto = xmlService.loadBuild(buildInfoPath.toFile());
-                return Optional.of(new Build(dto, CacheSource.REMOTE));
-            } catch (Exception e) {
-                LOGGER.info("Downloaded build info is not valid, deleting: {}", buildInfoPath, e);
-                Files.delete(buildInfoPath);
-            }
-        }
+        boolean localCopyExists = Files.exists(buildInfoPath);
 
+        // When remote is not enabled, just use the local downloaded copy if available
         if (!cacheConfig.isRemoteCacheEnabled()) {
+            if (localCopyExists) {
+                LOGGER.info(
+                        "Downloaded build found by checksum {}",
+                        context.getInputInfo().getChecksum());
+                try {
+                    org.apache.maven.buildcache.xml.build.Build dto = xmlService.loadBuild(buildInfoPath.toFile());
+                    return Optional.of(new Build(dto, CacheSource.REMOTE));
+                } catch (Exception e) {
+                    LOGGER.info("Downloaded build info is not valid, deleting: {}", buildInfoPath, e);
+                    Files.delete(buildInfoPath);
+                }
+            }
             return Optional.empty();
         }
 
+        // Remote is enabled — always check for a fresh entry.
+        // Apply lookupinfo throttle only when there is no local copy (the throttle gates
+        // repeated 404 lookups; when a local copy exists we must re-check the remote
+        // because it may have been updated — see issue #463).
         try {
             Path lookupInfoPath = remoteBuildPath(context, LOOKUPINFO_XML);
-            if (Files.exists(lookupInfoPath)) {
+            if (!localCopyExists && Files.exists(lookupInfoPath)) {
                 final BasicFileAttributes fileAttributes =
                         Files.readAttributes(lookupInfoPath, BasicFileAttributes.class);
                 final long lastModified = fileAttributes.lastModifiedTime().toMillis();
@@ -166,17 +171,63 @@ public class LocalCacheRepositoryImpl implements LocalCacheRepository {
                 }
             }
 
-            final Optional<Build> build = remoteRepository.findBuild(context);
-            if (build.isPresent()) {
+            final Optional<Build> remoteBuild = remoteRepository.findBuild(context);
+            if (remoteBuild.isPresent()) {
+                if (localCopyExists) {
+                    // Compare buildTime: use whichever entry is newer
+                    try {
+                        org.apache.maven.buildcache.xml.build.Build localDto =
+                                xmlService.loadBuild(buildInfoPath.toFile());
+                        if (localDto.getBuildTime() != null
+                                && remoteBuild.get().getDto().getBuildTime() != null
+                                && localDto.getBuildTime()
+                                        .after(remoteBuild.get().getDto().getBuildTime())) {
+                            LOGGER.info(
+                                    "Local downloaded build is newer than remote, keeping local copy for checksum {}",
+                                    context.getInputInfo().getChecksum());
+                            return Optional.of(new Build(localDto, CacheSource.REMOTE));
+                        }
+                    } catch (Exception e) {
+                        LOGGER.debug("Could not compare local build time, will use remote entry", e);
+                    }
+                }
                 LOGGER.info("Build info downloaded from remote repo, saving to: {}", buildInfoPath);
                 Files.createDirectories(buildInfoPath.getParent());
-                Files.write(buildInfoPath, xmlService.toBytes(build.get().getDto()), CREATE_NEW);
+                Files.write(buildInfoPath, xmlService.toBytes(remoteBuild.get().getDto()), CREATE, TRUNCATE_EXISTING);
+                // Remote entry found — clear any stale lookupinfo marker
+                Files.deleteIfExists(lookupInfoPath);
+                return remoteBuild;
             } else {
-                FileUtils.touch(lookupInfoPath.toFile());
+                // Remote returned empty — fall back to local copy if available
+                if (localCopyExists) {
+                    LOGGER.info(
+                            "Remote cache has no entry but local downloaded copy exists for checksum {}",
+                            context.getInputInfo().getChecksum());
+                    try {
+                        org.apache.maven.buildcache.xml.build.Build dto = xmlService.loadBuild(buildInfoPath.toFile());
+                        return Optional.of(new Build(dto, CacheSource.REMOTE));
+                    } catch (Exception e) {
+                        LOGGER.info("Downloaded build info is not valid, deleting: {}", buildInfoPath, e);
+                        Files.delete(buildInfoPath);
+                    }
+                } else {
+                    FileUtils.touch(lookupInfoPath.toFile());
+                }
             }
-            return build;
+            return Optional.empty();
         } catch (Exception e) {
             LOGGER.error("Remote build info is not valid, cached data is not compatible", e);
+            // Fall back to local copy on error if available
+            if (localCopyExists) {
+                LOGGER.info("Falling back to local downloaded copy after remote error");
+                try {
+                    org.apache.maven.buildcache.xml.build.Build dto = xmlService.loadBuild(buildInfoPath.toFile());
+                    return Optional.of(new Build(dto, CacheSource.REMOTE));
+                } catch (Exception ex) {
+                    LOGGER.info("Downloaded build info is not valid, deleting: {}", buildInfoPath, ex);
+                    Files.delete(buildInfoPath);
+                }
+            }
             return Optional.empty();
         }
     }
