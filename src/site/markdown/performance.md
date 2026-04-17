@@ -28,23 +28,27 @@ performance tuning, measure results in relevant scenarios to validate results an
 By default, the cache uses the [XX](https://cyan4973.github.io/xxHash/) algorithm, which is a very fast
 non-cryptographic hash algorithm and is sufficient for most use cases. All supported values for `<hashAlgorithm>` are:
 
-| Identifier | Description                                                                                      |
-|------------|--------------------------------------------------------------------------------------------------|
-| `XX`       | **Default.** xxHash, non-cryptographic, fastest.                                                 |
-| `XXMM`     | xxHash with memory-mapped file I/O. Faster for large codebases; requires a JVM flag on JDK ≥ 17. |
-| `METRO`    | Metro hash, standard I/O.                                                                        |
-| `METRO+MM` | Metro hash with memory-mapped file I/O. Requires a JVM flag on JDK ≥ 17.                         |
-| `SHA-1`    | Cryptographic. Not recommended unless integrity guarantees are required.                         |
-| `SHA-256`  | Cryptographic.                                                                                   |
-| `SHA-384`  | Cryptographic.                                                                                   |
-| `SHA-512`  | Cryptographic, slowest.                                                                          |
+| Identifier   | Description                                                                                               |
+|--------------|-----------------------------------------------------------------------------------------------------------|
+| `XX`         | **Default.** xxHash, non-cryptographic, fastest.                                                          |
+| `XXMM`       | xxHash with memory-mapped file I/O. Faster for large codebases; requires a JVM flag on JDK ≥ 17.          |
+| `METRO`      | Metro hash, standard I/O.                                                                                 |
+| `METRO+MM`   | Metro hash with memory-mapped file I/O. Requires a JVM flag on JDK ≥ 17.                                  |
+| `SHA-1`      | Cryptographic. Not recommended unless integrity guarantees are required.                                  |
+| `SHA-1+MM`   | Cryptographic. Not recommended unless integrity guarantees are required. Requires a JVM flag on JDK ≥ 17. |
+| `SHA-256`    | Cryptographic.                                                                                            |
+| `SHA-256+MM` | Cryptographic. Requires a JVM flag on JDK ≥ 17.                                                           |
+| `SHA-384`    | Cryptographic.                                                                                            |
+| `SHA-384+MM` | Cryptographic. Requires a JVM flag on JDK ≥ 17.                                                           |
+| `SHA-512`    | Cryptographic, slowest.                                                                                   |
+| `SHA-512+MM` | Cryptographic, slowest. Requires a JVM flag on JDK ≥ 17.                                                  |
 
 ```xml
 
 <hashAlgorithm>XX</hashAlgorithm>
 ```
 
-The memory-mapped algorithms (`XXMM` and `METRO+MM`) require adding the following line to `.mvn/jvm.config` in the
+The memory-mapped algorithms (`XXMM` and those with the `+MM` suffix) require adding the following line to `.mvn/jvm.config` in the
 project root to run correctly on JDK ≥ 17:
 
 ```
