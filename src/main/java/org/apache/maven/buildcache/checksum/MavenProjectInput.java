@@ -23,6 +23,9 @@ import javax.annotation.Nonnull;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -80,7 +83,7 @@ import org.apache.maven.model.Model;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.model.PluginExecution;
 import org.apache.maven.model.Resource;
-import org.apache.maven.model.io.DefaultModelWriter;
+import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
 import org.apache.maven.project.MavenProject;
 import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.artifact.DefaultArtifactType;
@@ -213,6 +216,8 @@ public class MavenProjectInput {
             projectVersion.setIsText("yes");
             projectVersion.setValue(project.getVersion());
             items.add(projectVersion);
+
+            checksum.update(project.getVersion().getBytes(StandardCharsets.UTF_8));
         }
 
         DigestItem effectivePomChecksum = DigestUtils.pom(checksum, effectivePom);
@@ -336,13 +341,14 @@ public class MavenProjectInput {
      */
     private String getEffectivePom(Model prototype) throws IOException {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
-        new DefaultModelWriter().write(output, Collections.emptyMap(), prototype);
+        try (Writer writer = new OutputStreamWriter(output, StandardCharsets.UTF_8)) {
+            new MavenXpp3Writer().write(output, prototype);
+        }
 
         // normalize env specifics
         final String[] searchList = {baseDirPath.toString(), "\\", "windows", "linux"};
         final String[] replacementList = {"", "/", "os.classifier", "os.classifier"};
 
-        //Normalize output to ensure consistent encoding, line ending, and whitespace
         String result = output.toString(java.nio.charset.StandardCharsets.UTF_8.name());
         result = result.replace("\r\n", "\n");
         result = result.trim();
