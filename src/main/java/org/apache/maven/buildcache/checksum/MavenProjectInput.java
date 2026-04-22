@@ -23,6 +23,7 @@ import javax.annotation.Nonnull;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
@@ -84,7 +85,6 @@ import org.apache.maven.model.PluginExecution;
 import org.apache.maven.model.Resource;
 import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
 import org.apache.maven.project.MavenProject;
-import org.codehaus.plexus.util.WriterFactory;
 import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.artifact.DefaultArtifactType;
 import org.eclipse.aether.resolution.ArtifactRequest;
@@ -341,15 +341,19 @@ public class MavenProjectInput {
      */
     private String getEffectivePom(Model prototype) throws IOException {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
-
-        try (Writer writer = WriterFactory.newXmlWriter(output)) {
-            new MavenXpp3Writer().write(writer, prototype);
-
-            // normalize env specifics
-            final String[] searchList = {baseDirPath.toString(), "\\", "windows", "linux"};
-            final String[] replacementList = {"", "/", "os.classifier", "os.classifier"};
-            return replaceEachRepeatedly(output.toString(), searchList, replacementList);
+        try (Writer writer = new OutputStreamWriter(output, StandardCharsets.UTF_8)) {
+            new MavenXpp3Writer().write(output, prototype);
         }
+
+        // normalize env specifics
+        final String[] searchList = {baseDirPath.toString(), "\\", "windows", "linux"};
+        final String[] replacementList = {"", "/", "os.classifier", "os.classifier"};
+
+        String result = output.toString(java.nio.charset.StandardCharsets.UTF_8.name());
+        result = result.replace("\r\n", "\n");
+        result = result.trim();
+
+        return replaceEachRepeatedly(result, searchList, replacementList);
     }
 
     private SortedSet<Path> getInputFiles() {
