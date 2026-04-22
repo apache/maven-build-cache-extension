@@ -18,8 +18,6 @@
  */
 package org.apache.maven.buildcache;
 
-import javax.annotation.Nonnull;
-
 import java.io.IOException;
 import java.util.Optional;
 
@@ -27,13 +25,14 @@ import org.apache.maven.artifact.Artifact;
 import org.apache.maven.buildcache.xml.Build;
 import org.apache.maven.buildcache.xml.report.CacheReport;
 import org.apache.maven.execution.MavenSession;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Cache repository.
  */
 public interface CacheRepository {
 
-    @Nonnull
+    @NonNull
     Optional<Build> findBuild(CacheContext context) throws IOException;
 
     void saveBuildInfo(CacheResult cacheResult, Build build) throws IOException;

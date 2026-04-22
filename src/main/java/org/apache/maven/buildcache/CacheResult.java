@@ -20,6 +20,8 @@ package org.apache.maven.buildcache;
 
 import org.apache.maven.buildcache.xml.Build;
 import org.apache.maven.buildcache.xml.CacheSource;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import static java.util.Objects.requireNonNull;
 
@@ -32,7 +34,7 @@ public class CacheResult {
     private final Build build;
     private final CacheContext context;
 
-    private CacheResult(RestoreStatus status, Build build, CacheContext context) {
+    private CacheResult(RestoreStatus status, @Nullable Build build, @Nullable CacheContext context) {
         this.status = requireNonNull(status);
         this.build = build;
         this.context = context;
@@ -88,14 +90,17 @@ public class CacheResult {
         return status == RestoreStatus.SUCCESS;
     }
 
+    @Nullable
     public Build getBuildInfo() {
         return build;
     }
 
+    @Nullable
     public CacheSource getSource() {
         return build != null ? build.getSource() : null;
     }
 
+    @Nullable
     public CacheContext getContext() {
         return context;
     }
@@ -104,6 +109,7 @@ public class CacheResult {
         return status == RestoreStatus.PARTIAL;
     }
 
+    @NonNull
     public RestoreStatus getStatus() {
         return status;
     }
