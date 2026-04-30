@@ -52,7 +52,7 @@ public final class HostnameResolver {
     }
 
     public static String resolve() {
-        if (hostname == null)
+        if (hostname == null) {
             synchronized (HostnameResolver.class) {
                 ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
                     Thread t = new Thread(r);
@@ -88,7 +88,7 @@ public final class HostnameResolver {
                     executor.shutdownNow();
                 }
             }
-
+        }
         return hostname;
     }
 }
