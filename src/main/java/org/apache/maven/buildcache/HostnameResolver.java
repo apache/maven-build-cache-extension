@@ -45,14 +45,14 @@ public final class HostnameResolver {
 
     private static final String FALLBACK = "unknown";
     private static final long TIMEOUT_MS = 1000;
-    private static String hostname;
+    private static volatile String hostname;
 
     private HostnameResolver() {
         // utility class
     }
 
     public static String resolve() {
-        if (hostname == null) {
+        if (hostname == null) synchronized (HostnameResolver.class) {
             ExecutorService executor = Executors.newSingleThreadExecutor();
             try {
 
