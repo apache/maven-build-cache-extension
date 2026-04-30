@@ -53,7 +53,12 @@ public final class HostnameResolver {
 
     public static String resolve() {
         if (hostname == null) synchronized (HostnameResolver.class) {
-            ExecutorService executor = Executors.newSingleThreadExecutor();
+            ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
+                Thread t = new Thread(r);
+                t.setDaemon(true);
+                return t;
+            });
+
             try {
 
                 Future<String> future = executor.submit(() -> {
