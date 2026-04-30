@@ -52,41 +52,42 @@ public final class HostnameResolver {
     }
 
     public static String resolve() {
-        if (hostname == null) synchronized (HostnameResolver.class) {
-            ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
-                Thread t = new Thread(r);
-                t.setDaemon(true);
-                return t;
-            });
-
-            try {
-
-                Future<String> future = executor.submit(() -> {
-                    try {
-                        return InetAddress.getLocalHost().getCanonicalHostName();
-                    } catch (Exception e) {
-                        return null;
-                    }
+        if (hostname == null)
+            synchronized (HostnameResolver.class) {
+                ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
+                    Thread t = new Thread(r);
+                    t.setDaemon(true);
+                    return t;
                 });
 
-                String resolved;
                 try {
-                    resolved = future.get(TIMEOUT_MS, TimeUnit.MILLISECONDS);
-                } catch (TimeoutException e) {
-                    future.cancel(true);
-                    resolved = FALLBACK;
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    resolved = FALLBACK;
-                } catch (ExecutionException e) {
-                    resolved = FALLBACK;
-                }
 
-                hostname = (resolved == null || resolved.trim().isEmpty()) ? FALLBACK : resolved.trim();
-            } finally {
-                executor.shutdownNow();
+                    Future<String> future = executor.submit(() -> {
+                        try {
+                            return InetAddress.getLocalHost().getCanonicalHostName();
+                        } catch (Exception e) {
+                            return null;
+                        }
+                    });
+
+                    String resolved;
+                    try {
+                        resolved = future.get(TIMEOUT_MS, TimeUnit.MILLISECONDS);
+                    } catch (TimeoutException e) {
+                        future.cancel(true);
+                        resolved = FALLBACK;
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        resolved = FALLBACK;
+                    } catch (ExecutionException e) {
+                        resolved = FALLBACK;
+                    }
+
+                    hostname = (resolved == null || resolved.trim().isEmpty()) ? FALLBACK : resolved.trim();
+                } finally {
+                    executor.shutdownNow();
+                }
             }
-        }
 
         return hostname;
     }
