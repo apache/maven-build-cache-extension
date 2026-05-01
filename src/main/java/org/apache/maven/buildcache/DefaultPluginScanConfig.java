@@ -18,9 +18,8 @@
  */
 package org.apache.maven.buildcache;
 
-import javax.annotation.Nonnull;
-
 import org.apache.maven.buildcache.xml.config.DirScanConfig;
+import org.jspecify.annotations.NonNull;
 
 /**
  * DefaultPluginScanConfig
@@ -38,12 +37,12 @@ public class DefaultPluginScanConfig implements PluginScanConfig {
     }
 
     @Override
-    @Nonnull
+    @NonNull
     public PluginScanConfig mergeWith(PluginScanConfig overrideSource) {
         return overrideSource;
     }
 
-    @Nonnull
+    @NonNull
     @Override
     public ScanConfigProperties getTagScanProperties(String tagName) {
         return new ScanConfigProperties(true, "*");

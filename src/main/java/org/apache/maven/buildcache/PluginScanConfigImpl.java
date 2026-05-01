@@ -18,14 +18,14 @@
  */
 package org.apache.maven.buildcache;
 
-import javax.annotation.Nonnull;
-
 import java.util.List;
 
 import org.apache.commons.lang3.Strings;
 import org.apache.maven.buildcache.xml.config.DirScanConfig;
 import org.apache.maven.buildcache.xml.config.TagExclude;
 import org.apache.maven.buildcache.xml.config.TagScanConfig;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 /**
  * PluginScanConfigImpl
@@ -34,17 +34,20 @@ public class PluginScanConfigImpl implements PluginScanConfig {
 
     private final DirScanConfig dto;
 
-    public PluginScanConfigImpl(DirScanConfig scanConfig) {
+    public PluginScanConfigImpl(@Nullable DirScanConfig scanConfig) {
         this.dto = scanConfig;
     }
 
     @Override
     public boolean isSkip() {
-        return Strings.CS.equals(dto.getMode(), "skip");
+        return dto != null && Strings.CS.equals(dto.getMode(), "skip");
     }
 
     @Override
     public boolean accept(String tagName) {
+        if (dto == null) {
+            return false;
+        }
         // include or exclude is a choice element, could be only obe property set
 
         //noinspection ConstantConditions
@@ -65,7 +68,7 @@ public class PluginScanConfigImpl implements PluginScanConfig {
         return false;
     }
 
-    @Nonnull
+    @NonNull
     @Override
     public PluginScanConfig mergeWith(final PluginScanConfig overrideConfig) {
         if (dto == null) {
@@ -97,17 +100,19 @@ public class PluginScanConfigImpl implements PluginScanConfig {
         return new PluginScanConfigImpl(merged);
     }
 
-    @Nonnull
+    @NonNull
     public ScanConfigProperties getTagScanProperties(String tagName) {
         ScanConfigProperties scanProperties = findTagScanProperties(tagName);
         return scanProperties != null ? scanProperties : defaultScanConfig();
     }
 
+    @Nullable
     @Override
     public DirScanConfig dto() {
         return dto;
     }
 
+    @Nullable
     private ScanConfigProperties findTagScanProperties(String tagName) {
         ScanConfigProperties scanConfigProperties = findConfigByName(tagName, dto.getIncludes());
         if (scanConfigProperties == null) {
@@ -116,6 +121,7 @@ public class PluginScanConfigImpl implements PluginScanConfig {
         return scanConfigProperties;
     }
 
+    @Nullable
     private ScanConfigProperties findConfigByName(String tagName, List<TagScanConfig> configs) {
         if (configs == null) {
             return null;
