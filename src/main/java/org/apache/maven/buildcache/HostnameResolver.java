@@ -44,7 +44,7 @@ import java.util.concurrent.TimeoutException;
 public final class HostnameResolver {
 
     private static final String FALLBACK = "unknown";
-    private static final long TIMEOUT_MS = 1000;
+    protected static final long TIMEOUT_MS = 1000;
     private static volatile String hostname;
 
     private HostnameResolver() {

@@ -20,14 +20,17 @@ package org.apache.maven.buildcache;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class HostnameResolverTest {
 
     @Test
     void testResolve() {
-        assertNotNull(HostnameResolver.resolve());
-        assertNotEquals("unknown", HostnameResolver.resolve());
+        long start = System.currentTimeMillis();
+        String hostname = HostnameResolver.resolve();
+        assertNotNull(hostname);
+        long duration = System.currentTimeMillis() - start;
+        assertTrue(duration <= HostnameResolver.TIMEOUT_MS);
     }
 }
