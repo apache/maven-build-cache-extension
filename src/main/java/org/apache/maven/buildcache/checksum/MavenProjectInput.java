@@ -33,7 +33,6 @@ import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -97,7 +96,6 @@ import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.replaceEachRepeatedly;
 import static org.apache.commons.lang3.StringUtils.stripToEmpty;
-import static org.apache.maven.buildcache.CacheUtils.isPom;
 import static org.apache.maven.buildcache.CacheUtils.isSnapshot;
 import static org.apache.maven.buildcache.xml.CacheConfigImpl.CACHE_ENABLED_PROPERTY_NAME;
 import static org.apache.maven.buildcache.xml.CacheConfigImpl.CACHE_SKIP;
@@ -188,7 +186,7 @@ public class MavenProjectInput {
         final long t0 = System.currentTimeMillis();
 
         final String effectivePom = getEffectivePom(normalizedModelProvider.normalizedModel(project));
-        final SortedSet<Path> inputFiles = isPom(project) ? Collections.emptySortedSet() : getInputFiles();
+        final SortedSet<Path> inputFiles = getInputFiles();
         final SortedMap<String, String> dependenciesChecksum = getMutableDependencies();
         final SortedMap<String, String> pluginDependenciesChecksum = getMutablePluginDependencies();
 
