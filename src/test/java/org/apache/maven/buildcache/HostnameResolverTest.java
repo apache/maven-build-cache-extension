@@ -29,8 +29,8 @@ class HostnameResolverTest {
     void testResolve() {
         long start = System.currentTimeMillis();
         String hostname = HostnameResolver.resolve();
-        assertNotNull(hostname);
         long duration = System.currentTimeMillis() - start;
         assertTrue(duration <= HostnameResolver.TIMEOUT_MS);
+        assertNotNull(hostname);
     }
 }
