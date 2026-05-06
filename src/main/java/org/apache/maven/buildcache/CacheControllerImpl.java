@@ -412,12 +412,14 @@ public class CacheControllerImpl implements CacheController {
 
         try {
             RestoredArtifact restoredProjectArtifact = null;
+            boolean restoredProjectArtifactIsDirectory = false;
             List<RestoredArtifact> restoredAttachedArtifacts = new ArrayList<>();
 
             if (build.getArtifact() != null && isNotBlank(build.getArtifact().getFileName())) {
                 final Artifact artifactInfo = build.getArtifact();
                 String originalVersion = artifactInfo.getVersion();
                 artifactInfo.setVersion(project.getVersion());
+                restoredProjectArtifactIsDirectory = artifactInfo.isIsDirectory();
                 // TODO if remote is forced, probably need to refresh or reconcile all files
                 final Future<File> downloadTask =
                         createDownloadTask(cacheResult, context, project, artifactInfo, originalVersion);
@@ -470,7 +472,10 @@ public class CacheControllerImpl implements CacheController {
             }
             // Actually modify project at the end in case something went wrong during restoration,
             // in which case, the project is unmodified and we continue with normal build.
-            if (restoredProjectArtifact != null) {
+            //
+            // Also, only restore the project artifact, if it was an actually fully build JAR,
+            // and not the cached compile results.
+            if (restoredProjectArtifact != null && !restoredProjectArtifactIsDirectory) {
                 project.setArtifact(restoredProjectArtifact);
                 // need to include package lifecycle to save build info for incremental builds
                 if (!project.hasLifecyclePhase("package")) {
