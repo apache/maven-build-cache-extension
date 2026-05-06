@@ -18,22 +18,21 @@
  */
 package org.apache.maven.buildcache.its;
 
-import org.apache.commons.lang3.SystemUtils;
 import org.apache.maven.buildcache.its.junit.IntegrationTest;
 import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 
 import static java.util.Arrays.asList;
-import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 @IntegrationTest("src/test/projects/issue-449-artifact-restore")
 class Issue449Test {
 
     @Test
+    @DisabledOnOs(OS.WINDOWS)
     void installAfterCleanCompileShouldWork(Verifier verifier) throws VerificationException {
-        assumeFalse(SystemUtils.IS_OS_WINDOWS);
-
         verifier.setAutoclean(false);
 
         verifier.setLogFileName("../log-0.txt");
@@ -47,5 +46,6 @@ class Issue449Test {
         verifier.verifyErrorFreeLog();
         verifier.verifyTextInLog("Found cached build, restoring");
         verifier.verifyTextInLog("Saved Build to local file");
+        verifier.verifyFilePresent("target/maven-build-cache-test-1.0-SNAPSHOT.jar");
     }
 }
