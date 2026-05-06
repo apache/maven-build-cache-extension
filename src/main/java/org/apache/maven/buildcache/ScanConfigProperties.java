@@ -18,6 +18,8 @@
  */
 package org.apache.maven.buildcache;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * ScanConfigProperties
  */
@@ -26,7 +28,7 @@ public class ScanConfigProperties {
     private final boolean recursive;
     private final String glob;
 
-    public ScanConfigProperties(boolean recursive, String glob) {
+    public ScanConfigProperties(boolean recursive, @Nullable String glob) {
         this.recursive = recursive;
         this.glob = glob;
     }
@@ -35,6 +37,7 @@ public class ScanConfigProperties {
         return recursive;
     }
 
+    @Nullable
     public String getGlob() {
         return glob;
     }
