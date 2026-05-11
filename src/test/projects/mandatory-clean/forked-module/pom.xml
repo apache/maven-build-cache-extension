@@ -34,7 +34,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-pmd-plugin</artifactId>
-                <version>3.19.0</version>
+                <version>@version.maven-pmd-plugin@</version>
                 <executions>
                     <execution>
                         <goals>

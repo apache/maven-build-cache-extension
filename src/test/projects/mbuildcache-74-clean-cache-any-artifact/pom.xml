@@ -34,7 +34,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
-                <version>3.4.1</version>
+                <version>@version.maven-enforcer-plugin@</version>
                 <executions>
                     <execution>
                         <id>require-property</id>

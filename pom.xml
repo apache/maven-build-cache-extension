@@ -23,7 +23,7 @@ under the License.
   <parent>
     <groupId>org.apache.maven.extensions</groupId>
     <artifactId>maven-extensions</artifactId>
-    <version>47</version>
+    <version>48</version>
     <relativePath />
   </parent>
 
@@ -85,6 +85,14 @@ under the License.
     <xmlunitVersion>2.6.4</xmlunitVersion>
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
     <maven.site.path>extensions-archives/${project.artifactId}-LATEST</maven.site.path>
+
+    <version.maven-pmd-plugin>3.28.0</version.maven-pmd-plugin>
+    <version.maven-toolchains-plugin>3.2.0</version.maven-toolchains-plugin>
+    <version.maven-plugin-plugin>3.13.1</version.maven-plugin-plugin>
+    <version.version-maven-plugin>2.21.0</version.version-maven-plugin>
+    <version.flatten-maven-plugin>1.7.3</version.flatten-maven-plugin>
+    <version.exec-maven-plugin>3.6.1</version.exec-maven-plugin>
+
   </properties>
 
   <dependencyManagement>
@@ -369,7 +377,6 @@ under the License.
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-invoker-plugin</artifactId>
-          <version>3.10.1</version>
         </plugin>
         <plugin>
           <groupId>org.apache.rat</groupId>
@@ -456,7 +463,6 @@ under the License.
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
-        <version>3.10.0</version>
         <executions>
           <execution>
             <id>copy-maven-distribution</id>
