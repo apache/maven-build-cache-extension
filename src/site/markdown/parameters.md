@@ -41,6 +41,7 @@ This document contains various configuration parameters supported by the cache e
 | `-Dmaven.build.cache.skipSave=(true/false)`                | Skip writing build result in caches. Does not affect reading from the cache.                                                                                                                                                                          | Configuring MR builds to benefits from the cache, but restricting writes to the `master` branch |
 | `-Dmaven.build.cache.mandatoryClean=(true/false)`          | Enable or disable the necessity to execute the `clean` phase in order to store the build result in cache. Default: `false`                                                                                                                            | Reducing the risk to save "wrong" files in cache in a local dev environment                     |
 | `-Dmaven.build.cache.cacheCompile=(true/false)`            | Cache compile phase outputs (classes, test-classes, generated sources). When enabled (default), compile-only builds create cache entries that can be restored by subsequent builds. When disabled, caching only occurs during package phase or later. | Performance optimization for incremental builds                                                 |
+| `-Dmaven.build.cache.maxLocalBuildsCached=<n>`             | Maximum number of cached build records retained per project in the local cache. Overrides `<local><maxBuildsCached>` from the XML config. (default: `3`)                                                                                            | Limit local cache disk usage or retain more builds for bisecting failures                       |
 
 ### Project-level properties
 
@@ -85,7 +86,7 @@ The following elements are supported in `maven-build-cache-config.xml` but have 
 
 | Element           | Default                                                 | Description                                                                                 |
 |-------------------|---------------------------------------------------------|---------------------------------------------------------------------------------------------|
-| `maxBuildsCached` | `3`                                                     | Maximum number of cached build records retained per project.                                |
+| `maxBuildsCached` | `3`                                                     | Maximum number of cached build records retained per project. Overridable via `-Dmaven.build.cache.maxLocalBuildsCached`. |
 | `location`        | `build-cache` dir sibling to the local Maven repository | Custom path for the local cache repository. Overridable via `-Dmaven.build.cache.location`. |
 
 #### `<remote>` — transport and identity attributes

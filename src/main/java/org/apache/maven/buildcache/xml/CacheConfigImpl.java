@@ -85,6 +85,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     public static final String CONFIG_PATH_PROPERTY_NAME = "maven.build.cache.configPath";
     public static final String CACHE_ENABLED_PROPERTY_NAME = "maven.build.cache.enabled";
     public static final String CACHE_LOCATION_PROPERTY_NAME = "maven.build.cache.location";
+    public static final String MAX_LOCAL_BUILDS_CACHED_PROPERTY_NAME = "maven.build.cache.maxLocalBuildsCached";
     public static final String REMOTE_ENABLED_PROPERTY_NAME = "maven.build.cache.remote.enabled";
     public static final String REMOTE_URL_PROPERTY_NAME = "maven.build.cache.remote.url";
     public static final String REMOTE_SERVER_ID_PROPERTY_NAME = "maven.build.cache.remote.server.id";
@@ -568,7 +569,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     @Override
     public int getMaxLocalBuildsCached() {
         checkInitializedState();
-        return getLocal().getMaxBuildsCached();
+        return getProperty(MAX_LOCAL_BUILDS_CACHED_PROPERTY_NAME, getLocal().getMaxBuildsCached());
     }
 
     @Override
@@ -659,6 +660,11 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
             }
         }
         return value;
+    }
+
+    private int getProperty(String key, int defaultValue) {
+        String property = getProperty(key, String.valueOf(defaultValue));
+        return Integer.parseInt(property);
     }
 
     private boolean getProperty(String key, boolean defaultValue) {
