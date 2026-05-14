@@ -569,7 +569,12 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     @Override
     public int getMaxLocalBuildsCached() {
         checkInitializedState();
-        return getProperty(MAX_LOCAL_BUILDS_CACHED_PROPERTY_NAME, getLocal().getMaxBuildsCached());
+        int maxLocalBuildsCached =
+                getProperty(MAX_LOCAL_BUILDS_CACHED_PROPERTY_NAME, getLocal().getMaxBuildsCached());
+        if (maxLocalBuildsCached <= 0) {
+            throw new IllegalArgumentException("maxLocalBuildsCached must be greater than 0");
+        }
+        return maxLocalBuildsCached;
     }
 
     @Override
@@ -664,7 +669,11 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
 
     private int getProperty(String key, int defaultValue) {
         String property = getProperty(key, String.valueOf(defaultValue));
-        return Integer.parseInt(property);
+        try {
+            return Integer.parseInt(property);
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
     }
 
     private boolean getProperty(String key, boolean defaultValue) {
