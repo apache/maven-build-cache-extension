@@ -43,17 +43,23 @@ import java.util.stream.Stream;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
 import org.apache.commons.compress.archivers.zip.ZipFile;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.handler.ArtifactHandler;
+import org.apache.maven.buildcache.xml.build.CompletedExecution;
+import org.apache.maven.buildcache.xml.build.PropertyValue;
 import org.apache.maven.buildcache.xml.build.Scm;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.plugin.MojoExecution;
+import org.apache.maven.plugin.PluginParameterExpressionEvaluator;
 import org.apache.maven.project.MavenProject;
+import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluationException;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.apache.maven.artifact.Artifact.LATEST_VERSION;
 import static org.apache.maven.artifact.Artifact.SNAPSHOT_VERSION;
@@ -62,6 +68,7 @@ import static org.apache.maven.artifact.Artifact.SNAPSHOT_VERSION;
  * Cache Utils
  */
 public class CacheUtils {
+    private static final Logger LOGGER = LoggerFactory.getLogger(CacheUtils.class);
 
     public static boolean isPom(MavenProject project) {
         return project.getPackaging().equals("pom");
@@ -314,5 +321,66 @@ public class CacheUtils {
             permissions.add(PosixFilePermission.OTHERS_READ);
         }
         return permissions;
+    }
+
+    static Object interpolateExpression(String expression, MavenSession session, MojoExecution execution) {
+        try {
+            PluginParameterExpressionEvaluator evaluator = new PluginParameterExpressionEvaluator(session, execution);
+            return evaluator.evaluate(expression);
+        } catch (ExpressionEvaluationException e) {
+            LOGGER.warn("Cannot interpolate expression '{}': {}", expression, e.getMessage(), e);
+            return expression; // return the expression as is when interpolation fails
+        }
+    }
+
+    static String normalizeValue(Object value, Path baseDirPath) {
+        if (value instanceof File) {
+            Path path = ((File) value).toPath();
+            return normalizedPath(path, baseDirPath);
+        } else if (value instanceof Path) {
+            return normalizedPath(((Path) value), baseDirPath);
+        } else if (value != null && value.getClass().isArray()) {
+            return ArrayUtils.toString(value);
+        } else {
+            return String.valueOf(value);
+        }
+    }
+
+    /*
+     Best effort to normalize paths from Mojo fields.
+     - all absolute paths under project root are relativized for portability
+     - redundant '..' and '.' are removed to have consistent views on all paths
+     - all relative paths are considered portable and are not be touched
+     - absolute paths outside of project directory cannot be deterministically
+       relativized and are not touched
+    */
+    private static String normalizedPath(Path path, Path baseDirPath) {
+        boolean isProjectSubdir = path.isAbsolute() && path.startsWith(baseDirPath);
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug(
+                    "normalizedPath isProjectSubdir {} path '{}' - baseDirPath '{}', path.isAbsolute() {},"
+                            + " path.startsWith(baseDirPath) {}",
+                    isProjectSubdir,
+                    path,
+                    baseDirPath,
+                    path.isAbsolute(),
+                    path.startsWith(baseDirPath));
+        }
+        Path preparedPath = isProjectSubdir ? baseDirPath.relativize(path) : path;
+        String normalizedPath = preparedPath.normalize().toString();
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("normalizedPath '{}' - {} return {}", path, baseDirPath, normalizedPath);
+        }
+        return normalizedPath;
+    }
+
+    static void addProperty(
+            CompletedExecution execution, String propertyName, Object value, Path baseDirPath, boolean tracked) {
+        final PropertyValue valueType = new PropertyValue();
+        valueType.setName(propertyName);
+        final String valueText = normalizeValue(value, baseDirPath);
+        valueType.setValue(valueText);
+        valueType.setTracked(tracked);
+        execution.addProperty(valueType);
     }
 }
