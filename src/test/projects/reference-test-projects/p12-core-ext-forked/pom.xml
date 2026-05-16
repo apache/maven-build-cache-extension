@@ -62,7 +62,7 @@ under the License.
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-invoker-plugin</artifactId>
-                    <version>@version.maven-invoker-tools@</version>
+                    <version>@version.maven-invoker-plugin@</version>
                     <configuration>
                         <projectsDirectory>${project.basedir}/src/it</projectsDirectory>
                         <cloneProjectsTo>${project.build.directory}/it</cloneProjectsTo>
