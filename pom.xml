@@ -23,7 +23,7 @@ under the License.
   <parent>
     <groupId>org.apache.maven.extensions</groupId>
     <artifactId>maven-extensions</artifactId>
-    <version>47</version>
+    <version>48</version>
     <relativePath />
   </parent>
 
@@ -573,7 +573,7 @@ under the License.
     <profile>
       <id>maven3</id>
       <properties>
-        <mavenVersion>3.9.12</mavenVersion>
+        <mavenVersion>3.9.15</mavenVersion>
         <maven.dir>maven3</maven.dir>
         <maven.basedir>${project.build.directory}/${maven.dir}</maven.basedir>
       </properties>
