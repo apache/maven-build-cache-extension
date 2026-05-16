@@ -45,9 +45,9 @@ logic.
 documented prerequisites). Tests never rely on a pre-populated local repository beyond what
 Maven downloads in a normal build.
 
-**Use parent version properties for plugin versions.** In ITs use the version properties for plugins defined in
-parent to keep them updated in ITs without additional work.
-If there is no version property defined for a certain plugin, then define one in the parent of this extension.
+**Use predefined version properties for plugin versions.** In ITs use the version properties for plugins defined in
+`ReferenceProjectBootstrap#getReplacements()` to keep them aligned in all ITs with less work.
+If there is no version property defined for a certain plugin, then define one there of this extension.
 **DO NOT USE FIXED VERSIONS IN ITs**.
 
 ---

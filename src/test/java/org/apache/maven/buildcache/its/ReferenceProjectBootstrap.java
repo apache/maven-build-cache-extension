@@ -25,6 +25,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -257,26 +259,61 @@ public class ReferenceProjectBootstrap {
      * properties, and txt files under {@code projectDir}.
      */
     private static void substituteTokens(Path projectDir) throws IOException {
-        String javaHome = System.getProperty("java.home");
-        // java.specification.version is "21" for Java 21, "11" for Java 11, etc.
-        String jdkMajor = System.getProperty("java.specification.version");
-
         try (Stream<Path> files = Files.walk(projectDir)) {
             files.filter(p -> !Files.isDirectory(p))
                     .filter(ReferenceProjectBootstrap::isTextFile)
                     .forEach(file -> {
                         try {
                             String content = Files.readString(file, StandardCharsets.UTF_8);
-                            if (content.contains("@JAVA_HOME@") || content.contains("@JDK_MAJOR_VERSION@")) {
-                                content = content.replace("@JAVA_HOME@", javaHome)
-                                        .replace("@JDK_MAJOR_VERSION@", jdkMajor);
+
+                            Map<String, String> replacements = getReplacements();
+                            boolean contentChanged = false;
+                            for (String search : replacements.keySet()) {
+                                if (content.contains(search)) {
+                                    content = content.replace(search, replacements.get(search));
+                                    contentChanged = true;
+                                }
+                            }
+
+                            if (contentChanged) {
                                 Files.writeString(file, content, StandardCharsets.UTF_8);
                             }
+
                         } catch (IOException e) {
                             throw new RuntimeException(e);
                         }
                     });
         }
+    }
+
+    private static Map<String, String> getReplacements() {
+        Map<String, String> replacements = new ConcurrentHashMap<>();
+        replacements.put("@JAVA_HOME@", System.getProperty("java.home"));
+        // java.specification.version is "21" for Java 21, "11" for Java 11, etc.
+        replacements.put("@JDK_MAJOR_VERSION@", System.getProperty("java.specification.version"));
+        // Official plugins
+        replacements.put("@version.maven-antrun-plugin@", "3.2.0");
+        replacements.put("@version.maven-clean-plugin@", "3.5.0");
+        replacements.put("@version.maven-compiler-plugin@", "3.15.0");
+        replacements.put("@version.maven-deploy-plugin@", "3.1.4");
+        replacements.put("@version.maven-enforcer-plugin@", "3.6.2");
+        replacements.put("@version.maven-install-plugin@", "3.1.4");
+        replacements.put("@version.maven-jar-plugin@", "3.5.0");
+        replacements.put("@version.maven-javadoc-plugin@", "3.12.0");
+        replacements.put("@version.maven-plugin-plugin@", "3.13.1");
+        replacements.put("@version.maven-pmd-plugin@", "3.28.0");
+        replacements.put("@version.maven-project-info-reports-plugin@", "3.9.0");
+        replacements.put("@version.maven-resources-plugin@", "3.5.0");
+        replacements.put("@version.maven-shade-plugin@", "3.6.2");
+        replacements.put("@version.maven-source-plugin@", "3.4.0");
+        replacements.put("@version.maven-surefire@", "3.5.5");
+        replacements.put("@version.maven-toolchains-plugin@", "3.2.0");
+        replacements.put("@version.maven-war-plugin@", "3.5.1");
+        // Other plugins
+        replacements.put("@version.version-maven-plugin@", "2.21.0");
+        replacements.put("@version.flatten-maven-plugin@", "1.7.3");
+        replacements.put("@version.exec-maven-plugin@", "3.6.1");
+        return replacements;
     }
 
     private static boolean isTextFile(Path p) {
