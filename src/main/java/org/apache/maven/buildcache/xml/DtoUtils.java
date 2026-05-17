@@ -20,6 +20,7 @@ package org.apache.maven.buildcache.xml;
 
 import javax.annotation.Nonnull;
 
+import java.nio.file.Path;
 import java.util.List;
 
 import org.apache.commons.lang3.ArrayUtils;
@@ -108,6 +109,12 @@ public class DtoUtils {
         return dependency;
     }
 
+    /**
+     *
+     * @deprecated Kept for binary compatibility, not used by the codebase anymore.
+     *             Use {@link CacheUtils#addProperty(CompletedExecution, String, Object, Path, boolean)}
+     */
+    @Deprecated
     public static void addProperty(
             CompletedExecution execution, String propertyName, Object value, String baseDirPath, boolean tracked) {
         final PropertyValue valueType = new PropertyValue();

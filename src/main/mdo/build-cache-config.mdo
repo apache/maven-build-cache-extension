@@ -1441,6 +1441,13 @@ under the License.
                         </xs:documentation>
                     </xs:annotation>
                 </xs:attribute>
+                <xs:attribute name="expression" type="xs:string">
+                    <xs:annotation>
+                        <xs:documentation>
+                            Interpolated expression to use as cached value.
+                        </xs:documentation>
+                    </xs:annotation>
+                </xs:attribute>
             </xs:extension>
         </xs:simpleContent>
     </xs:complexType>
@@ -1464,6 +1471,11 @@ under the License.
                 <field xml.attribute="true">
                     <name>defaultValue</name>
                     <type>String</type>
+                </field>
+                <field xml.attribute="true">
+                    <name>expression</name>
+                    <type>String</type>
+                    <description>Interpolated expression to use as cached value.</description>
                 </field>
             </fields>
         </class>
@@ -1497,3 +1509,4 @@ under the License.
     -->
 
 </model>
+

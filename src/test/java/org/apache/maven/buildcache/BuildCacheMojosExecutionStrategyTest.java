@@ -30,6 +30,7 @@ import org.apache.maven.buildcache.xml.CacheConfig;
 import org.apache.maven.buildcache.xml.build.CompletedExecution;
 import org.apache.maven.buildcache.xml.build.PropertyValue;
 import org.apache.maven.buildcache.xml.config.TrackedProperty;
+import org.apache.maven.execution.MavenSession;
 import org.apache.maven.execution.scope.internal.MojoExecutionScope;
 import org.apache.maven.plugin.MavenPluginManager;
 import org.apache.maven.plugin.MojoExecution;
@@ -53,6 +54,7 @@ class BuildCacheMojosExecutionStrategyTest {
         private MojoExecution executionMock;
         private CompletedExecution cacheRecordMock;
         private CacheConfig cacheConfigMock;
+        private MavenSession sessionMock;
 
         @BeforeEach
         void setUp() {
@@ -68,6 +70,7 @@ class BuildCacheMojosExecutionStrategyTest {
             projectMock = mock(MavenProject.class);
             executionMock = mock(MojoExecution.class);
             cacheRecordMock = mock(CompletedExecution.class);
+            sessionMock = mock(MavenSession.class);
         }
 
         @Test
@@ -105,7 +108,7 @@ class BuildCacheMojosExecutionStrategyTest {
                     Arrays.asList("a", "b", "c"),
                     new String[] {"c", "d", "e"});
 
-            assertTrue(strategy.isParamsMatched(projectMock, executionMock, testMojo, cacheRecordMock));
+            assertTrue(strategy.isParamsMatched(projectMock, sessionMock, executionMock, testMojo, cacheRecordMock));
         }
 
         @Test
@@ -132,7 +135,7 @@ class BuildCacheMojosExecutionStrategyTest {
             testMojo.setAnyObject("true");
 
             assertTrue(
-                    strategy.isParamsMatched(projectMock, executionMock, testMojo, cacheRecordMock),
+                    strategy.isParamsMatched(projectMock, sessionMock, executionMock, testMojo, cacheRecordMock),
                     "If property set to 'skipValue' mismatch could be ignored because cached build"
                             + " is more complete than requested build");
         }
@@ -161,7 +164,7 @@ class BuildCacheMojosExecutionStrategyTest {
             testMojo.setAnyObject("defaultValue");
 
             assertTrue(
-                    strategy.isParamsMatched(projectMock, executionMock, testMojo, cacheRecordMock),
+                    strategy.isParamsMatched(projectMock, sessionMock, executionMock, testMojo, cacheRecordMock),
                     "If property has defaultValue it must be matched even if cache record has no this field");
         }
 
@@ -187,7 +190,7 @@ class BuildCacheMojosExecutionStrategyTest {
             TestMojo testMojo = new TestMojo();
             testMojo.setAnyObject("2");
 
-            assertFalse(strategy.isParamsMatched(projectMock, executionMock, testMojo, cacheRecordMock));
+            assertFalse(strategy.isParamsMatched(projectMock, sessionMock, executionMock, testMojo, cacheRecordMock));
         }
 
         private Pair<TrackedProperty, PropertyValue> setupProperty(String propertyName, String value) {

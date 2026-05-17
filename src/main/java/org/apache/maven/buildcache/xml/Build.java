@@ -19,8 +19,6 @@
 package org.apache.maven.buildcache.xml;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -30,6 +28,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.apache.maven.buildcache.CacheUtils;
+import org.apache.maven.buildcache.HostnameResolver;
 import org.apache.maven.buildcache.checksum.MavenProjectInput;
 import org.apache.maven.buildcache.hash.HashAlgorithm;
 import org.apache.maven.buildcache.xml.build.Artifact;
@@ -60,11 +59,7 @@ public class Build {
         this.dto = new org.apache.maven.buildcache.xml.build.Build();
         this.dto.setCacheImplementationVersion(MavenProjectInput.CACHE_IMPLEMENTATION_VERSION);
         this.dto.setBuildTime(new Date());
-        try {
-            this.dto.setBuildServer(InetAddress.getLocalHost().getCanonicalHostName());
-        } catch (UnknownHostException ignore) {
-            this.dto.setBuildServer("unknown");
-        }
+        this.dto.setBuildServer(HostnameResolver.resolve());
         this.dto.setHashFunction(hashAlgorithm);
         this.dto.setArtifact(artifact);
         this.dto.setGoals(goals);

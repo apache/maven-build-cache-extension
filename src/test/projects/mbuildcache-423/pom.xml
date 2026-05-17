@@ -1,0 +1,77 @@
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>org.apache.maven.caching.test</groupId>
+    <artifactId>mbuildcache-423</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <!--
+        Pom-packaged project that owns a "source" file (config/checkstyle-rules.xml).
+        The file is declared as an explicit cache input via the maven.build.cache.input.1
+        property so the extension knows to include it in the checksum.
+
+        Issue #423: because MavenProjectInput hard-codes an empty input set for every
+        pom-packaged project, this property is currently ignored and changes to
+        checkstyle-rules.xml do NOT invalidate the cache — they should.
+    -->
+    <packaging>pom</packaging>
+
+    <properties>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- Explicitly declare the config file as a cache input for this pom module -->
+        <maven.build.cache.input.1>config/checkstyle-rules.xml</maven.build.cache.input.1>
+    </properties>
+
+    <build>
+        <plugins>
+            <!--
+                A real plugin execution is required so that the build-cache extension
+                actually participates for this pom module.  Without at least one lifecycle
+                mojo, mojoExecutions is empty, getSource() returns null and the cache is
+                bypassed entirely.  The antrun echo goal is the lightest option: it has no
+                external dependencies and produces deterministic, side-effect-free output.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>validate-config</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <echo message="Checkstyle config present: ${maven.build.cache.input.1}"/>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

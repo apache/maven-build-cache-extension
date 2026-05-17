@@ -33,7 +33,6 @@ import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -97,7 +96,6 @@ import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.replaceEachRepeatedly;
 import static org.apache.commons.lang3.StringUtils.stripToEmpty;
-import static org.apache.maven.buildcache.CacheUtils.isPom;
 import static org.apache.maven.buildcache.CacheUtils.isSnapshot;
 import static org.apache.maven.buildcache.xml.CacheConfigImpl.CACHE_ENABLED_PROPERTY_NAME;
 import static org.apache.maven.buildcache.xml.CacheConfigImpl.CACHE_SKIP;
@@ -188,7 +186,7 @@ public class MavenProjectInput {
         final long t0 = System.currentTimeMillis();
 
         final String effectivePom = getEffectivePom(normalizedModelProvider.normalizedModel(project));
-        final SortedSet<Path> inputFiles = isPom(project) ? Collections.emptySortedSet() : getInputFiles();
+        final SortedSet<Path> inputFiles = getInputFiles();
         final SortedMap<String, String> dependenciesChecksum = getMutableDependencies();
         final SortedMap<String, String> pluginDependenciesChecksum = getMutablePluginDependencies();
 
@@ -836,11 +834,21 @@ public class MavenProjectInput {
             return DtoUtils.createDigestedFile(artifact, hash);
         }
 
+        // Handle special dependency types that have implicit classifiers
+        String classifier = dependency.getClassifier();
+        String extension = null;
+
+        // test-jar type requires "tests" classifier and "jar" extension
+        if ("test-jar".equals(dependency.getType()) && (classifier == null || classifier.isEmpty())) {
+            classifier = "tests";
+            extension = "jar";
+        }
+
         org.eclipse.aether.artifact.Artifact dependencyArtifact = new org.eclipse.aether.artifact.DefaultArtifact(
                 dependency.getGroupId(),
                 dependency.getArtifactId(),
-                dependency.getClassifier(),
-                null,
+                classifier,
+                extension,
                 dependency.getVersion(),
                 new DefaultArtifactType(dependency.getType()));
         ArtifactRequest artifactRequest = new ArtifactRequest().setArtifact(dependencyArtifact);

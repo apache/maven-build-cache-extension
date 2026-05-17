@@ -31,7 +31,7 @@ class ChainedListener extends AbstractExecutionListener {
     private final CopyOnWriteArrayList<ExecutionListener> chainedListeners = new CopyOnWriteArrayList<>();
 
     ChainedListener(ExecutionListener delegate) {
-        this.delegate = delegate;
+        this.delegate = delegate != null ? delegate : new AbstractExecutionListener() {};
     }
 
     public boolean chainListener(ExecutionListener listener) {

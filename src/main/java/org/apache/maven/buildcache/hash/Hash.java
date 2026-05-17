@@ -57,4 +57,12 @@ public class Hash {
 
         Checksum checksum(int count);
     }
+
+    /**
+     * Memory policy
+     */
+    public enum MemoryPolicy {
+        Standard,
+        MemoryMappedBuffers
+    }
 }

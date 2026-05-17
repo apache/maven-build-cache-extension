@@ -36,11 +36,16 @@ package org.apache.maven.buildcache.checksum;
  * specific language governing permissions and limitations
  * under the License.
  */
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import org.apache.maven.buildcache.hash.HashAlgorithm;
 import org.apache.maven.buildcache.hash.HashChecksum;
+import org.apache.maven.buildcache.hash.HashFactory;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import static org.apache.maven.buildcache.hash.HashFactory.SHA256;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -57,13 +62,17 @@ class SHAHashTest {
     private static final String FULL_CHECKSUM = "7305db9b2abccd706c256db3d97e5ff48d677cfe4d3a5904afb7da0e3950e1e2";
 
     private static final HashAlgorithm ALGORITHM = SHA256.createAlgorithm();
+    private static final HashAlgorithm ALGORITHM_MM = HashFactory.SHA256_MM.createAlgorithm();
+
     private static final HashChecksum CHECKSUM = SHA256.createChecksum(0);
+
+    @TempDir
+    Path tempDir;
 
     @Test
     void testEmptyArray() {
         byte[] emptyArray = new byte[0];
-        String hash = ALGORITHM.hash(emptyArray);
-        assertEquals(EMPTY_HASH, hash);
+        assertEquals(EMPTY_HASH, ALGORITHM.hash(emptyArray));
     }
 
     @Test
@@ -71,8 +80,17 @@ class SHAHashTest {
         String helloHash = ALGORITHM.hash(HELLO_ARRAY);
         assertEquals(HELLO_HASH, helloHash);
 
-        String worldHash = ALGORITHM.hash(WORLD_ARRAY);
-        assertEquals(WORLD_HASH, worldHash);
+        assertEquals(WORLD_HASH, ALGORITHM.hash(WORLD_ARRAY));
+        assertEquals(WORLD_HASH, ALGORITHM_MM.hash(WORLD_ARRAY));
+    }
+
+    @Test
+    void testFileHash() throws IOException {
+        Path testFile = tempDir.resolve("SHAHashTest.txt");
+        Files.write(testFile, HELLO_ARRAY);
+
+        assertEquals(HELLO_HASH, ALGORITHM.hash(testFile));
+        assertEquals(HELLO_HASH, ALGORITHM_MM.hash(testFile));
     }
 
     @Test

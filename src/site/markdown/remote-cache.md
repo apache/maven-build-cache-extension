@@ -138,8 +138,10 @@ low-level insights. See techniques to configure cache in [How-To](how-to.md) and
 in the section below. Also, it is possible to diff remote and local `buildInfo.xml` files directly using any tool of
 your preference.
 
-If you are using a webdav remote server (which is the most easiest to use to create directories on a remote server), from Maven 3.9.1 and 4.0.0-alpha5, support of webdav has been removed per default.
+If you are using a webdav remote server (which is the most easiest to use to create directories on a remote server),
+from Maven 3.9.1 and 4.0.0-alpha5, support of webdav has been removed per default.
 You need to use the following extra configuration:
+
 ```bash
 -Daether.connector.http.supportWebDav=true
 OR
@@ -147,7 +149,9 @@ OR
 ```
 
 Or configure your remote with the following configuration (`dav:url`)
+
 ```xml
+
 <remote enabled="true">
     <url>dav:http://your-buildcache-url</url>
 </remote>
@@ -233,11 +237,15 @@ Filter out environment-specific properties from the effective pom model:
     <global>
         ...
     </global>
-    <plugin artifactId="maven-surefire-plugin">
-        <effectivePom>
-            <excludeProperty>argLine</excludeProperty>
-        </effectivePom>
-    </plugin>
+    <plugins>
+        <plugin artifactId="maven-surefire-plugin">
+            <effectivePom>
+                <excludeProperties>
+                    <excludeProperty>argLine</excludeProperty>
+                </excludeProperties>
+            </effectivePom>
+        </plugin>
+    </plugins>
 </input>
 ```
 

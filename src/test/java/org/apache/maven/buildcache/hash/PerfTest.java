@@ -83,6 +83,11 @@ public class PerfTest {
     }
 
     @Benchmark
+    public String sha256mm(HashState state) throws IOException {
+        return doTest(HashFactory.SHA256_MM, state);
+    }
+
+    @Benchmark
     public String xx(HashState state) throws IOException {
         return doTest(HashFactory.XX, state);
     }

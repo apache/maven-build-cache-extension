@@ -29,6 +29,8 @@ import java.util.Arrays;
 import java.util.Set;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -50,11 +52,8 @@ class CacheUtilsPermissionsTest {
      * cache correctness similar to how Git includes file mode in tree hashes.
      */
     @Test
+    @DisabledOnOs(OS.WINDOWS)
     void testPermissionsAffectFileHashWhenEnabled() throws IOException {
-        // Skip test on non-POSIX filesystems (e.g., Windows)
-        if (!tempDir.getFileSystem().supportedFileAttributeViews().contains("posix")) {
-            return;
-        }
 
         // Given: Same directory content with different permissions
         Path sourceDir1 = tempDir.resolve("source1");
@@ -100,12 +99,8 @@ class CacheUtilsPermissionsTest {
      * the key point is that permission information is NOT deterministically stored.
      */
     @Test
+    @DisabledOnOs(OS.WINDOWS)
     void testPermissionsDoNotAffectHashWhenDisabled() throws IOException {
-        // Skip test on non-POSIX filesystems (e.g., Windows)
-        if (!tempDir.getFileSystem().supportedFileAttributeViews().contains("posix")) {
-            return;
-        }
-
         // Given: Same directory content with different permissions
         Path sourceDir1 = tempDir.resolve("source1");
         Files.createDirectories(sourceDir1);
@@ -152,6 +147,33 @@ class CacheUtilsPermissionsTest {
                 perms1.equals(execPermissions) && perms2.equals(normalPermissions),
                 "When preservePermissions=false, original permissions should NOT be preserved. "
                         + "Files should use system default permissions (umask).");
+    }
+
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    void testPermissionsAreRestoredOnUnzip() throws Exception {
+        // Given: a source directory with a file that has "execute" permission
+        Path source = tempDir.resolve("source");
+        Files.createDirectories(source);
+
+        Path script = source.resolve("script.sh");
+        writeString(script, "#!/bin/bash\necho hello");
+        Set<PosixFilePermission> execPermissions = PosixFilePermissions.fromString("rwxr-xr-x");
+        Files.setPosixFilePermissions(script, execPermissions);
+
+        // When: ZIP file is created from that directory with "preservePermissions=true"
+        Path zippedFile = tempDir.resolve("target.zip");
+        CacheUtils.zip(source, zippedFile, "*", true);
+
+        // And: ZIP file is extracted with "preservePermissions=true"
+        Path unzippedDir = tempDir.resolve("target-unzipped");
+        Files.createDirectories(unzippedDir);
+        CacheUtils.unzip(zippedFile, unzippedDir, true);
+
+        // Then: extracted file should have executable permissions
+        Path extractedScript = unzippedDir.resolve("script.sh");
+        assertTrue(Files.exists(extractedScript), "Extracted script should exist.");
+        assertTrue(Files.isExecutable(extractedScript), "Permissions should be restored when the file is extracted");
     }
 
     /**

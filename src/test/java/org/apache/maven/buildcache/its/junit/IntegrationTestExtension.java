@@ -27,6 +27,7 @@ import java.nio.file.Paths;
 import java.util.Comparator;
 import java.util.stream.Stream;
 
+import org.apache.maven.buildcache.its.MavenSetup;
 import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
@@ -41,30 +42,9 @@ import org.junit.jupiter.api.parallel.Resources;
 @ResourceLock(Resources.SYSTEM_PROPERTIES)
 public class IntegrationTestExtension implements BeforeAllCallback, BeforeEachCallback, ParameterResolver {
 
-    private static Path mavenHome;
-
     @Override
     public void beforeAll(ExtensionContext context) throws IOException {
-        Path basedir;
-        String basedirstr = System.getProperty("maven.basedir");
-        if (basedirstr == null) {
-            if (Files.exists(Paths.get("target/maven3"))) {
-                basedir = Paths.get("target/maven3");
-            } else if (Files.exists(Paths.get("target/maven4"))) {
-                basedir = Paths.get("target/maven4");
-            } else {
-                throw new IllegalStateException("Could not find maven home !");
-            }
-        } else {
-            basedir = Paths.get(basedirstr);
-        }
-        mavenHome = Files.list(basedir.toAbsolutePath())
-                .filter(p -> Files.exists(p.resolve("bin/mvn")))
-                .findAny()
-                .orElseThrow(() -> new IllegalStateException("Could not find maven home"));
-        System.setProperty("maven.home", mavenHome.toString());
-        mavenHome.resolve("bin/mvn").toFile().setExecutable(true);
-
+        MavenSetup.configureMavenHome();
         deleteDir(Paths.get("target/build-cache/"));
     }
 
