@@ -53,9 +53,10 @@ class MavenProjectInputTest {
     void testCollectFilteredFiles() {
         List<Path> collectedFiles = new ArrayList<>();
         MavenProjectInput.walkDirectoryFiles(
-                Paths.get("src/test/resources/test-folder"), collectedFiles, DEFAULT_GLOB, it -> it.getFileName()
-                        .toString()
-                        .endsWith("pom.xml"));
+                Paths.get("src/test/resources/test-folder"),
+                collectedFiles,
+                DEFAULT_GLOB,
+                it -> it.getFileName().toString().endsWith("pom.xml"));
         assertEquals(0, collectedFiles.size()); // pom is filtered out by the "mustBeSkipped" predicate
     }
 
