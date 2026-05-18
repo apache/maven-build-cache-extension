@@ -573,7 +573,7 @@ under the License.
     <profile>
       <id>maven3</id>
       <properties>
-        <mavenVersion>3.9.15</mavenVersion>
+        <mavenVersion>3.9.16</mavenVersion>
         <maven.dir>maven3</maven.dir>
         <maven.basedir>${project.build.directory}/${maven.dir}</maven.basedir>
       </properties>
