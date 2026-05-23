@@ -172,17 +172,20 @@ Add `executionControl/runAlways` section:
 ### Default Reconciliation Behavior
 
 The build cache extension automatically tracks certain critical plugin properties by default, even without explicit
-`executionControl` configuration. These defaults are loaded from `default-reconciliation/defaults.xml`:
+`executionControl` configuration. These defaults are derived from plugin parameter descriptors under
+`plugin-parameters/`:
 
-* **maven-compiler-plugin** (`compile` and `testCompile` goals): Tracks `source`, `target`, and `release` properties
-* **maven-install-plugin** (`install` goal): Tracked to ensure artifacts are installed when needed
+* **maven-compiler-plugin** (`compile` and `testCompile` goals): Tracks functional parameters defined in
+  `plugin-parameters/maven-compiler-plugin.xml`
+* **maven-install-plugin** (`install` and `install-file` goals): Tracks functional parameters defined in
+  `plugin-parameters/maven-install-plugin.xml`
 
 This default behavior prevents common cache invalidation issues, particularly in multi-module JPMS (Java Platform Module System)
 projects where compiler version changes can cause compilation failures.
 
 **Overriding Defaults:** When you explicitly configure `executionControl` for a plugin, your explicit configuration completely
 overrides the defaults for that plugin. For example, to track only the `release` property for maven-compiler-plugin instead
-of the default `source`, `target`, and `release`:
+of the functional parameters from `plugin-parameters/maven-compiler-plugin.xml`:
 
 ```xml
 <cache xmlns="http://maven.apache.org/BUILD-CACHE-CONFIG/1.2.0">
