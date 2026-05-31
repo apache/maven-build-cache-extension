@@ -203,7 +203,8 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                                 || result.getValidationTimeEvents().isEmpty()) {
                             LOGGER.debug("Skipping cache storage for {} - no cacheable mojos executed", projectName);
                         } else {
-                            LOGGER.debug("Using validation-time properties for cache storage (consistent lifecycle point)");
+                            LOGGER.debug(
+                                    "Using validation-time properties for cache storage (consistent lifecycle point)");
                             cacheController.save(result, mojoExecutions, result.getValidationTimeEvents());
                         }
                     }
