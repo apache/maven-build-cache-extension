@@ -101,6 +101,7 @@ import static org.apache.maven.buildcache.xml.CacheConfigImpl.CACHE_ENABLED_PROP
 import static org.apache.maven.buildcache.xml.CacheConfigImpl.CACHE_SKIP;
 import static org.apache.maven.buildcache.xml.CacheConfigImpl.RESTORE_GENERATED_SOURCES_PROPERTY_NAME;
 import static org.apache.maven.buildcache.xml.CacheConfigImpl.RESTORE_ON_DISK_ARTIFACTS_PROPERTY_NAME;
+import static org.apache.maven.buildcache.xml.CacheConfigImpl.SKIP_SAVE;
 
 /**
  * MavenProjectInput
@@ -993,5 +994,16 @@ public class MavenProjectInput {
      */
     public static boolean isCacheDisabled(MavenProject project) {
         return !Boolean.parseBoolean(project.getProperties().getProperty(CACHE_ENABLED_PROPERTY_NAME, "true"));
+    }
+
+    /**
+     * Skip cache saving on a per-project level via a property.
+     * Defaults to false.
+     * {@code <maven.build.cache.skipSave>true<maven.build.cache.skipSave/>}
+     * @param project current project
+     * @return true if saving should be skipped for this project
+     */
+    public static boolean isSkipSave(MavenProject project) {
+        return Boolean.parseBoolean(project.getProperties().getProperty(SKIP_SAVE, "false"));
     }
 }

@@ -175,7 +175,8 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                 }
 
                 if (cacheState == INITIALIZED && (!result.isSuccess() || !restored)) {
-                    if (cacheConfig.isSkipSave()) {
+                    boolean skipSave = cacheConfig.isSkipSave() || MavenProjectInput.isSkipSave(project);
+                    if (skipSave) {
                         LOGGER.debug("Cache saving is disabled.");
                     } else if (cacheConfig.isMandatoryClean()
                             && lifecyclePhasesHelper
