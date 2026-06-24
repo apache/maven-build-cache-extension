@@ -32,17 +32,17 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Verifies the phase-escalation scenario: after a {@code compile}-level cache entry exists,
- * running {@code mvn package} partially restores the compile segment from cache and then executes
- * the remaining phases up to {@code package} (test 2.7).
+ * Verifies that escalating from a compile-only cache entry to {@code install} restores the compile
+ * segment from cache, rebuilds the package/install phases, and upgrades the cache entry to store a
+ * packaged main artifact.
  */
 @Tag("smoke")
 @IntegrationTest("src/test/projects/lifecycle-phases")
-class CompileThenPackageEscalationTest {
+class CompileThenInstallEscalationTest {
 
     private static final String PROJECT_NAME = "org.apache.maven.caching.test:lifecycle-phases";
     private static final String PARTIAL_RESTORE =
-            "Project " + PROJECT_NAME + " restored partially. Highest cached goal: compile, requested: package";
+            "Project " + PROJECT_NAME + " restored partially. Highest cached goal: compile, requested: install";
     private static final String SKIPPED_COMPILE = "Skipping plugin execution (cached): compiler:compile";
     private static final String CACHE_SAVED = "Saved Build to local file";
     private static final String CLASSES_OUTPUT_PATH = "<filePath>target/classes</filePath>";
@@ -51,11 +51,10 @@ class CompileThenPackageEscalationTest {
     private static final String DIRECTORY_ARTIFACT_MARKER = "<isDirectory>true</isDirectory>";
 
     @Test
-    void packageEscalatesFromCompileCache(Verifier verifier) throws Exception {
+    void installEscalatesFromCompileCache(Verifier verifier) throws Exception {
         verifier.setAutoclean(false);
         Path cacheLocation = configureCacheLocation(verifier);
 
-        // Build 1 — compile; cache saved at compile level
         verifier.setLogFileName("../log-1.txt");
         verifier.executeGoal("compile");
         verifier.verifyErrorFreeLog();
@@ -66,21 +65,19 @@ class CompileThenPackageEscalationTest {
                 compileBuildInfo.contains(DIRECTORY_ARTIFACT_MARKER),
                 "Compile cache entry must not store target/classes as the main artifact");
 
-        // Build 2 — request package; compile segment restored from cache, package mojos run
         verifier.setLogFileName("../log-2.txt");
-        verifier.executeGoal("package");
+        verifier.executeGoal("install");
         verifier.verifyErrorFreeLog();
         verifier.verifyTextInLog(PARTIAL_RESTORE);
         verifier.verifyTextInLog(SKIPPED_COMPILE);
-        // New cache entry at package level saved
         verifier.verifyTextInLog(CACHE_SAVED);
 
         String buildInfo = Files.readString(findBuildInfo(cacheLocation));
         assertTrue(
-                buildInfo.contains(PACKAGED_ARTIFACT_PATH), "Package-level cache entry must point to the packaged JAR");
+                buildInfo.contains(PACKAGED_ARTIFACT_PATH), "Install-level cache entry must point to the packaged JAR");
         assertFalse(
                 buildInfo.contains(DIRECTORY_ARTIFACT_MARKER),
-                "Package-level cache entry must not keep target/classes as the main artifact");
+                "Install-level cache entry must not keep target/classes as the main artifact");
     }
 
     private static Path configureCacheLocation(Verifier verifier) {
