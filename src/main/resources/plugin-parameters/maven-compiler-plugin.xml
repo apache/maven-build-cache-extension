@@ -1,0 +1,327 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ Licensed to the Apache Software Foundation (ASF) under one or more
+ contributor license agreements.  See the NOTICE file distributed with
+ this work for additional information regarding copyright ownership.
+ The ASF licenses this file to You under the Apache License, Version 2.0
+ (the "License"); you may not use this file except in compliance with
+ the License.  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+<plugin xmlns="http://maven.apache.org/PLUGIN-PARAMETERS/1.0.0"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://maven.apache.org/PLUGIN-PARAMETERS/1.0.0 plugin-parameters.xsd">
+  <groupId>org.apache.maven.plugins</groupId>
+  <artifactId>maven-compiler-plugin</artifactId>
+  <minVersion>3.11.0</minVersion>
+
+  <goals>
+    <goal>
+      <name>compile</name>
+      <parameters>
+        <!-- FUNCTIONAL: Affect compiled bytecode or compilation behavior -->
+        <parameter>
+          <name>source</name>
+          <type>functional</type>
+          <description>Source JDK version for compilation</description>
+        </parameter>
+        <parameter>
+          <name>target</name>
+          <type>functional</type>
+          <description>Target JDK version for compiled bytecode</description>
+        </parameter>
+        <parameter>
+          <name>release</name>
+          <type>functional</type>
+          <description>JDK release version (combines source and target)</description>
+        </parameter>
+        <parameter>
+          <name>encoding</name>
+          <type>functional</type>
+          <description>Source file encoding</description>
+        </parameter>
+        <parameter>
+          <name>debug</name>
+          <type>functional</type>
+          <description>Include debugging information in compiled bytecode</description>
+        </parameter>
+        <parameter>
+          <name>debuglevel</name>
+          <type>functional</type>
+          <description>Level of debugging information (lines, vars, source)</description>
+        </parameter>
+        <parameter>
+          <name>optimize</name>
+          <type>functional</type>
+          <description>Optimize compiled bytecode</description>
+        </parameter>
+        <parameter>
+          <name>compilerArgs</name>
+          <type>functional</type>
+          <description>Additional compiler arguments</description>
+        </parameter>
+        <parameter>
+          <name>compilerArgument</name>
+          <type>functional</type>
+          <description>Single additional compiler argument</description>
+        </parameter>
+        <parameter>
+          <name>annotationProcessorPaths</name>
+          <type>functional</type>
+          <description>Classpath for annotation processors</description>
+        </parameter>
+        <parameter>
+          <name>annotationProcessors</name>
+          <type>functional</type>
+          <description>Annotation processors to run</description>
+        </parameter>
+        <parameter>
+          <name>proc</name>
+          <type>functional</type>
+          <description>Annotation processing mode (none, only, proc)</description>
+        </parameter>
+        <parameter>
+          <name>executable</name>
+          <type>functional</type>
+          <description>Path to javac executable (different compiler may produce different output)</description>
+        </parameter>
+        <parameter>
+          <name>parameters</name>
+          <type>functional</type>
+          <description>Generate metadata for method parameters</description>
+        </parameter>
+        <parameter>
+          <name>enablePreview</name>
+          <type>functional</type>
+          <description>Enable preview features</description>
+        </parameter>
+
+        <!-- BEHAVIORAL: Affect how compilation runs but not the output -->
+        <parameter>
+          <name>verbose</name>
+          <type>behavioral</type>
+          <description>Verbose compiler output</description>
+        </parameter>
+        <parameter>
+          <name>showWarnings</name>
+          <type>behavioral</type>
+          <description>Show compilation warnings</description>
+        </parameter>
+        <parameter>
+          <name>showDeprecation</name>
+          <type>behavioral</type>
+          <description>Show deprecation warnings</description>
+        </parameter>
+        <parameter>
+          <name>skip</name>
+          <type>functional</type>
+          <description>Skip compilation entirely (no bytecode produced when true)</description>
+        </parameter>
+        <parameter>
+          <name>skipMain</name>
+          <type>functional</type>
+          <description>Skip compiling main sources (no main bytecode produced when true)</description>
+        </parameter>
+        <parameter>
+          <name>failOnError</name>
+          <type>behavioral</type>
+          <description>Fail build on compilation error</description>
+        </parameter>
+        <parameter>
+          <name>failOnWarning</name>
+          <type>behavioral</type>
+          <description>Fail build on compilation warning</description>
+        </parameter>
+        <parameter>
+          <name>fork</name>
+          <type>behavioral</type>
+          <description>Fork compiler into separate process</description>
+        </parameter>
+        <parameter>
+          <name>maxmem</name>
+          <type>behavioral</type>
+          <description>Maximum memory for compiler process</description>
+        </parameter>
+        <parameter>
+          <name>meminitial</name>
+          <type>behavioral</type>
+          <description>Initial memory for compiler process</description>
+        </parameter>
+        <parameter>
+          <name>compilerReuseStrategy</name>
+          <type>behavioral</type>
+          <description>Strategy for reusing compiler instances</description>
+        </parameter>
+        <parameter>
+          <name>forceJavacCompilerUse</name>
+          <type>behavioral</type>
+          <description>Force use of javac compiler</description>
+        </parameter>
+        <parameter>
+          <name>staleMillis</name>
+          <type>behavioral</type>
+          <description>Staleness check interval for incremental compilation</description>
+        </parameter>
+        <parameter>
+          <name>useIncrementalCompilation</name>
+          <type>behavioral</type>
+          <description>Enable incremental compilation</description>
+        </parameter>
+      </parameters>
+    </goal>
+
+    <goal>
+      <name>testCompile</name>
+      <parameters>
+        <!-- Same parameters as compile goal -->
+        <parameter>
+          <name>source</name>
+          <type>functional</type>
+          <description>Source JDK version for test compilation</description>
+        </parameter>
+        <parameter>
+          <name>target</name>
+          <type>functional</type>
+          <description>Target JDK version for compiled test bytecode</description>
+        </parameter>
+        <parameter>
+          <name>release</name>
+          <type>functional</type>
+          <description>JDK release version for tests</description>
+        </parameter>
+        <parameter>
+          <name>encoding</name>
+          <type>functional</type>
+          <description>Test source file encoding</description>
+        </parameter>
+        <parameter>
+          <name>debug</name>
+          <type>functional</type>
+          <description>Include debugging information in test bytecode</description>
+        </parameter>
+        <parameter>
+          <name>debuglevel</name>
+          <type>functional</type>
+          <description>Level of debugging information for tests</description>
+        </parameter>
+        <parameter>
+          <name>optimize</name>
+          <type>functional</type>
+          <description>Optimize test bytecode</description>
+        </parameter>
+        <parameter>
+          <name>compilerArgs</name>
+          <type>functional</type>
+          <description>Additional compiler arguments for tests</description>
+        </parameter>
+        <parameter>
+          <name>compilerArgument</name>
+          <type>functional</type>
+          <description>Single additional compiler argument for tests</description>
+        </parameter>
+        <parameter>
+          <name>annotationProcessorPaths</name>
+          <type>functional</type>
+          <description>Classpath for test annotation processors</description>
+        </parameter>
+        <parameter>
+          <name>annotationProcessors</name>
+          <type>functional</type>
+          <description>Annotation processors for tests</description>
+        </parameter>
+        <parameter>
+          <name>proc</name>
+          <type>functional</type>
+          <description>Annotation processing mode for tests</description>
+        </parameter>
+        <parameter>
+          <name>executable</name>
+          <type>functional</type>
+          <description>Path to javac for test compilation</description>
+        </parameter>
+        <parameter>
+          <name>parameters</name>
+          <type>functional</type>
+          <description>Generate metadata for test method parameters</description>
+        </parameter>
+        <parameter>
+          <name>enablePreview</name>
+          <type>functional</type>
+          <description>Enable preview features for tests</description>
+        </parameter>
+        <parameter>
+          <name>verbose</name>
+          <type>behavioral</type>
+          <description>Verbose test compiler output</description>
+        </parameter>
+        <parameter>
+          <name>showWarnings</name>
+          <type>behavioral</type>
+          <description>Show test compilation warnings</description>
+        </parameter>
+        <parameter>
+          <name>showDeprecation</name>
+          <type>behavioral</type>
+          <description>Show test deprecation warnings</description>
+        </parameter>
+        <parameter>
+          <name>skip</name>
+          <type>functional</type>
+          <description>Skip test compilation (no test bytecode produced when true)</description>
+        </parameter>
+        <parameter>
+          <name>failOnError</name>
+          <type>behavioral</type>
+          <description>Fail build on test compilation error</description>
+        </parameter>
+        <parameter>
+          <name>failOnWarning</name>
+          <type>behavioral</type>
+          <description>Fail build on test compilation warning</description>
+        </parameter>
+        <parameter>
+          <name>fork</name>
+          <type>behavioral</type>
+          <description>Fork test compiler process</description>
+        </parameter>
+        <parameter>
+          <name>maxmem</name>
+          <type>behavioral</type>
+          <description>Maximum memory for test compiler</description>
+        </parameter>
+        <parameter>
+          <name>meminitial</name>
+          <type>behavioral</type>
+          <description>Initial memory for test compiler</description>
+        </parameter>
+        <parameter>
+          <name>compilerReuseStrategy</name>
+          <type>behavioral</type>
+          <description>Compiler reuse strategy for tests</description>
+        </parameter>
+        <parameter>
+          <name>forceJavacCompilerUse</name>
+          <type>behavioral</type>
+          <description>Force javac for test compilation</description>
+        </parameter>
+        <parameter>
+          <name>staleMillis</name>
+          <type>behavioral</type>
+          <description>Staleness check for test incremental compilation</description>
+        </parameter>
+        <parameter>
+          <name>useIncrementalCompilation</name>
+          <type>behavioral</type>
+          <description>Enable incremental test compilation</description>
+        </parameter>
+      </parameters>
+    </goal>
+  </goals>
+</plugin>
