@@ -388,13 +388,29 @@ public class CacheControllerImpl implements CacheController {
     }
 
     private boolean isPathInsideProject(final MavenProject project, Path path) {
-        Path restorationPath = path.toAbsolutePath().normalize();
-        return restorationPath.startsWith(project.getBasedir().toPath());
+        return pathInsideProject(project, path).isPresent();
+    }
+
+    private Optional<Path> pathInsideProject(final MavenProject project, Path path) {
+        Path normalizedPath = normalizeProjectPath(project, path);
+        if (normalizedPath.startsWith(getProjectBaseDir(project))) {
+            return Optional.of(normalizedPath);
+        }
+        return Optional.empty();
+    }
+
+    private Path normalizeProjectPath(final MavenProject project, Path path) {
+        Path baseDir = getProjectBaseDir(project);
+        return (path.isAbsolute() ? path : baseDir.resolve(path)).normalize();
+    }
+
+    private Path getProjectBaseDir(final MavenProject project) {
+        return project.getBasedir().toPath().toAbsolutePath().normalize();
     }
 
     private void verifyRestorationInsideProject(final MavenProject project, Path path) {
         if (!isPathInsideProject(project, path)) {
-            Path normalized = path.toAbsolutePath().normalize();
+            Path normalized = normalizeProjectPath(project, path);
             LOGGER.error(ERROR_MSG_RESTORATION_OUTSIDE_PROJECT + normalized);
             throw new RuntimeException(ERROR_MSG_RESTORATION_OUTSIDE_PROJECT + normalized);
         }
@@ -415,7 +431,7 @@ public class CacheControllerImpl implements CacheController {
             boolean restoredProjectArtifactIsDirectory = false;
             List<RestoredArtifact> restoredAttachedArtifacts = new ArrayList<>();
 
-            if (build.getArtifact() != null && isNotBlank(build.getArtifact().getFileName())) {
+            if (build.getArtifact() != null && isNotBlank(build.getArtifact().getFilePath())) {
                 final Artifact artifactInfo = build.getArtifact();
                 String originalVersion = artifactInfo.getVersion();
                 artifactInfo.setVersion(project.getVersion());
@@ -574,15 +590,16 @@ public class CacheControllerImpl implements CacheController {
             final boolean cacheCompile = cacheConfig.isCacheCompile();
             if (cacheCompile) {
                 attachGeneratedSources(project, state, buildStartTime);
+                attachCompileOutputs(project, state, buildStartTime);
                 attachOutputs(project, state, buildStartTime);
             }
 
             final List<org.apache.maven.artifact.Artifact> attachedArtifacts =
                     project.getAttachedArtifacts() != null ? project.getAttachedArtifacts() : Collections.emptyList();
             final List<Artifact> attachedArtifactDtos = artifactDtos(attachedArtifacts, algorithm, project, state);
-            // Always create artifact DTO - if package phase hasn't run, the file will be null
-            // and restoration will safely skip it. This ensures all builds have an artifact DTO.
-            final Artifact projectArtifactDto = artifactDto(project.getArtifact(), algorithm, project, state);
+            // Always create artifact DTO. Compile-only outputs are cached as attached outputs, not as the
+            // main Maven artifact; the main artifact gets a file path only after a packaging mojo assigns one.
+            final Artifact projectArtifactDto = projectArtifactDto(project.getArtifact(), algorithm, project, state);
 
             List<CompletedExecution> completedExecution = buildExecutionInfo(mojoExecutions, executionEvents);
 
@@ -594,9 +611,7 @@ public class CacheControllerImpl implements CacheController {
             //   2. mvn compile (cacheCompile=true) tries to restore incomplete cache and fails
             //
             // Save cache entry if ANY of these conditions are met:
-            // 1. Project artifact file exists:
-            //    a) Regular file (JAR/WAR/etc from package phase)
-            //    b) Directory (target/classes from compile-only builds) - only if cacheCompile=true
+            // 1. Project artifact file exists as a regular file (JAR/WAR/etc from package phase)
             // 2. Has attached artifacts (classes/test-classes from cacheCompile=true)
             // 3. POM project with plugin executions (worth caching to skip plugin execution on cache hit)
             //
@@ -606,8 +621,7 @@ public class CacheControllerImpl implements CacheController {
             // Check if project artifact is valid (exists and is correct type)
             boolean hasArtifactFile = projectArtifact.getFile() != null
                     && projectArtifact.getFile().exists()
-                    && (projectArtifact.getFile().isFile()
-                            || (cacheCompile && projectArtifact.getFile().isDirectory()));
+                    && projectArtifact.getFile().isFile();
             boolean hasAttachedArtifacts = !attachedArtifactDtos.isEmpty()
                     && attachedArtifactDtos.stream()
                             .anyMatch(a -> !"consumer".equals(a.getClassifier()) || !"pom".equals(a.getType()));
@@ -634,8 +648,8 @@ public class CacheControllerImpl implements CacheController {
 
             localCache.beforeSave(context);
 
-            // Save project artifact file if it exists (created by package or compile phase)
-            if (projectArtifact.getFile() != null) {
+            // Save project artifact file if it exists (created by package phase or later)
+            if (projectArtifact.getFile() != null && projectArtifact.getFile().isFile()) {
                 saveProjectArtifact(cacheResult, projectArtifact, project);
             }
             for (org.apache.maven.artifact.Artifact attachedArtifact : attachedArtifacts) {
@@ -677,47 +691,17 @@ public class CacheControllerImpl implements CacheController {
     }
 
     /**
-     * Saves a project artifact to cache, handling both regular files and directory artifacts.
-     * Directory artifacts (e.g., target/classes from compile-only builds) are zipped before saving
-     * since Files.copy() cannot handle directories.
+     * Saves a project artifact to cache.
      */
     private void saveProjectArtifact(
             CacheResult cacheResult, org.apache.maven.artifact.Artifact projectArtifact, MavenProject project)
             throws IOException {
         File originalFile = projectArtifact.getFile();
         try {
-            if (originalFile.isDirectory()) {
-                saveDirectoryArtifact(cacheResult, projectArtifact, project, originalFile);
-            } else {
-                // Regular file (JAR/WAR) - save directly
-                localCache.saveArtifactFile(cacheResult, projectArtifact);
-            }
+            localCache.saveArtifactFile(cacheResult, projectArtifact);
         } finally {
             // Restore original file reference in case it was temporarily changed
             projectArtifact.setFile(originalFile);
-        }
-    }
-
-    /**
-     * Saves a directory artifact by zipping it first, then saving the zip to cache.
-     */
-    private void saveDirectoryArtifact(
-            CacheResult cacheResult,
-            org.apache.maven.artifact.Artifact projectArtifact,
-            MavenProject project,
-            File originalFile)
-            throws IOException {
-        Path tempZip = Files.createTempFile("maven-cache-", "-" + project.getArtifactId() + ".zip");
-        boolean hasFiles = CacheUtils.zip(originalFile.toPath(), tempZip, "*", cacheConfig.isPreservePermissions());
-        if (hasFiles) {
-            // Temporarily replace artifact file with zip for saving
-            projectArtifact.setFile(tempZip.toFile());
-            localCache.saveArtifactFile(cacheResult, projectArtifact);
-            LOGGER.debug("Saved directory artifact as zip: {} -> {}", originalFile, tempZip);
-            // Clean up temp file after it's been saved to cache
-            Files.deleteIfExists(tempZip);
-        } else {
-            LOGGER.info("Skipping empty directory artifact: {}", originalFile);
         }
     }
 
@@ -788,6 +772,18 @@ public class CacheControllerImpl implements CacheController {
             }
         }
         return result;
+    }
+
+    private Artifact projectArtifactDto(
+            org.apache.maven.artifact.Artifact projectArtifact,
+            HashAlgorithm algorithm,
+            MavenProject project,
+            ProjectCacheState state)
+            throws IOException {
+        if (projectArtifact.getFile() != null && projectArtifact.getFile().isDirectory()) {
+            return DtoUtils.createDto(projectArtifact);
+        }
+        return artifactDto(projectArtifact, algorithm, project, state);
     }
 
     private Artifact artifactDto(
@@ -1133,11 +1129,50 @@ public class CacheControllerImpl implements CacheController {
         for (DirName dir : attachedDirs) {
             final Path targetDir = Paths.get(project.getBuild().getDirectory());
             final Path outputDir = targetDir.resolve(dir.getValue());
-            if (isPathInsideProject(project, outputDir)) {
+            Optional<Path> pathInsideProject = pathInsideProject(project, outputDir);
+            if (pathInsideProject.isPresent()) {
                 attachDirIfNotEmpty(
-                        outputDir, targetDir, project, state, OutputType.EXTRA_OUTPUT, dir.getGlob(), buildStartTime);
+                        pathInsideProject.get(),
+                        targetDir,
+                        project,
+                        state,
+                        OutputType.EXTRA_OUTPUT,
+                        dir.getGlob(),
+                        buildStartTime);
             } else {
-                LOGGER.warn("Outside project output candidate directory discarded ({})", outputDir.normalize());
+                LOGGER.warn(
+                        "Outside project output candidate directory discarded ({})",
+                        normalizeProjectPath(project, outputDir));
+            }
+        }
+    }
+
+    private void attachCompileOutputs(MavenProject project, ProjectCacheState state, long buildStartTime)
+            throws IOException {
+        final Path targetDir = Paths.get(project.getBuild().getDirectory());
+        attachCompileOutput(project.getBuild().getOutputDirectory(), targetDir, project, state, buildStartTime);
+        attachCompileOutput(project.getBuild().getTestOutputDirectory(), targetDir, project, state, buildStartTime);
+    }
+
+    private void attachCompileOutput(
+            String outputDirectory, Path targetDir, MavenProject project, ProjectCacheState state, long buildStartTime)
+            throws IOException {
+        if (isNotBlank(outputDirectory)) {
+            Path outputDir = Paths.get(outputDirectory);
+            Optional<Path> pathInsideProject = pathInsideProject(project, outputDir);
+            if (pathInsideProject.isPresent()) {
+                attachDirIfNotEmpty(
+                        pathInsideProject.get(),
+                        targetDir,
+                        project,
+                        state,
+                        OutputType.EXTRA_OUTPUT,
+                        DEFAULT_FILE_GLOB,
+                        buildStartTime);
+            } else {
+                LOGGER.warn(
+                        "Outside project output candidate directory discarded ({})",
+                        normalizeProjectPath(project, outputDir));
             }
         }
     }
@@ -1152,7 +1187,12 @@ public class CacheControllerImpl implements CacheController {
             final long buildStartTime)
             throws IOException {
         if (Files.isDirectory(candidateSubDir) && hasFiles(candidateSubDir)) {
-            final Path relativePath = project.getBasedir().toPath().relativize(candidateSubDir);
+            final Path relativePath = getProjectBaseDir(project)
+                    .relativize(candidateSubDir.toAbsolutePath().normalize());
+            if (state.attachedResourcesPathsById.containsValue(relativePath)) {
+                LOGGER.debug("Skipping already attached directory: {}", candidateSubDir);
+                return;
+            }
             state.attachedResourceCounter++;
             final String classifier = attachedOutputType.getClassifierPrefix() + state.attachedResourceCounter;
 
@@ -1256,7 +1296,8 @@ public class CacheControllerImpl implements CacheController {
      */
     public void stagePreExistingArtifacts(MavenSession session, MavenProject project) throws IOException {
         final ProjectCacheState state = getProjectState(project);
-        final Path multimoduleRoot = CacheUtils.getMultimoduleRoot(session);
+        final Path multimoduleRoot =
+                CacheUtils.getMultimoduleRoot(session).toAbsolutePath().normalize();
         final Path stagingDir = multimoduleRoot.resolve("target").resolve("maven-build-cache-extension");
 
         // Create or reuse staging directory from interrupted previous run
@@ -1268,11 +1309,16 @@ public class CacheControllerImpl implements CacheController {
 
         int movedCount = 0;
         for (Path path : pathsToProcess) {
+            Path normalizedPath = path.toAbsolutePath().normalize();
+            if (!normalizedPath.startsWith(multimoduleRoot)) {
+                LOGGER.warn("Outside reactor artifact candidate discarded ({})", normalizedPath);
+                continue;
+            }
             // Calculate path relative to multimodule root (preserves full path including submodule)
-            Path relativePath = multimoduleRoot.relativize(path);
+            Path relativePath = multimoduleRoot.relativize(normalizedPath);
             Path stagedPath = stagingDir.resolve(relativePath);
 
-            if (Files.isDirectory(path)) {
+            if (Files.isDirectory(normalizedPath)) {
                 // If directory already exists in staging (from interrupted run), remove it first
                 if (Files.exists(stagedPath)) {
                     deleteDirectory(stagedPath);
@@ -1280,10 +1326,10 @@ public class CacheControllerImpl implements CacheController {
                 }
                 // Move entire directory to staging
                 Files.createDirectories(stagedPath.getParent());
-                Files.move(path, stagedPath);
+                Files.move(normalizedPath, stagedPath);
                 movedCount++;
                 LOGGER.debug("Moved directory to staging: {} → {}", relativePath, stagedPath);
-            } else if (Files.isRegularFile(path)) {
+            } else if (Files.isRegularFile(normalizedPath)) {
                 // If file already exists in staging (from interrupted run), remove it first
                 if (Files.exists(stagedPath)) {
                     Files.delete(stagedPath);
@@ -1291,7 +1337,7 @@ public class CacheControllerImpl implements CacheController {
                 }
                 // Move individual file (e.g., JAR) to staging
                 Files.createDirectories(stagedPath.getParent());
-                Files.move(path, stagedPath);
+                Files.move(normalizedPath, stagedPath);
                 movedCount++;
                 LOGGER.debug("Moved file to staging: {} → {}", relativePath, stagedPath);
             }
@@ -1309,8 +1355,9 @@ public class CacheControllerImpl implements CacheController {
      * <p>This includes:
      * <ul>
      *     <li>the main project artifact file (for example, the built JAR), if it has been produced, and</li>
-     *     <li>any attached output directories configured via {@code cacheConfig.getAttachedOutputs()} under the
-     *         project's target directory, when {@code cacheConfig.isCacheCompile()} is enabled.</li>
+     *     <li>compile output directories plus any attached output directories configured via
+     *         {@code cacheConfig.getAttachedOutputs()} under the project's target directory, when
+     *         {@code cacheConfig.isCacheCompile()} is enabled.</li>
      * </ul>
      * Only paths that currently exist on disk are included in the returned set; non-existent files or directories
      * are ignored.
@@ -1323,23 +1370,42 @@ public class CacheControllerImpl implements CacheController {
         final org.apache.maven.artifact.Artifact projectArtifact = project.getArtifact();
         final Path targetDir = Paths.get(project.getBuild().getDirectory());
 
-        // 1. Main project artifact (JAR file or target/classes directory)
-        if (projectArtifact.getFile() != null && projectArtifact.getFile().exists()) {
+        // 1. Main project artifact (JAR/WAR/etc. file)
+        if (projectArtifact.getFile() != null && projectArtifact.getFile().isFile()) {
             paths.add(projectArtifact.getFile().toPath());
         }
 
-        // 2. Attached outputs from configuration (if cacheCompile enabled)
+        // 2. Compile outputs and configured attached outputs (if cacheCompile enabled)
         if (cacheConfig.isCacheCompile()) {
+            addExistingOutputPath(project, paths, project.getBuild().getOutputDirectory());
+            addExistingOutputPath(project, paths, project.getBuild().getTestOutputDirectory());
             List<DirName> attachedDirs = cacheConfig.getAttachedOutputs();
             for (DirName dir : attachedDirs) {
-                Path outputDir = targetDir.resolve(dir.getValue());
-                if (Files.exists(outputDir)) {
-                    paths.add(outputDir);
-                }
+                addExistingOutputPath(project, paths, targetDir.resolve(dir.getValue()));
             }
         }
 
         return paths;
+    }
+
+    private void addExistingOutputPath(MavenProject project, Set<Path> paths, String outputDirectory) {
+        if (isNotBlank(outputDirectory)) {
+            addExistingOutputPath(project, paths, Paths.get(outputDirectory));
+        }
+    }
+
+    private void addExistingOutputPath(MavenProject project, Set<Path> paths, Path outputDir) {
+        Optional<Path> pathInsideProject = pathInsideProject(project, outputDir);
+        if (pathInsideProject.isPresent()) {
+            Path normalizedOutputDir = pathInsideProject.get();
+            if (Files.exists(normalizedOutputDir)) {
+                paths.add(normalizedOutputDir);
+            }
+        } else {
+            LOGGER.warn(
+                    "Outside project output candidate directory discarded ({})",
+                    normalizeProjectPath(project, outputDir));
+        }
     }
 
     /**
