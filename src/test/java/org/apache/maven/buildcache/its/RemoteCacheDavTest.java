@@ -113,7 +113,7 @@ class RemoteCacheDavTest {
     }
 
     public static Stream<Arguments> transports() {
-        return Stream.of(Arguments.of("wagon"), Arguments.of("http"));
+        return Stream.of(Arguments.of("http"));
     }
 
     @ParameterizedTest

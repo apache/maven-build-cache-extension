@@ -45,7 +45,6 @@ import org.apache.maven.buildcache.xml.report.CacheReport;
 import org.apache.maven.buildcache.xml.report.ProjectReport;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.project.MavenProject;
-import org.apache.maven.wagon.ResourceDoesNotExistException;
 import org.eclipse.aether.RepositorySystemSession;
 import org.eclipse.aether.repository.Authentication;
 import org.eclipse.aether.repository.Proxy;
@@ -154,9 +153,6 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
             GetTask task = new GetTask(new URI(url));
             transporter.get(task);
             return Optional.of(task.getDataBytes());
-        } catch (ResourceDoesNotExistException e) {
-            logNotFound(fullUrl, e);
-            return Optional.empty();
         } catch (Exception e) {
             // this can be wagon used so the exception may be different
             // we want wagon users not flooded with logs when not found
