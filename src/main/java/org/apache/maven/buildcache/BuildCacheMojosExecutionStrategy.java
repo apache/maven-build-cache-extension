@@ -270,6 +270,18 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
         final Build build = cacheResult.getBuildInfo();
         final MavenProject project = cacheResult.getContext().getProject();
         final MavenSession session = cacheResult.getContext().getSession();
+        final String highestRequestPhase = lifecyclePhasesHelper.resolveHighestLifecyclePhase(project, mojoExecutions);
+
+        if (requiresPackagedArtifact(highestRequestPhase)
+                && buildStoresDirectoryAsMainArtifact(build)
+                && !lifecyclePhasesHelper.isLaterPhaseThanBuild("package", build)) {
+            LOGGER.info(
+                    "Cached build for {} cannot satisfy requested {} phase because the main artifact is stored as a directory",
+                    getVersionlessProjectKey(project),
+                    highestRequestPhase);
+            return CacheRestorationStatus.FAILURE;
+        }
+
         final List<MojoExecution> cachedSegment =
                 lifecyclePhasesHelper.getCachedSegment(project, mojoExecutions, build);
 
@@ -333,12 +345,31 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
 
         // Execute mojos after the cache segment
         LOGGER.debug("Execute mojos post cache segment");
+        if (shouldResetProjectArtifactForPackaging(build, highestRequestPhase) && project.getArtifact() != null) {
+            LOGGER.debug(
+                    "Resetting project artifact file before package-or-later mojos after legacy directory-backed main artifact restoration");
+            project.getArtifact().setFile(null);
+        }
         List<MojoExecution> postCachedSegment =
                 lifecyclePhasesHelper.getPostCachedSegment(project, mojoExecutions, build);
         for (MojoExecution mojoExecution : postCachedSegment) {
             mojoExecutionRunner.run(mojoExecution);
         }
         return CacheRestorationStatus.SUCCESS;
+    }
+
+    private boolean shouldResetProjectArtifactForPackaging(Build build, String highestRequestPhase) {
+        return requiresPackagedArtifact(highestRequestPhase)
+                && buildStoresDirectoryAsMainArtifact(build)
+                && lifecyclePhasesHelper.isLaterPhaseThanBuild("package", build);
+    }
+
+    private boolean buildStoresDirectoryAsMainArtifact(Build build) {
+        return build.getArtifact() != null && build.getArtifact().isIsDirectory();
+    }
+
+    private boolean requiresPackagedArtifact(String lifecyclePhase) {
+        return "package".equals(lifecyclePhase) || lifecyclePhasesHelper.isLaterPhase(lifecyclePhase, "package");
     }
 
     private boolean verifyCacheConsistency(

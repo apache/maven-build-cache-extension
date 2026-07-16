@@ -19,25 +19,36 @@
 package org.apache.maven.buildcache;
 
 import java.io.File;
+import java.lang.reflect.Method;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.SystemUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.buildcache.xml.CacheConfig;
+import org.apache.maven.buildcache.xml.XmlService;
 import org.apache.maven.buildcache.xml.build.CompletedExecution;
 import org.apache.maven.buildcache.xml.build.PropertyValue;
+import org.apache.maven.buildcache.xml.config.DirName;
 import org.apache.maven.buildcache.xml.config.TrackedProperty;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.execution.scope.internal.MojoExecutionScope;
+import org.apache.maven.model.Build;
 import org.apache.maven.plugin.MavenPluginManager;
 import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.project.MavenProject;
+import org.apache.maven.project.MavenProjectHelper;
+import org.eclipse.aether.RepositorySystem;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -203,5 +214,80 @@ class BuildCacheMojosExecutionStrategyTest {
 
             return Pair.of(config, cache);
         }
+    }
+}
+
+class CacheControllerImplPathCollectionTest {
+
+    @Test
+    void collectCachedArtifactPathsIgnoresOutputDirectoriesOutsideProject(@TempDir Path tempDir) throws Exception {
+        Path projectDir = tempDir.resolve("project").toAbsolutePath().normalize();
+        Path targetDir = projectDir.resolve("target");
+        Path outputDir = targetDir.resolve("classes");
+        Path attachedOutputDir = targetDir.resolve("generated");
+        Path outsideOutputDir =
+                tempDir.resolve("outside-classes").toAbsolutePath().normalize();
+        Path outsideAttachedOutputDir =
+                tempDir.resolve("outside-attached").toAbsolutePath().normalize();
+
+        Files.createDirectories(outputDir);
+        Files.createDirectories(attachedOutputDir);
+        Files.createDirectories(outsideOutputDir);
+        Files.createDirectories(outsideAttachedOutputDir);
+
+        DirName attachedOutput = dirName("generated");
+        DirName outsideAttachedOutput = dirName("../../outside-attached");
+
+        CacheConfig cacheConfig = mock(CacheConfig.class);
+        when(cacheConfig.isCacheCompile()).thenReturn(true);
+        when(cacheConfig.getAttachedOutputs()).thenReturn(Arrays.asList(attachedOutput, outsideAttachedOutput));
+
+        Build build = mock(Build.class);
+        when(build.getDirectory()).thenReturn(targetDir.toString());
+        when(build.getOutputDirectory()).thenReturn(outputDir.toString());
+        when(build.getTestOutputDirectory()).thenReturn(outsideOutputDir.toString());
+
+        MavenProject project = mock(MavenProject.class);
+        when(project.getBasedir()).thenReturn(projectDir.toFile());
+        when(project.getBuild()).thenReturn(build);
+        when(project.getArtifact()).thenReturn(mock(org.apache.maven.artifact.Artifact.class));
+
+        Set<Path> paths = collectCachedArtifactPaths(newCacheController(cacheConfig), project);
+        Set<Path> normalizedPaths =
+                paths.stream().map(path -> path.toAbsolutePath().normalize()).collect(Collectors.toSet());
+
+        assertTrue(normalizedPaths.contains(outputDir));
+        assertTrue(normalizedPaths.contains(attachedOutputDir));
+        assertFalse(normalizedPaths.contains(outsideOutputDir));
+        assertFalse(normalizedPaths.contains(outsideAttachedOutputDir));
+        assertTrue(normalizedPaths.stream().allMatch(path -> path.startsWith(projectDir)));
+    }
+
+    private CacheControllerImpl newCacheController(CacheConfig cacheConfig) {
+        return new CacheControllerImpl(
+                mock(MavenProjectHelper.class),
+                mock(RepositorySystem.class),
+                mock(ArtifactHandlerManager.class),
+                mock(XmlService.class),
+                mock(LocalCacheRepository.class),
+                mock(RemoteCacheRepository.class),
+                cacheConfig,
+                mock(ProjectInputCalculator.class),
+                mock(RestoredArtifactHandler.class),
+                () -> mock(LifecyclePhasesHelper.class));
+    }
+
+    @SuppressWarnings("unchecked")
+    private Set<Path> collectCachedArtifactPaths(CacheControllerImpl controller, MavenProject project)
+            throws Exception {
+        Method method = CacheControllerImpl.class.getDeclaredMethod("collectCachedArtifactPaths", MavenProject.class);
+        method.setAccessible(true);
+        return (Set<Path>) method.invoke(controller, project);
+    }
+
+    private DirName dirName(String value) {
+        DirName dirName = new DirName();
+        dirName.setValue(value);
+        return dirName;
     }
 }
