@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
+import org.apache.maven.artifact.handler.DefaultArtifactHandler;
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.buildcache.MultiModuleSupport;
 import org.apache.maven.buildcache.NormalizedModelProvider;
@@ -52,6 +53,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -103,6 +105,9 @@ class MavenProjectInputSnapshotResolutionTest {
 
     @BeforeEach
     void setUp() {
+        // artifact handler MUST return something
+        when(artifactHandlerManager.getArtifactHandler(anyString())).thenReturn(new DefaultArtifactHandler("jar"));
+
         // Setup basic mocks that MavenProjectInput constructor needs
         when(session.getRepositorySession()).thenReturn(repositorySystemSession);
         when(project.getBasedir()).thenReturn(tempDir.toFile());
