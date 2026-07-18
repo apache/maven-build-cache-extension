@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-name: Verify 3.9.x
+name: Verify 3.10.x
 
 on:
   push:
@@ -26,9 +26,8 @@ jobs:
     name: Verify
     uses: apache/maven-gh-actions-shared/.github/workflows/maven-verify.yml@v5
     with:
-      maven-args: '-D"maven.test.redirectTestOutputToFile=false -Pmaven3"'
+      maven-args: '-D"maven.test.redirectTestOutputToFile=false -Pmaven3.10"'
       maven4-enabled: false
-      matrix-exclude: '[ {"jdk": "8"} ]'
       ff-goal: '-P run-its verify javadoc:jar'
       verify-goal: '-P run-its verify javadoc:jar'
 

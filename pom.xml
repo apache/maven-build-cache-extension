@@ -65,8 +65,8 @@ under the License.
     <minimalJavaBuildVersion>11</minimalJavaBuildVersion>
     <classWorldsVersion>2.6.0</classWorldsVersion>
 
-    <!-- default maven version, will be overridden by maven3 profile -->
-    <mavenVersion>4.0.0-alpha-8</mavenVersion>
+    <!-- default maven version, will be overridden by mavenX profile -->
+    <mavenVersion>3.9.16</mavenVersion>
     <maven.dir>maven4</maven.dir>
     <maven.basedir>${project.build.directory}/${maven.dir}</maven.basedir>
 
@@ -571,10 +571,18 @@ under the License.
       </build>
     </profile>
     <profile>
-      <id>maven3</id>
+      <id>maven3.10</id>
       <properties>
-        <mavenVersion>3.9.16</mavenVersion>
-        <maven.dir>maven3</maven.dir>
+        <mavenVersion>3.10.0-rc-1</mavenVersion>
+        <maven.dir>maven3.10</maven.dir>
+        <maven.basedir>${project.build.directory}/${maven.dir}</maven.basedir>
+      </properties>
+    </profile>
+    <profile>
+      <id>maven4.0</id>
+      <properties>
+        <mavenVersion>4.0.0-rc-5</mavenVersion>
+        <maven.dir>maven4.0</maven.dir>
         <maven.basedir>${project.build.directory}/${maven.dir}</maven.basedir>
       </properties>
     </profile>
