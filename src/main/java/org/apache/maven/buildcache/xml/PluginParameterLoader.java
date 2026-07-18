@@ -72,14 +72,14 @@ public class PluginParameterLoader {
             return null;
         }
 
-        try {
-            java.util.List<PluginParameterDefinition> allDefinitions = parseDefinitions(is, artifactId);
+        try (InputStream inputStream = is) {
+            java.util.List<PluginParameterDefinition> allDefinitions = parseDefinitions(inputStream, artifactId);
 
             PluginParameterDefinition bestMatch = findBestMatch(allDefinitions, pluginVersion);
 
             if (bestMatch != null) {
                 definitions.put(cacheKey, bestMatch);
-                LOGGER.info(
+                LOGGER.debug(
                         "Loaded parameter definition for {}:{} (minVersion: {}): {} goals, {} total parameters",
                         artifactId,
                         pluginVersion != null ? pluginVersion : "any",

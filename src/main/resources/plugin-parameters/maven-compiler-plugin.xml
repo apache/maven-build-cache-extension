@@ -103,7 +103,7 @@
           <description>Enable preview features</description>
         </parameter>
 
-        <!-- BEHAVIORAL: Affect how compilation runs but not the output -->
+        <!-- BEHAVIORAL by default; parameters that affect output are marked FUNCTIONAL -->
         <parameter>
           <name>verbose</name>
           <type>behavioral</type>
