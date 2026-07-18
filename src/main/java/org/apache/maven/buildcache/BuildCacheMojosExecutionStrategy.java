@@ -431,12 +431,8 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                 LOGGER.error("Cannot extract plugin property {} from mojo {}", propertyName, mojo, e);
                 return false;
             } catch (Exception e) {
-                // Catch all exceptions including NullPointerException when property doesn't exist in mojo
-                LOGGER.warn(
-                        "Property '{}' not found in mojo {} - treating as null",
-                        propertyName,
-                        mojo.getClass().getSimpleName());
-                currentValue = "null";
+                LOGGER.warn("Cannot extract plugin property {} from mojo {}", propertyName, mojo, e);
+                return false;
             }
 
             LOGGER.debug(
