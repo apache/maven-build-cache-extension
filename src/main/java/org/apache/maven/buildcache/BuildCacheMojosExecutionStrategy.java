@@ -139,15 +139,13 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                     // Capture validation-time properties for all mojos to ensure consistent property reading
                     // at the same lifecycle point for all builds (eliminates Maven 4 injection timing issues)
                     // Always capture when cacheState is INITIALIZED since we may need to save
-                    if (cacheState == INITIALIZED) {
-                        Map<String, MojoExecutionEvent> validationTimeEvents =
-                                captureValidationTimeProperties(session, project, mojoExecutions);
-                        result = CacheResult.rebuilded(result, validationTimeEvents);
-                        LOGGER.debug(
-                                "Captured validation-time properties for {} mojos in project {}",
-                                validationTimeEvents.size(),
-                                projectName);
-                    }
+                    Map<String, MojoExecutionEvent> validationTimeEvents =
+                            captureValidationTimeProperties(session, project, mojoExecutions);
+                    result = CacheResult.rebuilded(result, validationTimeEvents);
+                    LOGGER.debug(
+                            "Captured validation-time properties for {} mojos in project {}",
+                            validationTimeEvents.size(),
+                            projectName);
                 }
             } else {
                 LOGGER.info("Cache is disabled on project level for {}", projectName);
@@ -489,8 +487,8 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                 continue;
             }
 
+            mojoExecutionScope.enter();
             try {
-                mojoExecutionScope.enter();
                 mojoExecutionScope.seed(MavenProject.class, project);
                 mojoExecutionScope.seed(MojoExecution.class, mojoExecution);
 
@@ -533,7 +531,10 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                     && lifecyclePhasesHelper.isLaterPhaseThanClean(mojoExecution.getLifecyclePhase())
                     && (validationTimeEvents == null
                             || !validationTimeEvents.containsKey(mojoExecutionKey(mojoExecution)))) {
-                throw new AssertionError("Validation-time properties not captured for project " + projectName);
+                throw new AssertionError("Validation-time properties not captured for "
+                        + mojoExecution.getMojoDescriptor().getFullGoalName()
+                        + " in project "
+                        + projectName);
             }
         }
     }
