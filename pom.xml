@@ -67,7 +67,7 @@ under the License.
 
     <!-- default maven version, will be overridden by mavenX profile -->
     <mavenVersion>3.9.16</mavenVersion>
-    <maven.dir>maven4</maven.dir>
+    <maven.dir>maven3.9</maven.dir>
     <maven.basedir>${project.build.directory}/${maven.dir}</maven.basedir>
 
     <commonsCliVersion>1.4</commonsCliVersion>
