@@ -279,6 +279,7 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
             LOGGER.debug("Skipping fork save: a cache entry already covers a later phase for {}.", projectName);
         } else {
             final Map<String, MojoExecutionEvent> executionEvents = result.getValidationTimeEvents();
+            validateValidationTimeEvents(projectName, mojoExecutions, executionEvents);
             if (executionEvents == null || executionEvents.isEmpty()) {
                 LOGGER.debug("Skipping cache storage for {} - no cacheable mojos executed", projectName);
                 return;
@@ -607,7 +608,8 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
      * @return Map of execution key to MojoExecutionEvent captured at validation time
      */
     private Map<String, MojoExecutionEvent> captureValidationTimeProperties(
-            MavenSession session, MavenProject project, List<MojoExecution> mojoExecutions) {
+            MavenSession session, MavenProject project, List<MojoExecution> mojoExecutions)
+            throws LifecycleExecutionException {
         Map<String, MojoExecutionEvent> validationTimeEvents = new HashMap<>();
 
         for (MojoExecution mojoExecution : mojoExecutions) {
@@ -635,10 +637,10 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                 }
 
             } catch (PluginConfigurationException | PluginContainerException e) {
-                LOGGER.warn(
-                        "Cannot capture validation-time properties for {}: {}",
-                        mojoExecution.getMojoDescriptor().getFullGoalName(),
-                        e.getMessage());
+                throw new LifecycleExecutionException(
+                        "Cannot capture validation-time properties for "
+                                + mojoExecution.getMojoDescriptor().getFullGoalName(),
+                        e);
             } finally {
                 try {
                     mojoExecutionScope.exit();
@@ -650,6 +652,20 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
 
         LOGGER.debug("Captured validation-time properties for {} mojos", validationTimeEvents.size());
         return validationTimeEvents;
+    }
+
+    private void validateValidationTimeEvents(
+            String projectName,
+            List<MojoExecution> mojoExecutions,
+            Map<String, MojoExecutionEvent> validationTimeEvents) {
+        for (MojoExecution mojoExecution : mojoExecutions) {
+            if (mojoExecution.getLifecyclePhase() != null
+                    && lifecyclePhasesHelper.isLaterPhaseThanClean(mojoExecution.getLifecyclePhase())
+                    && (validationTimeEvents == null
+                            || !validationTimeEvents.containsKey(mojoExecutionKey(mojoExecution)))) {
+                throw new AssertionError("Validation-time properties not captured for project " + projectName);
+            }
+        }
     }
 
     private enum CacheRestorationStatus {
