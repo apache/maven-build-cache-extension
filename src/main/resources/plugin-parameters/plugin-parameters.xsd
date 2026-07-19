@@ -21,6 +21,13 @@
            elementFormDefault="qualified">
 
   <xs:element name="plugin" type="PluginType"/>
+  <xs:element name="plugins" type="PluginsType"/>
+
+  <xs:complexType name="PluginsType">
+    <xs:sequence>
+      <xs:element ref="plugin" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
 
   <xs:complexType name="PluginType">
     <xs:sequence>
