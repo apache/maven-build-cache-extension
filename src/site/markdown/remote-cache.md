@@ -143,7 +143,7 @@ from Maven 3.9.1 and 4.0.0-alpha5, support of webdav has been removed per defaul
 You need to use the following extra configuration:
 
 ```bash
--Daether.connector.http.supportWebDav=true
+-Daether.transport.http.supportWebDav=true
 OR
 -Dmaven.resolver.transport=wagon
 ```

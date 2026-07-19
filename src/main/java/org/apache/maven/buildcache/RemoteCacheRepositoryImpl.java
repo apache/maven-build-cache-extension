@@ -178,7 +178,13 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
         Class<?> currentClass = ex.getClass();
 
         while (currentClass != null) {
+            // Apache HttpClient 4.x
             if ("org.apache.http.client.HttpResponseException".equals(currentClass.getName())) {
+                return true;
+            }
+            // Resolver 2 generic; used by all clients
+            if ("org.eclipse.aether.spi.connector.transport.http.HttpTransporterException"
+                    .equals(currentClass.getName())) {
                 return true;
             }
             currentClass = currentClass.getSuperclass();
