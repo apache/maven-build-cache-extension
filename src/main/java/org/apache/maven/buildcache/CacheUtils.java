@@ -34,8 +34,10 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -161,6 +163,11 @@ public class CacheUtils {
         return Strings.CS.endsWithAny(fileName, ".jar", ".zip", ".war", ".ear");
     }
 
+    public static boolean zip(final Path dir, final Path zip, final String glob, boolean preservePermissions)
+            throws IOException {
+        return zip(dir, zip, glob, preservePermissions, false);
+    }
+
     /**
      * Put every matching files of a directory in a zip.
      * @param dir directory to zip
@@ -172,10 +179,12 @@ public class CacheUtils {
      *                           the ZIP file (e.g., for cache keys) will include permission information, ensuring
      *                           cache invalidation when file permissions change. This behavior is similar to how Git
      *                           includes file mode in tree hashes.</p>
+     * @param preserveTimestamps whether to preserve file and directory timestamps in the zip
      * @return true if at least one file has been included in the zip.
      * @throws IOException
      */
-    public static boolean zip(final Path dir, final Path zip, final String glob, boolean preservePermissions)
+    public static boolean zip(
+            final Path dir, final Path zip, final String glob, boolean preservePermissions, boolean preserveTimestamps)
             throws IOException {
         final MutableBoolean hasFiles = new MutableBoolean();
         // Check once if filesystem supports POSIX permissions instead of catching exceptions for every file
@@ -186,15 +195,44 @@ public class CacheUtils {
 
             PathMatcher matcher =
                     "*".equals(glob) ? null : FileSystems.getDefault().getPathMatcher("glob:" + glob);
+            final Map<Path, FileTime> directoryTimestamps = new HashMap<>();
+            final Set<Path> directoriesWithMatchingFiles = new HashSet<>();
+            if (preserveTimestamps) {
+                ZipArchiveEntry zipEntry = new ZipArchiveEntry("./");
+                zipEntry.setTime(Files.getLastModifiedTime(dir).toMillis());
+                zipOutputStream.putArchiveEntry(zipEntry);
+                zipOutputStream.closeArchiveEntry();
+            }
             Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
+
+                @Override
+                public FileVisitResult preVisitDirectory(Path path, BasicFileAttributes attrs) {
+                    if (preserveTimestamps) {
+                        directoryTimestamps.put(path, attrs.lastModifiedTime());
+                    }
+                    return FileVisitResult.CONTINUE;
+                }
 
                 @Override
                 public FileVisitResult visitFile(Path path, BasicFileAttributes basicFileAttributes)
                         throws IOException {
 
                     if (matcher == null || matcher.matches(path.getFileName())) {
+                        if (preserveTimestamps) {
+                            Path parent = path.getParent();
+                            while (parent != null && !parent.equals(dir)) {
+                                directoriesWithMatchingFiles.add(parent);
+                                parent = parent.getParent();
+                            }
+                        }
+
                         final ZipArchiveEntry zipEntry =
                                 new ZipArchiveEntry(dir.relativize(path).toString());
+
+                        if (preserveTimestamps) {
+                            zipEntry.setTime(
+                                    basicFileAttributes.lastModifiedTime().toMillis());
+                        }
 
                         // Preserve Unix permissions if requested and filesystem supports it
                         if (supportsPosix) {
@@ -209,16 +247,39 @@ public class CacheUtils {
                     }
                     return FileVisitResult.CONTINUE;
                 }
+
+                @Override
+                public FileVisitResult postVisitDirectory(Path path, IOException exc) throws IOException {
+                    if (exc != null) {
+                        throw exc;
+                    }
+                    if (preserveTimestamps
+                            && !path.equals(dir)
+                            && (matcher == null || directoriesWithMatchingFiles.contains(path))) {
+                        ZipArchiveEntry zipEntry =
+                                new ZipArchiveEntry(dir.relativize(path).toString() + "/");
+                        zipEntry.setTime(directoryTimestamps.get(path).toMillis());
+                        zipOutputStream.putArchiveEntry(zipEntry);
+                        zipOutputStream.closeArchiveEntry();
+                    }
+                    return FileVisitResult.CONTINUE;
+                }
             });
         }
         return hasFiles.booleanValue();
     }
 
     public static void unzip(Path zip, Path out, boolean preservePermissions) throws IOException {
+        unzip(zip, out, preservePermissions, true);
+    }
+
+    public static void unzip(Path zip, Path out, boolean preservePermissions, boolean preserveTimestamps)
+            throws IOException {
         // Check once if filesystem supports POSIX permissions instead of catching exceptions for every file
         final boolean supportsPosix = preservePermissions
                 && out.getFileSystem().supportedFileAttributeViews().contains("posix");
 
+        final Map<Path, Long> directoryTimestamps = new HashMap<>();
         try (ZipFile zipFile = ZipFile.builder().setFile(zip.toFile()).get()) {
             Enumeration<ZipArchiveEntry> entries = zipFile.getEntries();
             while (entries.hasMoreElements()) {
@@ -228,15 +289,26 @@ public class CacheUtils {
                     throw new RuntimeException("Bad zip entry");
                 }
                 if (entry.isDirectory()) {
-                    Files.createDirectory(file);
+                    Files.createDirectories(file);
+                    if (preserveTimestamps) {
+                        directoryTimestamps.put(file, entry.getTime());
+                    }
                 } else {
                     Path parent = file.getParent();
-                    Files.createDirectories(parent);
+                    if (parent != null) {
+                        Files.createDirectories(parent);
+                    }
                     try (InputStream is = zipFile.getInputStream(entry)) {
                         Files.copy(is, file, StandardCopyOption.REPLACE_EXISTING);
                     }
+                    if (preserveTimestamps) {
+                        try {
+                            Files.setLastModifiedTime(file, FileTime.fromMillis(entry.getTime()));
+                        } catch (IOException e) {
+                            LOGGER.debug("Could not preserve timestamp for {}", file, e);
+                        }
+                    }
                 }
-                Files.setLastModifiedTime(file, FileTime.fromMillis(entry.getTime()));
 
                 // Restore Unix permissions if requested and filesystem supports it
                 if (supportsPosix) {
@@ -245,6 +317,15 @@ public class CacheUtils {
                         Set<PosixFilePermission> permissions = modeToPermissions(unixMode);
                         Files.setPosixFilePermissions(file, permissions);
                     }
+                }
+            }
+        }
+        if (preserveTimestamps) {
+            for (Map.Entry<Path, Long> entry : directoryTimestamps.entrySet()) {
+                try {
+                    Files.setLastModifiedTime(entry.getKey(), FileTime.fromMillis(entry.getValue()));
+                } catch (IOException e) {
+                    LOGGER.debug("Could not preserve timestamp for {}", entry.getKey(), e);
                 }
             }
         }

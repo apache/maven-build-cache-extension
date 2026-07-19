@@ -110,7 +110,7 @@ public class MavenProjectInput {
     /**
      * Version of cache implementation. It is recommended to change to simplify remote cache maintenance
      */
-    public static final String CACHE_IMPLEMENTATION_VERSION = "v1.1";
+    public static final String CACHE_IMPLEMENTATION_VERSION = "v1.2";
 
     /**
      * property name to pass glob value. The glob to be used to list directory files in plugins scanning

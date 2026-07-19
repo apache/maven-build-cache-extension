@@ -110,6 +110,10 @@ public interface CacheConfig {
 
     boolean isPreservePermissions();
 
+    default boolean isPreserveTimestamps() {
+        return true;
+    }
+
     boolean adjustMetaInfVersion();
 
     boolean calculateProjectVersionChecksum();

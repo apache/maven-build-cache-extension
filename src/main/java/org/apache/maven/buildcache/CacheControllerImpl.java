@@ -373,7 +373,11 @@ public class CacheControllerImpl implements CacheController {
         if (!Files.exists(restorationPath)) {
             Files.createDirectories(restorationPath);
         }
-        CacheUtils.unzip(cachedZip.toPath(), restorationPath, cacheConfig.isPreservePermissions());
+        CacheUtils.unzip(
+                cachedZip.toPath(),
+                restorationPath,
+                cacheConfig.isPreservePermissions(),
+                cacheConfig.isPreserveTimestamps());
         LOGGER.debug("Restored directory artifact by unzipping: {} -> {}", artifact.getFileName(), restorationPath);
     }
 
@@ -708,7 +712,12 @@ public class CacheControllerImpl implements CacheController {
             File originalFile)
             throws IOException {
         Path tempZip = Files.createTempFile("maven-cache-", "-" + project.getArtifactId() + ".zip");
-        boolean hasFiles = CacheUtils.zip(originalFile.toPath(), tempZip, "*", cacheConfig.isPreservePermissions());
+        boolean hasFiles = CacheUtils.zip(
+                originalFile.toPath(),
+                tempZip,
+                "*",
+                cacheConfig.isPreservePermissions(),
+                cacheConfig.isPreserveTimestamps());
         if (hasFiles) {
             // Temporarily replace artifact file with zip for saving
             projectArtifact.setFile(tempZip.toFile());
@@ -1059,7 +1068,8 @@ public class CacheControllerImpl implements CacheController {
             throws IOException {
         Path temp = Files.createTempFile("maven-incremental-", project.getArtifactId());
         temp.toFile().deleteOnExit();
-        boolean hasFile = CacheUtils.zip(dir, temp, glob, cacheConfig.isPreservePermissions());
+        boolean hasFile = CacheUtils.zip(
+                dir, temp, glob, cacheConfig.isPreservePermissions(), cacheConfig.isPreserveTimestamps());
         if (hasFile) {
             projectHelper.attachArtifact(project, "zip", classifier, temp.toFile());
         }
@@ -1074,7 +1084,8 @@ public class CacheControllerImpl implements CacheController {
         if (!Files.exists(outputDir)) {
             Files.createDirectories(outputDir);
         }
-        CacheUtils.unzip(artifactFilePath, outputDir, cacheConfig.isPreservePermissions());
+        CacheUtils.unzip(
+                artifactFilePath, outputDir, cacheConfig.isPreservePermissions(), cacheConfig.isPreserveTimestamps());
     }
 
     // TODO: move to config
