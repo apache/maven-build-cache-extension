@@ -65,8 +65,10 @@ under the License.
     <minimalJavaBuildVersion>11</minimalJavaBuildVersion>
     <classWorldsVersion>2.6.0</classWorldsVersion>
 
-    <!-- default maven version, will be overridden by mavenX profile -->
+    <!-- default maven version we build against -->
     <mavenVersion>3.9.16</mavenVersion>
+    <!-- default maven version we test against, will be overridden by mavenX profile -->
+    <maven.version>${mavenVersion}</maven.version>
     <maven.dir>maven3.9</maven.dir>
     <maven.basedir>${project.build.directory}/${maven.dir}</maven.basedir>
 
@@ -469,7 +471,7 @@ under the License.
                 <artifactItem>
                   <groupId>org.apache.maven</groupId>
                   <artifactId>apache-maven</artifactId>
-                  <version>${mavenVersion}</version>
+                  <version>${maven.version}</version>
                   <classifier>bin</classifier>
                   <type>tar.gz</type>
                   <overWrite>false</overWrite>
@@ -573,7 +575,7 @@ under the License.
     <profile>
       <id>maven3.10</id>
       <properties>
-        <mavenVersion>3.10.0-rc-1</mavenVersion>
+        <maven.version>3.10.0-rc-1</maven.version>
         <maven.dir>maven3.10</maven.dir>
         <maven.basedir>${project.build.directory}/${maven.dir}</maven.basedir>
       </properties>
@@ -581,7 +583,7 @@ under the License.
     <profile>
       <id>maven4.0</id>
       <properties>
-        <mavenVersion>4.0.0-rc-5</mavenVersion>
+        <maven.version>4.0.0-rc-5</maven.version>
         <maven.dir>maven4.0</maven.dir>
         <maven.basedir>${project.build.directory}/${maven.dir}</maven.basedir>
       </properties>
