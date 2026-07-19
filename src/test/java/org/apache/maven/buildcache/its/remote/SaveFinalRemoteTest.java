@@ -92,9 +92,8 @@ class SaveFinalRemoteTest {
         verifierA.setAutoclean(false);
         verifierA.setSystemProperty("maven.build.cache.remote.url", remoteUrl);
         verifierA.setSystemProperty("maven.build.cache.remote.save.enabled", "true");
-        verifierA.setSystemProperty(
-                "aether.transport.http.supportWebDav",
-                "true"); // Resolver 2 apache transport must have it explicitly enabled; is ignored by Resolver 1
+        verifierA.setSystemProperty("aether.transport.http.supportWebDav", "true"); // Maven 3.10+
+        verifierA.setSystemProperty("aether.connector.http.supportWebDav", "true"); // Maven 3.9
         // maven.build.cache.remote.save.final defaults to false — not set explicitly
 
         verifierA.setLogFileName("../log-normal.txt");
@@ -123,9 +122,8 @@ class SaveFinalRemoteTest {
         verifierB.setAutoclean(false);
         verifierB.setSystemProperty("maven.build.cache.remote.url", remoteUrl);
         verifierB.setSystemProperty("maven.build.cache.remote.save.enabled", "true");
-        verifierB.setSystemProperty(
-                "aether.transport.http.supportWebDav",
-                "true"); // Resolver 2 apache transport must have it explicitly enabled; is ignored by Resolver 1
+        verifierB.setSystemProperty("aether.transport.http.supportWebDav", "true"); // Maven 3.10+
+        verifierB.setSystemProperty("aether.connector.http.supportWebDav", "true"); // Maven 3.9
         verifierB.setSystemProperty("maven.build.cache.remote.save.final", "true");
 
         verifierB.setLogFileName("../log-final.txt");

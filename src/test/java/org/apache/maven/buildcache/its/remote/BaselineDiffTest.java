@@ -100,9 +100,8 @@ class BaselineDiffTest {
         verifier.setAutoclean(false);
         verifier.setSystemProperty("maven.build.cache.remote.url", remoteUrl);
         verifier.setSystemProperty("maven.build.cache.remote.save.enabled", "true");
-        verifier.setSystemProperty(
-                "aether.transport.http.supportWebDav",
-                "true"); // Resolver 2 apache transport must have it explicitly enabled; is ignored by Resolver 1
+        verifier.setSystemProperty("aether.transport.http.supportWebDav", "true"); // Maven 3.10+
+        verifier.setSystemProperty("aether.connector.http.supportWebDav", "true"); // Maven 3.9
 
         // ── Build 1: push baseline artifacts and build-cache-report.xml to WireMock ──────────
         verifier.setLogFileName("../log-1.txt");

@@ -134,7 +134,8 @@ class Issue463Test {
         verifier.setAutoclean(false);
         verifier.addCliOption("--settings=" + settings);
         // Allow Aether to create WebDAV collection (directory) hierarchy via MKCOL
-        verifier.setSystemProperty("aether.transport.http.supportWebDav", "true");
+        verifier.setSystemProperty("aether.transport.http.supportWebDav", "true"); // Maven 3.10+
+        verifier.setSystemProperty("aether.connector.http.supportWebDav", "true"); // Maven 3.9
 
         // ── Step 1: Runner A builds with skipTests=true, saves incomplete entry to remote ────────
         verifier.setSystemProperty(CACHE_LOCATION_PROPERTY_NAME, localCacheA.toString());
