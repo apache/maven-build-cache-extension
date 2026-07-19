@@ -228,7 +228,7 @@ the build output and shouldn't invalidate the cache.
 
 The extension automatically validates reconciliation configurations and logs warnings/errors for:
 
-* **Unknown parameters**: Parameters not defined in the plugin's parameter definition (ERROR level)
+* **Unknown parameters**: Parameters not defined in the plugin's parameter definition (WARN level)
   - May indicate a plugin version mismatch or renamed parameter
   - Suggests updating parameter definitions or removing the parameter from reconciliation
 
@@ -288,7 +288,7 @@ The parameter validation system supports version-specific definitions to handle 
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
-<plugins>
+<plugins xmlns="http://maven.apache.org/PLUGIN-PARAMETERS/1.0.0">
   <!-- Parameters for versions 1.0.0 through 2.x -->
   <plugin xmlns="http://maven.apache.org/PLUGIN-PARAMETERS/1.0.0">
     <groupId>org.apache.maven.plugins</groupId>
