@@ -19,7 +19,7 @@
   Test plugin demonstrating version-specific parameter definitions.
   This file shows how parameters change across plugin versions.
 -->
-<plugins>
+<plugins xmlns="http://maven.apache.org/PLUGIN-PARAMETERS/1.0.0">
   <!-- Parameters for version 1.0.0-2.9.9 -->
   <plugin xmlns="http://maven.apache.org/PLUGIN-PARAMETERS/1.0.0"
           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"

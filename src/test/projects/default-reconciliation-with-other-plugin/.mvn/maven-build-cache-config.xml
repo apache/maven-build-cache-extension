@@ -21,7 +21,7 @@
     <executionControl>
         <reconcile>
             <plugins>
-                <plugin artifactId="maven-surefire-plugin">
+                <plugin artifactId="maven-surefire-plugin" goal="test">
                     <reconciles>
                         <reconcile propertyName="forkCount"/>
                     </reconciles>

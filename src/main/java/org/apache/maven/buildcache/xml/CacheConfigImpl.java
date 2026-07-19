@@ -331,9 +331,6 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
 
         // Validate each tracked property
         List<TrackedProperty> properties = config.getReconciles();
-        if (properties == null) {
-            return;
-        }
 
         for (TrackedProperty property : properties) {
             String propertyName = property.getPropertyName();
