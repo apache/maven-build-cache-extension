@@ -18,9 +18,6 @@
  */
 package org.apache.maven.buildcache;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
@@ -38,7 +35,9 @@ import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -78,11 +77,11 @@ class CacheUtilsTimestampTest {
 
         // When: Zip and unzip using CacheUtils
         Path zipFile = tempDir.resolve("cache.zip");
-        CacheUtils.zip(sourceDir, zipFile, "*", true);
+        CacheUtils.zip(sourceDir, zipFile, "*", false, true);
 
         Path extractDir = tempDir.resolve("extracted");
         Files.createDirectories(extractDir);
-        CacheUtils.unzip(zipFile, extractDir, true);
+        CacheUtils.unzip(zipFile, extractDir, false, true);
 
         // Then: File timestamps should be preserved
         Path extractedFile1 = extractDir.resolve("com").resolve("example").resolve("Service.class");
@@ -124,11 +123,11 @@ class CacheUtilsTimestampTest {
 
         // When: Zip and unzip using CacheUtils
         Path zipFile = tempDir.resolve("cache.zip");
-        CacheUtils.zip(sourceDir, zipFile, "*", true);
+        CacheUtils.zip(sourceDir, zipFile, "*", false, true);
 
         Path extractDir = tempDir.resolve("extracted");
         Files.createDirectories(extractDir);
-        CacheUtils.unzip(zipFile, extractDir, true);
+        CacheUtils.unzip(zipFile, extractDir, false, true);
 
         // Then: Directory timestamps should be preserved
         Path extractedDir = extractDir.resolve("com").resolve("example");
@@ -154,7 +153,7 @@ class CacheUtilsTimestampTest {
 
         // When: Create zip
         Path zipFile = tempDir.resolve("cache.zip");
-        CacheUtils.zip(sourceDir, zipFile, "*", true);
+        CacheUtils.zip(sourceDir, zipFile, "*", false, true);
 
         // Then: Zip should contain directory entries
         List<String> entries = new ArrayList<>();
@@ -192,7 +191,7 @@ class CacheUtilsTimestampTest {
 
         // When: Create zip
         Path zipFile = tempDir.resolve("cache.zip");
-        CacheUtils.zip(sourceDir, zipFile, "*", true);
+        CacheUtils.zip(sourceDir, zipFile, "*", false, true);
 
         // Then: Zip entries should have correct timestamps
         try (ZipInputStream zis = new ZipInputStream(Files.newInputStream(zipFile))) {
@@ -250,7 +249,7 @@ class CacheUtilsTimestampTest {
         Instant packageTime = compileTime.plus(5, ChronoUnit.SECONDS);
         Path jarFile = tempDir.resolve("target").resolve("my-module-1.0.jar");
         Files.createDirectories(jarFile.getParent());
-        CacheUtils.zip(classesDir, jarFile, "*", true);
+        CacheUtils.zip(classesDir, jarFile, "*", false, true);
         Files.setLastModifiedTime(jarFile, FileTime.from(packageTime));
 
         long jarTimestamp = Files.getLastModifiedTime(jarFile).toMillis();
@@ -259,7 +258,7 @@ class CacheUtilsTimestampTest {
         deleteRecursively(classesDir);
 
         // When: Simulate cache restoration - restore JAR contents back to target/classes
-        CacheUtils.unzip(jarFile, classesDir, true);
+        CacheUtils.unzip(jarFile, classesDir, false, true);
 
         // Then: Restored file should NOT be newer than JAR
         Path restoredClass = classesDir.resolve("com").resolve("example").resolve("Service.class");
@@ -270,11 +269,11 @@ class CacheUtilsTimestampTest {
         if (restoredTimestamp > jarTimestamp) {
             long diffSeconds = (restoredTimestamp - jarTimestamp) / 1000;
             fail(String.format(
-                    "[WARNING] File 'target/classes/com/example/Service.class' is more recent%n" +
-                    "          than the packaged artifact 'my-module-1.0.jar'%n" +
-                    "          (difference: %d seconds)%n" +
-                    "          Please run a full 'mvn clean package' build%n%n" +
-                    "This indicates timestamps are not being preserved correctly during cache restoration.",
+                    "[WARNING] File 'target/classes/com/example/Service.class' is more recent%n"
+                            + "          than the packaged artifact 'my-module-1.0.jar'%n"
+                            + "          (difference: %d seconds)%n"
+                            + "          Please run a full 'mvn clean package' build%n%n"
+                            + "This indicates timestamps are not being preserved correctly during cache restoration.",
                     diffSeconds));
         }
 
@@ -299,8 +298,7 @@ class CacheUtilsTimestampTest {
                 packageDir.resolve("Service.class"),
                 packageDir.resolve("Repository.class"),
                 packageDir.resolve("Controller.class"),
-                packageDir.resolve("Model.class")
-        );
+                packageDir.resolve("Model.class"));
 
         for (Path file : files) {
             writeString(file, "// " + file.getFileName() + " content");
@@ -311,11 +309,11 @@ class CacheUtilsTimestampTest {
 
         // When: Zip and unzip
         Path zipFile = tempDir.resolve("cache.zip");
-        CacheUtils.zip(sourceDir, zipFile, "*", true);
+        CacheUtils.zip(sourceDir, zipFile, "*", false, true);
 
         Path extractDir = tempDir.resolve("extracted");
         Files.createDirectories(extractDir);
-        CacheUtils.unzip(zipFile, extractDir, true);
+        CacheUtils.unzip(zipFile, extractDir, false, true);
 
         // Then: All files should have consistent timestamps
         for (Path originalFile : files) {
@@ -348,11 +346,11 @@ class CacheUtilsTimestampTest {
 
         // When: Zip and unzip with preserveTimestamps=false
         Path zipFile = tempDir.resolve("cache.zip");
-        CacheUtils.zip(sourceDir, zipFile, "*", false);
+        CacheUtils.zip(sourceDir, zipFile, "*", false, false);
 
         Path extractDir = tempDir.resolve("extracted");
         Files.createDirectories(extractDir);
-        CacheUtils.unzip(zipFile, extractDir, false);
+        CacheUtils.unzip(zipFile, extractDir, false, false);
 
         // Then: Extracted file should NOT have the original timestamp
         // (it should have a timestamp close to now, not 1 hour ago)
@@ -365,17 +363,22 @@ class CacheUtilsTimestampTest {
         long diffFromCurrent = Math.abs(extractedTimestamp - currentTime);
 
         // The extracted file should be much closer to current time than to the old timestamp
-        assertTrue(diffFromCurrent < diffFromOriginal,
-                String.format("When preserveTimestamps=false, extracted file timestamp should be close to current time.%n" +
-                        "Original timestamp (1 hour ago): %s (%d)%n" +
-                        "Extracted timestamp: %s (%d)%n" +
-                        "Current time: %s (%d)%n" +
-                        "Diff from original: %d seconds%n" +
-                        "Diff from current: %d seconds%n" +
-                        "Expected: diff from current < diff from original",
-                        Instant.ofEpochMilli(originalTimestamp), originalTimestamp,
-                        Instant.ofEpochMilli(extractedTimestamp), extractedTimestamp,
-                        Instant.ofEpochMilli(currentTime), currentTime,
+        assertTrue(
+                diffFromCurrent < diffFromOriginal,
+                String.format(
+                        "When preserveTimestamps=false, extracted file timestamp should be close to current time.%n"
+                                + "Original timestamp (1 hour ago): %s (%d)%n"
+                                + "Extracted timestamp: %s (%d)%n"
+                                + "Current time: %s (%d)%n"
+                                + "Diff from original: %d seconds%n"
+                                + "Diff from current: %d seconds%n"
+                                + "Expected: diff from current < diff from original",
+                        Instant.ofEpochMilli(originalTimestamp),
+                        originalTimestamp,
+                        Instant.ofEpochMilli(extractedTimestamp),
+                        extractedTimestamp,
+                        Instant.ofEpochMilli(currentTime),
+                        currentTime,
                         diffFromOriginal / 1000,
                         diffFromCurrent / 1000));
     }
@@ -390,15 +393,14 @@ class CacheUtilsTimestampTest {
 
         if (diffMs > TIMESTAMP_TOLERANCE_MS) {
             String errorMessage = String.format(
-                    "%s%n" +
-                    "File: %s%n" +
-                    "Expected timestamp: %s (%d)%n" +
-                    "Actual timestamp:   %s (%d)%n" +
-                    "Difference:         %d seconds (%.2f hours)%n" +
-                    "%n" +
-                    "Timestamps must be preserved within %d ms tolerance.%n" +
-                    "This failure indicates CacheUtils.zip() or CacheUtils.unzip() is not%n" +
-                    "correctly preserving file/directory timestamps.",
+                    "%s%n" + "File: %s%n"
+                            + "Expected timestamp: %s (%d)%n"
+                            + "Actual timestamp:   %s (%d)%n"
+                            + "Difference:         %d seconds (%.2f hours)%n"
+                            + "%n"
+                            + "Timestamps must be preserved within %d ms tolerance.%n"
+                            + "This failure indicates CacheUtils.zip() or CacheUtils.unzip() is not%n"
+                            + "correctly preserving file/directory timestamps.",
                     message,
                     fileName,
                     Instant.ofEpochMilli(expectedMs),

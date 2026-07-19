@@ -51,21 +51,19 @@ public class ModuleInfoCachingTest {
 
         // Zip using the default glob pattern "*" (same as attachedOutputs uses)
         Path zipFile = testDir.resolve("test.zip");
-        boolean hasFiles = CacheUtils.zip(classesDir, zipFile, "*", true);
+        boolean hasFiles = CacheUtils.zip(classesDir, zipFile, "*", true, true);
 
         assertTrue(hasFiles, "Zip should contain files");
         assertTrue(Files.exists(zipFile), "Zip file should be created");
 
         // Extract and verify module-info.class is present
         Path extractDir = testDir.resolve("extracted");
-        CacheUtils.unzip(zipFile, extractDir, true);
+        CacheUtils.unzip(zipFile, extractDir, true, true);
 
         Path extractedModuleInfo = extractDir.resolve("module-info.class");
-        assertTrue(Files.exists(extractedModuleInfo),
-            "module-info.class should be present after extraction");
+        assertTrue(Files.exists(extractedModuleInfo), "module-info.class should be present after extraction");
 
         Path extractedRegularClass = extractDir.resolve("com/example/MyClass.class");
-        assertTrue(Files.exists(extractedRegularClass),
-            "Regular .class file should be present after extraction");
+        assertTrue(Files.exists(extractedRegularClass), "Regular .class file should be present after extraction");
     }
 }

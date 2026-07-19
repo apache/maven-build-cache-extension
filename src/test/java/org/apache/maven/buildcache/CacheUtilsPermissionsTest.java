@@ -78,8 +78,8 @@ class CacheUtilsPermissionsTest {
         // When: Create ZIP files with preservePermissions=true
         Path zip1 = tempDir.resolve("cache1.zip");
         Path zip2 = tempDir.resolve("cache2.zip");
-        CacheUtils.zip(sourceDir1, zip1, "*", true);
-        CacheUtils.zip(sourceDir2, zip2, "*", true);
+        CacheUtils.zip(sourceDir1, zip1, "*", true, false);
+        CacheUtils.zip(sourceDir2, zip2, "*", true, false);
 
         // Then: ZIP files should have different hashes despite identical content
         byte[] hash1 = Files.readAllBytes(zip1);
@@ -124,16 +124,16 @@ class CacheUtilsPermissionsTest {
         // When: Create ZIP files with preservePermissions=false
         Path zip1 = tempDir.resolve("cache1.zip");
         Path zip2 = tempDir.resolve("cache2.zip");
-        CacheUtils.zip(sourceDir1, zip1, "*", false);
-        CacheUtils.zip(sourceDir2, zip2, "*", false);
+        CacheUtils.zip(sourceDir1, zip1, "*", false, false);
+        CacheUtils.zip(sourceDir2, zip2, "*", false, false);
 
         // Unzip and verify permissions are NOT preserved
         Path extractDir1 = tempDir.resolve("extracted1");
         Path extractDir2 = tempDir.resolve("extracted2");
         Files.createDirectories(extractDir1);
         Files.createDirectories(extractDir2);
-        CacheUtils.unzip(zip1, extractDir1, false);
-        CacheUtils.unzip(zip2, extractDir2, false);
+        CacheUtils.unzip(zip1, extractDir1, false, false);
+        CacheUtils.unzip(zip2, extractDir2, false, false);
 
         Path extractedFile1 = extractDir1.resolve("script.sh");
         Path extractedFile2 = extractDir2.resolve("script.sh");
@@ -163,12 +163,12 @@ class CacheUtilsPermissionsTest {
 
         // When: ZIP file is created from that directory with "preservePermissions=true"
         Path zippedFile = tempDir.resolve("target.zip");
-        CacheUtils.zip(source, zippedFile, "*", true);
+        CacheUtils.zip(source, zippedFile, "*", true, false);
 
         // And: ZIP file is extracted with "preservePermissions=true"
         Path unzippedDir = tempDir.resolve("target-unzipped");
         Files.createDirectories(unzippedDir);
-        CacheUtils.unzip(zippedFile, unzippedDir, true);
+        CacheUtils.unzip(zippedFile, unzippedDir, true, false);
 
         // Then: extracted file should have executable permissions
         Path extractedScript = unzippedDir.resolve("script.sh");
