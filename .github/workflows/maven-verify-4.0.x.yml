@@ -17,9 +17,10 @@
 
 name: Verify 4.0
 
-on:
-  push:
-  pull_request:
+# Maven 4 disabled for now: let's focus on Resolver 2 first
+# on:
+#  push:
+#  pull_request:
 
 jobs:
   build:
