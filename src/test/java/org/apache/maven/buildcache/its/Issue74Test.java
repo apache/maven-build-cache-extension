@@ -46,7 +46,7 @@ class Issue74Test {
     @Test
     void simple(Verifier verifier) throws VerificationException, IOException {
         verifier.setAutoclean(false);
-        verifier.setMavenDebug(true);
+        verifier.addCliOption("-X");
 
         // first run - uncached
         verifier.setLogFileName("../log-1.txt");

@@ -99,7 +99,7 @@ class CiBuildDrivenProjectVersionChangeCachedTest {
 
         // Build 2 — next CI build; revision bumped to 1.1; source code unchanged.
         // Version normalisation strips the version from the fingerprint → cache HIT.
-        Verifier verifier2 = new Verifier(verifier.getBasedir(), true);
+        Verifier verifier2 = new Verifier(verifier.getBasedir());
         verifier2.setAutoclean(false);
         verifier2.setLogFileName("../log-2.txt");
         verifier2.setSystemProperty("projectVersion", System.getProperty("projectVersion"));
@@ -113,7 +113,7 @@ class CiBuildDrivenProjectVersionChangeCachedTest {
 
         // Build 3 — major version bump, release (no SNAPSHOT suffix); still no source change.
         // SNAPSHOT vs. release distinction is irrelevant to normalisation → cache HIT.
-        Verifier verifier3 = new Verifier(verifier.getBasedir(), true);
+        Verifier verifier3 = new Verifier(verifier.getBasedir());
         verifier3.setAutoclean(false);
         verifier3.setLogFileName("../log-3.txt");
         verifier3.setSystemProperty("projectVersion", System.getProperty("projectVersion"));

@@ -72,7 +72,7 @@ class RemoteParentVersionBumpInvalidatesTest {
         String corpParentDir = Paths.get(verifier.getBasedir(), "_corp-parent")
                 .toAbsolutePath()
                 .toString();
-        Verifier corpInstallV1 = new Verifier(corpParentDir, true);
+        Verifier corpInstallV1 = new Verifier(corpParentDir);
         corpInstallV1.setAutoclean(false);
         corpInstallV1.setSystemProperty("projectVersion", System.getProperty("projectVersion"));
         corpInstallV1.setLocalRepo(System.getProperty("localRepo"));
@@ -97,7 +97,7 @@ class RemoteParentVersionBumpInvalidatesTest {
         CacheITUtils.replaceInFile(corpParentPom, "<version>4.13.2</version>", "<version>4.12</version>");
 
         // Install corp-parent 1.1 into the test local repository.
-        Verifier corpInstallV11 = new Verifier(corpParentDir, true);
+        Verifier corpInstallV11 = new Verifier(corpParentDir);
         corpInstallV11.setAutoclean(false);
         corpInstallV11.setSystemProperty("projectVersion", System.getProperty("projectVersion"));
         corpInstallV11.setLocalRepo(System.getProperty("localRepo"));

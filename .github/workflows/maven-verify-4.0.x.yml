@@ -15,12 +15,11 @@
 # specific language governing permissions and limitations
 # under the License.
 
-name: Verify 4.0.x
+name: Verify 4.0
 
-# Disabled until we can get Maven 4.0.x to run in CI (migrate to maven-executor)
-#on:
-#  push:
-#  pull_request:
+on:
+  push:
+  pull_request:
 
 jobs:
   build:

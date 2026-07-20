@@ -76,7 +76,7 @@ class CIFriendlyRevisionVersionTest {
         // Build 2 — revision=2.0 (different version, same source).
         // The version string is normalized in the effective-POM fingerprint, so the cache key
         // is the same as build 1 → cache HIT.
-        Verifier verifier2 = new Verifier(verifier.getBasedir(), true);
+        Verifier verifier2 = new Verifier(verifier.getBasedir());
         verifier2.setAutoclean(false);
         verifier2.setLogFileName("../log-2.txt");
         verifier2.setSystemProperty("projectVersion", System.getProperty("projectVersion"));
