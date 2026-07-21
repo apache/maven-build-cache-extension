@@ -24,5 +24,6 @@ under the License.
     <configuration>
         <enabled>true</enabled>
         <hashAlgorithm>XX</hashAlgorithm>
+        <projectVersioning calculateProjectVersionChecksum="true"/>
     </configuration>
 </cache>

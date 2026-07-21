@@ -230,7 +230,7 @@ public class ReferenceProjectBootstrap {
         // Pre-install prerequisite sub-projects (e.g. external parent POMs, relocated artifacts)
         for (String subDir : preInstallDirs) {
             Path subProjectDir = projectDir.resolve(subDir);
-            Verifier preInstaller = new Verifier(subProjectDir.toString(), true);
+            Verifier preInstaller = new Verifier(subProjectDir.toString());
             preInstaller.setLogFileName("../../pre-install-" + subDir + ".txt");
             preInstaller.setSystemProperty("projectVersion", System.getProperty("projectVersion"));
             preInstaller.setLocalRepo(localRepo);
@@ -239,7 +239,7 @@ public class ReferenceProjectBootstrap {
             preInstaller.verifyErrorFreeLog();
         }
 
-        Verifier verifier = new Verifier(projectDir.toString(), true);
+        Verifier verifier = new Verifier(projectDir.toString());
         verifier.setLogFileName("../log.txt");
         verifier.setSystemProperty("projectVersion", System.getProperty("projectVersion"));
         verifier.setLocalRepo(localRepo);

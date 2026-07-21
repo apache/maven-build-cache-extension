@@ -84,8 +84,8 @@ class ForkedExecutionsTest {
         verifier.setAutoclean(false);
 
         verifier.setLogFileName("../log-1.txt");
-        verifier.setMavenDebug(true);
         verifier.setCliOptions(Arrays.asList(
+                "-X",
                 "-Dmaven.build.cache.location=" + tempDirectory.toAbsolutePath(),
                 "-Dmaven.build.cache.remote.url=http:////localhost:"
                         + wm.getRuntimeInfo().getHttpPort(),

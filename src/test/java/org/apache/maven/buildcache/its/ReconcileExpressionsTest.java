@@ -144,7 +144,7 @@ class ReconcileExpressionsTest {
     @Test
     void multipleExpressionsEvaluated(Verifier verifier) throws VerificationException {
         verifier.setAutoclean(false);
-        verifier.setMavenDebug(true);
+        verifier.addCliOption("-X");
 
         // Build with debug to see expression evaluation
         verifier.setLogFileName("../log-multi-1.txt");

@@ -65,24 +65,17 @@ under the License.
     <minimalJavaBuildVersion>11</minimalJavaBuildVersion>
     <classWorldsVersion>2.6.0</classWorldsVersion>
 
-    <!-- default maven version, will be overridden by maven3 profile -->
-    <mavenVersion>4.0.0-alpha-8</mavenVersion>
-    <maven.dir>maven4</maven.dir>
+    <!-- default maven version we build against -->
+    <mavenVersion>3.9.16</mavenVersion>
+    <!-- default maven version we test against, will be overridden by mavenX profile -->
+    <maven.version>${mavenVersion}</maven.version>
+    <maven.dir>maven3.9</maven.dir>
     <maven.basedir>${project.build.directory}/${maven.dir}</maven.basedir>
 
-    <commonsCliVersion>1.4</commonsCliVersion>
-    <commonsLangVersion>3.20.0</commonsLangVersion>
-    <junit.version>5.14.4</junit.version>
-    <mockitoVersion>4.11.0</mockitoVersion>
-    <wagonVersion>3.4.3</wagonVersion>
-    <securityDispatcherVersion>2.0</securityDispatcherVersion>
-    <cipherVersion>2.0</cipherVersion>
-    <modelloVersion>1.11</modelloVersion>
-    <jxpathVersion>1.3</jxpathVersion>
+    <wagonVersion>3.5.3</wagonVersion>
     <resolverVersion>1.9.27</resolverVersion>
     <slf4jVersion>1.7.36</slf4jVersion>
-    <wiremockVersion>3.0.1</wiremockVersion>
-    <xmlunitVersion>2.6.4</xmlunitVersion>
+    <mockitoVersion>4.11.0</mockitoVersion>
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
     <maven.site.path>extensions-archives/${project.artifactId}-LATEST</maven.site.path>
   </properties>
@@ -99,7 +92,7 @@ under the License.
       <dependency>
         <groupId>org.junit</groupId>
         <artifactId>junit-bom</artifactId>
-        <version>${junit.version}</version>
+        <version>5.14.4</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -169,7 +162,7 @@ under the License.
     <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-lang3</artifactId>
-      <version>${commonsLangVersion}</version>
+      <version>3.20.0</version>
     </dependency>
     <dependency>
       <groupId>commons-io</groupId>
@@ -211,37 +204,26 @@ under the License.
       <artifactId>slf4j-api</artifactId>
       <version>${slf4jVersion}</version>
     </dependency>
+
     <dependency>
       <groupId>org.apache.maven.wagon</groupId>
       <artifactId>wagon-webdav-jackrabbit</artifactId>
-      <version>3.5.3</version>
+      <version>${wagonVersion}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.maven.wagon</groupId>
       <artifactId>wagon-provider-api</artifactId>
-      <version>3.5.3</version>
+      <version>${wagonVersion}</version>
     </dependency>
+
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-api</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.maven.shared</groupId>
-      <artifactId>maven-verifier</artifactId>
-      <version>1.8.0</version>
-      <scope>test</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>junit</groupId>
-          <artifactId>junit</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.maven</groupId>
-      <artifactId>maven-embedder</artifactId>
-      <version>${mavenVersion}</version>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-params</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -291,20 +273,15 @@ under the License.
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-params</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-junit-jupiter</artifactId>
       <version>${mockitoVersion}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>com.github.tomakehurst</groupId>
-      <artifactId>wiremock-jre8</artifactId>
-      <version>${wiremockVersion}</version>
+      <groupId>org.wiremock</groupId>
+      <artifactId>wiremock</artifactId>
+      <version>3.13.2</version>
       <scope>test</scope>
       <exclusions>
         <exclusion>
@@ -317,6 +294,20 @@ under the License.
         </exclusion>
       </exclusions>
     </dependency>
+
+    <!-- To be removed (replace with maven-executor) -->
+    <dependency>
+      <groupId>org.apache.maven.shared</groupId>
+      <artifactId>maven-verifier</artifactId>
+      <version>1.8.0</version>
+      <exclusions>
+        <exclusion>
+          <groupId>junit</groupId>
+          <artifactId>junit</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
     <dependency>
       <groupId>org.openjdk.jmh</groupId>
       <artifactId>jmh-core</artifactId>
@@ -365,11 +356,6 @@ under the License.
               </configuration>
             </execution>
           </executions>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-invoker-plugin</artifactId>
-          <version>3.10.1</version>
         </plugin>
         <plugin>
           <groupId>org.apache.rat</groupId>
@@ -469,7 +455,7 @@ under the License.
                 <artifactItem>
                   <groupId>org.apache.maven</groupId>
                   <artifactId>apache-maven</artifactId>
-                  <version>${mavenVersion}</version>
+                  <version>${maven.version}</version>
                   <classifier>bin</classifier>
                   <type>tar.gz</type>
                   <overWrite>false</overWrite>
@@ -571,10 +557,18 @@ under the License.
       </build>
     </profile>
     <profile>
-      <id>maven3</id>
+      <id>maven3.10</id>
       <properties>
-        <mavenVersion>3.9.16</mavenVersion>
-        <maven.dir>maven3</maven.dir>
+        <maven.version>3.10.0-rc-1</maven.version>
+        <maven.dir>maven3.10</maven.dir>
+        <maven.basedir>${project.build.directory}/${maven.dir}</maven.basedir>
+      </properties>
+    </profile>
+    <profile>
+      <id>maven4.0</id>
+      <properties>
+        <maven.version>4.0.0-rc-5</maven.version>
+        <maven.dir>maven4.0</maven.dir>
         <maven.basedir>${project.build.directory}/${maven.dir}</maven.basedir>
       </properties>
     </profile>

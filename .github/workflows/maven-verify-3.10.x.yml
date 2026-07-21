@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-name: Verify 3.9
+name: Verify 3.10
 
 on:
   push:
@@ -28,5 +28,6 @@ jobs:
     with:
       maven4-enabled: false
       matrix-exclude: '[ {"jdk": "8"} ]'
-      ff-goal: '-P run-its verify javadoc:jar'
-      verify-goal: '-P run-its verify javadoc:jar'
+      ff-goal: '-P run-its,maven3.10 verify javadoc:jar'
+      verify-goal: '-P run-its,maven3.10 verify javadoc:jar'
+

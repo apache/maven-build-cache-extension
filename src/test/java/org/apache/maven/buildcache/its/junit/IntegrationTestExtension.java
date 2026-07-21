@@ -150,7 +150,7 @@ public class IntegrationTestExtension implements BeforeAllCallback, BeforeEachCa
                 });
             }
 
-            Verifier verifier = new Verifier(testExecutionDir.toString(), true);
+            Verifier verifier = new Verifier(testExecutionDir.toString());
             verifier.setLogFileName("../log.txt");
             verifier.setSystemProperty("projectVersion", System.getProperty("projectVersion"));
             verifier.setLocalRepo(System.getProperty("localRepo"));

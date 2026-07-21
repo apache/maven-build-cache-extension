@@ -15,20 +15,20 @@
 # specific language governing permissions and limitations
 # under the License.
 
-name: Verify 3.9.x
+name: Verify 4.0
 
-on:
-  push:
-  pull_request:
+# Maven 4 disabled for now: let's focus on Resolver 2 first
+# on:
+#  push:
+#  pull_request:
 
 jobs:
   build:
     name: Verify
     uses: apache/maven-gh-actions-shared/.github/workflows/maven-verify.yml@v5
     with:
-      maven-args: '-D"maven.test.redirectTestOutputToFile=false -Pmaven3"'
-      maven4-enabled: false
+      maven4-enabled: false # no: we manually download and run tests with Maven 4
       matrix-exclude: '[ {"jdk": "8"} ]'
-      ff-goal: '-P run-its verify javadoc:jar'
-      verify-goal: '-P run-its verify javadoc:jar'
+      ff-goal: '-P run-its,maven4.0 verify javadoc:jar'
+      verify-goal: '-P run-its,maven4.0 verify javadoc:jar'
 

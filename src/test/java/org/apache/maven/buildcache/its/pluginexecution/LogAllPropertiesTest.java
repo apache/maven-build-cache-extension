@@ -50,7 +50,6 @@ class LogAllPropertiesTest {
     @Test
     void logAllPropertiesRecordsNonTrackedParameters(Verifier verifier) throws VerificationException, IOException {
         verifier.setAutoclean(false);
-        verifier.setMavenDebug(false);
 
         // Build 1 — logAllProperties=true is in the cache config; all surefire parameters recorded
         verifier.setLogFileName("../log-1.txt");

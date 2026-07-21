@@ -44,7 +44,7 @@ class IncludeExcludeTest {
     @Test
     void includeExclude(Verifier verifier) throws VerificationException {
         verifier.setAutoclean(false);
-        verifier.setMavenDebug(true);
+        verifier.addCliOption("-X");
 
         // First build
         verifier.setLogFileName("../log-1.txt");
