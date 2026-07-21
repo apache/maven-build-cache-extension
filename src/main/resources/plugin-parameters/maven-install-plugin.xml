@@ -29,14 +29,14 @@
         <!-- FUNCTIONAL: Skipping installation changes the produced local repository -->
         <parameter>
           <name>skip</name>
-          <type>functional</type>
-          <description>Skip installation</description>
+          <cache-key>true</cache-key>
+          <description>Skip installation; changing it changes installed artifacts and local repository state</description>
         </parameter>
 
         <!-- FUNCTIONAL: Affect installed artifacts or project state -->
         <parameter>
           <name>installAtEnd</name>
-          <type>functional</type>
+          <cache-key>true</cache-key>
           <description>Install artifacts at end of multi-module build (changes installed project state on failure)</description>
         </parameter>
       </parameters>
@@ -48,58 +48,58 @@
         <!-- Same parameters as install goal -->
         <parameter>
           <name>file</name>
-          <type>functional</type>
-          <description>The file to install</description>
+          <cache-key>true</cache-key>
+          <description>The file to install; changing it changes the installed artifact contents</description>
         </parameter>
         <parameter>
           <name>groupId</name>
-          <type>functional</type>
-          <description>GroupId of the artifact</description>
+          <cache-key>true</cache-key>
+          <description>GroupId of the artifact; changing it changes the installed artifact coordinates</description>
         </parameter>
         <parameter>
           <name>artifactId</name>
-          <type>functional</type>
-          <description>ArtifactId of the artifact</description>
+          <cache-key>true</cache-key>
+          <description>ArtifactId of the artifact; changing it changes the installed artifact coordinates</description>
         </parameter>
         <parameter>
           <name>version</name>
-          <type>functional</type>
-          <description>Version of the artifact</description>
+          <cache-key>true</cache-key>
+          <description>Version of the artifact; changing it changes the installed artifact coordinates</description>
         </parameter>
         <parameter>
           <name>packaging</name>
-          <type>functional</type>
-          <description>Packaging type of the artifact</description>
+          <cache-key>true</cache-key>
+          <description>Packaging type of the artifact; changing it changes the installed artifact format</description>
         </parameter>
         <parameter>
           <name>classifier</name>
-          <type>functional</type>
-          <description>Classifier of the artifact</description>
+          <cache-key>true</cache-key>
+          <description>Classifier of the artifact; changing it changes the installed artifact coordinates</description>
         </parameter>
         <parameter>
           <name>pomFile</name>
-          <type>functional</type>
-          <description>POM file to install</description>
+          <cache-key>true</cache-key>
+          <description>POM file to install; changing it changes installed metadata and project state</description>
         </parameter>
         <parameter>
           <name>generatePom</name>
-          <type>functional</type>
-          <description>Generate a minimal POM</description>
+          <cache-key>true</cache-key>
+          <description>Generate a minimal POM; changing it changes installed metadata</description>
         </parameter>
         <parameter>
           <name>javadoc</name>
-          <type>functional</type>
-          <description>Javadoc artifact to install</description>
+          <cache-key>true</cache-key>
+          <description>Javadoc artifact to install; changing it changes installed artifacts</description>
         </parameter>
         <parameter>
           <name>localRepositoryPath</name>
-          <type>functional</type>
-          <description>Local repository path</description>
+          <cache-key>true</cache-key>
+          <description>Local repository path; changing it changes where installed artifacts are written</description>
         </parameter>
         <parameter>
           <name>sources</name>
-          <type>functional</type>
-          <description>Sources artifact to install</description>
+          <cache-key>true</cache-key>
+          <description>Sources artifact to install; changing it changes installed artifacts</description>
         </parameter>
       </parameters>
     </goal>

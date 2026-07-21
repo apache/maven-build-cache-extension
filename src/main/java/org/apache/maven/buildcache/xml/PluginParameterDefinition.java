@@ -23,7 +23,7 @@ import java.util.Map;
 
 /**
  * Represents the complete parameter definition for a Maven plugin loaded from XML.
- * Contains all goals and their parameters with categorization (functional vs behavioral).
+ * Contains all goals and their parameters with cache-key metadata.
  */
 public class PluginParameterDefinition {
 
@@ -101,12 +101,12 @@ public class PluginParameterDefinition {
      */
     public static class ParameterDefinition {
         private final String name;
-        private final ParameterType type;
+        private final boolean cacheKey;
         private final String description;
 
-        public ParameterDefinition(String name, ParameterType type, String description) {
+        public ParameterDefinition(String name, boolean cacheKey, String description) {
             this.name = name;
-            this.type = type;
+            this.cacheKey = cacheKey;
             this.description = description;
         }
 
@@ -114,37 +114,15 @@ public class PluginParameterDefinition {
             return name;
         }
 
-        public ParameterType getType() {
-            return type;
-        }
-
         public String getDescription() {
             return description;
         }
 
-        public boolean isFunctional() {
-            return type == ParameterType.FUNCTIONAL;
-        }
-
-        public boolean isBehavioral() {
-            return type == ParameterType.BEHAVIORAL;
-        }
-    }
-
-    /**
-     * Parameter type categorization
-     */
-    public enum ParameterType {
         /**
-         * Functional parameters affect the externally observable result, generated files, installed artifacts, project state,
-         * success/failure outcome, or artifact contents
+         * Whether changing this parameter must cause a cache miss.
          */
-        FUNCTIONAL,
-
-        /**
-         * Behavioral parameters change how the plugin performs the same operation without changing that observable result or
-         * outcome
-         */
-        BEHAVIORAL
+        public boolean isCacheKey() {
+            return cacheKey;
+        }
     }
 }

@@ -60,16 +60,9 @@
   <xs:complexType name="ParameterType">
     <xs:sequence>
       <xs:element name="name" type="xs:string"/>
-      <xs:element name="type" type="ParameterTypeEnum"/>
+      <xs:element name="cache-key" type="xs:boolean" minOccurs="0" default="false"/>
       <xs:element name="description" type="xs:string" minOccurs="0"/>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:simpleType name="ParameterTypeEnum">
-    <xs:restriction base="xs:string">
-      <xs:enumeration value="functional"/>
-      <xs:enumeration value="behavioral"/>
-    </xs:restriction>
-  </xs:simpleType>
 
 </xs:schema>

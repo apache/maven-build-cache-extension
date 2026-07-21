@@ -20,7 +20,6 @@ package org.apache.maven.buildcache.xml;
 
 import org.apache.maven.buildcache.xml.PluginParameterDefinition.GoalParameterDefinition;
 import org.apache.maven.buildcache.xml.PluginParameterDefinition.ParameterDefinition;
-import org.apache.maven.buildcache.xml.PluginParameterDefinition.ParameterType;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -45,20 +44,18 @@ class PluginParameterValidationTest {
         GoalParameterDefinition compileGoal = def.getGoal("compile");
         assertNotNull(compileGoal, "compile goal should exist");
 
-        // Verify functional parameters
+        // Verify cache-key parameters
         assertTrue(compileGoal.hasParameter("source"), "Should have 'source' parameter");
         assertTrue(compileGoal.hasParameter("target"), "Should have 'target' parameter");
         assertTrue(compileGoal.hasParameter("release"), "Should have 'release' parameter");
 
         ParameterDefinition sourceParam = compileGoal.getParameter("source");
-        assertEquals(ParameterType.FUNCTIONAL, sourceParam.getType());
-        assertTrue(sourceParam.isFunctional());
+        assertTrue(sourceParam.isCacheKey());
 
-        // Verify behavioral parameters
+        // Parameters without cache-key metadata default to false
         assertTrue(compileGoal.hasParameter("verbose"), "Should have 'verbose' parameter");
         ParameterDefinition verboseParam = compileGoal.getParameter("verbose");
-        assertEquals(ParameterType.BEHAVIORAL, verboseParam.getType());
-        assertTrue(verboseParam.isBehavioral());
+        assertTrue(!verboseParam.isCacheKey());
     }
 
     @Test
@@ -74,10 +71,10 @@ class PluginParameterValidationTest {
         GoalParameterDefinition installGoal = def.getGoal("install");
         assertNotNull(installGoal, "install goal should exist");
 
-        // The lifecycle install goal only exposes skip as an output-affecting parameter.
+        // The lifecycle install goal exposes cache-key parameters.
         assertTrue(installGoal.hasParameter("skip"), "Should have 'skip' parameter");
         ParameterDefinition skipParam = installGoal.getParameter("skip");
-        assertEquals(ParameterType.FUNCTIONAL, skipParam.getType());
+        assertTrue(skipParam.isCacheKey());
     }
 
     @Test
@@ -91,7 +88,7 @@ class PluginParameterValidationTest {
         GoalParameterDefinition compileGoal = compilerDef.getGoal("compile");
         assertNotNull(compileGoal);
 
-        // All default parameters should exist and be functional
+        // All default parameters should exist and be cache keys
         String[] defaultParams = {"source", "target", "release"};
         for (String paramName : defaultParams) {
             assertTrue(
@@ -99,8 +96,7 @@ class PluginParameterValidationTest {
                     "Default parameter '" + paramName + "' should exist in compile goal");
 
             ParameterDefinition param = compileGoal.getParameter(paramName);
-            assertTrue(
-                    param.isFunctional(), "Default parameter '" + paramName + "' should be FUNCTIONAL, not BEHAVIORAL");
+            assertTrue(param.isCacheKey(), "Default parameter '" + paramName + "' should be a cache key");
         }
 
         // Verify testCompile goal has same parameters
