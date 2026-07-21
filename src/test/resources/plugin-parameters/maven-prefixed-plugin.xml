@@ -26,8 +26,8 @@
         <pp:parameters>
           <pp:parameter>
             <pp:name>source</pp:name>
-            <pp:type>functional</pp:type>
-            <pp:description>Source level</pp:description>
+            <pp:cache-key>true</pp:cache-key>
+            <pp:description>Source level; changing it can change generated test output</pp:description>
           </pp:parameter>
         </pp:parameters>
       </pp:goal>

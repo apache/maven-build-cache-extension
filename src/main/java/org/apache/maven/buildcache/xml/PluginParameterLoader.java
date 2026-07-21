@@ -28,7 +28,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.maven.buildcache.xml.PluginParameterDefinition.GoalParameterDefinition;
 import org.apache.maven.buildcache.xml.PluginParameterDefinition.ParameterDefinition;
-import org.apache.maven.buildcache.xml.PluginParameterDefinition.ParameterType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -263,12 +262,10 @@ public class PluginParameterLoader {
 
     private ParameterDefinition parseParameter(Element paramElement) {
         String name = getTextContent(paramElement, "name");
-        String typeStr = getTextContent(paramElement, "type");
+        boolean cacheKey = Boolean.parseBoolean(getTextContent(paramElement, "cache-key"));
         String description = getTextContent(paramElement, "description");
 
-        ParameterType type = ParameterType.valueOf(typeStr.toUpperCase());
-
-        return new ParameterDefinition(name, type, description);
+        return new ParameterDefinition(name, cacheKey, description);
     }
 
     private String getTextContent(Element parent, String tagName) {

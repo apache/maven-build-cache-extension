@@ -27,13 +27,13 @@
       <parameters>
         <parameter>
           <name>commonParameter</name>
-          <type>functional</type>
-          <description>Parameter available in all versions</description>
+          <cache-key>true</cache-key>
+          <description>Parameter available in all versions; changing it changes the test result</description>
         </parameter>
         <parameter>
           <name>oldParameter</name>
-          <type>functional</type>
-          <description>Parameter only in 1.x versions</description>
+          <cache-key>true</cache-key>
+          <description>Parameter only in 1.x versions; changing it changes the test result</description>
         </parameter>
       </parameters>
     </goal>

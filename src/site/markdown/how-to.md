@@ -175,9 +175,9 @@ The build cache extension automatically tracks certain critical plugin propertie
 `executionControl` configuration. These defaults are derived from plugin parameter descriptors under
 `plugin-parameters/`:
 
-* **maven-compiler-plugin** (`compile` and `testCompile` goals): Tracks functional parameters defined in
+* **maven-compiler-plugin** (`compile` and `testCompile` goals): Tracks parameters marked `<cache-key>true</cache-key>` in
   `plugin-parameters/maven-compiler-plugin.xml`
-* **maven-install-plugin** (`install` and `install-file` goals): Tracks functional parameters defined in
+* **maven-install-plugin** (`install` and `install-file` goals): Tracks parameters marked `<cache-key>true</cache-key>` in
   `plugin-parameters/maven-install-plugin.xml`
 
 This default behavior prevents common cache invalidation issues, particularly in multi-module JPMS (Java Platform Module System)
@@ -185,7 +185,7 @@ projects where compiler version changes can cause compilation failures.
 
 **Overriding Defaults:** When you explicitly configure `executionControl` for a plugin goal, your explicit configuration
 overrides the built-in defaults for that matching plugin and goal. Other goals continue to use their defaults. For example,
-to track only the `release` property for the `compile` goal of maven-compiler-plugin instead of the functional parameters
+to track only the `release` property for the `compile` goal of maven-compiler-plugin instead of the cache-key parameters
 from `plugin-parameters/maven-compiler-plugin.xml`:
 
 ```xml
@@ -217,20 +217,15 @@ reconciliation configurations against known parameter definitions.
 
 #### Parameter Categories
 
-All plugin parameters are categorized into two types:
+Each parameter definition may contain an optional `<cache-key>` annotation:
 
-* **Functional / output-affecting**: Changes the plugin's externally observable result, generated files, installed artifacts,
-  project state, success/failure outcome, or artifact contents.
-* **Behavioral / execution-policy**: Changes how the plugin performs the same operation without changing that observable result
-  or outcome.
+* `<cache-key>true</cache-key>` means that changing the property's value must cause a cache miss.
+* `<cache-key>false</cache-key>` or an omitted annotation means that changing the property's value does not invalidate
+  the cache. The default is `false`.
 
-Examples:
-
-* **Functional Parameters**: `source`, `target`, `release`, and `encoding`
-* **Behavioral Parameters**: `verbose`, `compilerReuseStrategy`, and `logLevel`
-
-Only **functional** parameters should be tracked in reconciliation configurations, as behavioral parameters do not affect
-the result or outcome and should not invalidate the cache.
+The annotation is deliberately about cache identity, not how a plugin executes. Set it to `true` when the property can
+change generated files, installed artifacts, project state, artifact contents, or the build success/failure outcome.
+Leave it `false` when the property only changes execution policy or diagnostics without changing those observable results.
 
 #### Validation Features
 
@@ -240,9 +235,9 @@ The extension automatically validates reconciliation configurations and logs war
   - May indicate a plugin version mismatch or renamed parameter
   - Suggests updating parameter definitions or removing the parameter from reconciliation
 
-* **Behavioral parameters in reconciliation**: Parameters categorized as behavioral (WARN level)
-  - Suggests that the parameter likely shouldn't affect cache invalidation
-  - Consider removing if it doesn't actually affect build output
+* **Non-cache-key parameters in reconciliation**: Parameters without `<cache-key>true</cache-key>` (WARN level)
+  - Indicates that the parameter is not defined to invalidate the cache
+  - Consider removing it or marking it as a cache key if changing it affects outputs or build success/failure
 
 #### Adding Parameter Definitions for New Plugins
 
@@ -264,13 +259,12 @@ Parameter definitions are stored in `src/main/resources/plugin-parameters/{artif
       <parameters>
         <parameter>
           <name>outputDirectory</name>
-          <type>functional</type>
-          <description>Directory where output is written</description>
+          <cache-key>true</cache-key>
+          <description>Directory where output is written; changing it changes generated-file locations</description>
         </parameter>
         <parameter>
           <name>verbose</name>
-          <type>behavioral</type>
-          <description>Enable verbose logging</description>
+          <description>Enable verbose logging; omitted cache-key defaults to false</description>
         </parameter>
       </parameters>
     </goal>
@@ -308,8 +302,8 @@ The parameter validation system supports version-specific definitions to handle 
         <parameters>
           <parameter>
             <name>legacyParameter</name>
-            <type>functional</type>
-            <description>Deprecated in 3.0.0</description>
+            <cache-key>true</cache-key>
+            <description>Deprecated in 3.0.0; changing it changes the generated result</description>
           </parameter>
         </parameters>
       </goal>
@@ -327,8 +321,8 @@ The parameter validation system supports version-specific definitions to handle 
         <parameters>
           <parameter>
             <name>newParameter</name>
-            <type>functional</type>
-            <description>Added in 3.0.0</description>
+            <cache-key>true</cache-key>
+            <description>Added in 3.0.0; changing it changes the generated result</description>
           </parameter>
         </parameters>
       </goal>

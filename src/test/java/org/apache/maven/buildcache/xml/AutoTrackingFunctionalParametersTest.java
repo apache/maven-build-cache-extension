@@ -28,13 +28,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests that auto-tracking from plugin parameter definitions works correctly.
- * Verifies that ALL functional parameters are automatically tracked, not just a subset.
+ * Verifies that all cache-key parameters are automatically tracked, not just a subset.
  */
 class AutoTrackingFunctionalParametersTest {
 
     @Test
-    void testMavenCompilerPluginAutoTracksAllFunctionalParameters() {
-        // This test verifies that the auto-generation tracks ALL functional parameters,
+    void testMavenCompilerPluginAutoTracksAllCacheKeyParameters() {
+        // This test verifies that the auto-generation tracks ALL cache-key parameters,
         // not just the 3 that were in the old defaults.xml (source, target, release)
 
         PluginParameterLoader loader = new PluginParameterLoader();
@@ -45,34 +45,34 @@ class AutoTrackingFunctionalParametersTest {
         PluginParameterDefinition.GoalParameterDefinition compileGoal = def.getGoal("compile");
         assertNotNull(compileGoal, "compile goal should exist");
 
-        // Get all functional parameter names from the XML definition
-        Set<String> functionalParams = compileGoal.getParameters().values().stream()
-                .filter(PluginParameterDefinition.ParameterDefinition::isFunctional)
+        // Get all cache-key parameter names from the XML definition
+        Set<String> cacheKeyParams = compileGoal.getParameters().values().stream()
+                .filter(PluginParameterDefinition.ParameterDefinition::isCacheKey)
                 .map(PluginParameterDefinition.ParameterDefinition::getName)
                 .collect(Collectors.toSet());
 
         // Verify we have more than just the original 3 from defaults.xml
         assertTrue(
-                functionalParams.size() > 3,
-                "Should have more than 3 functional parameters (was: " + functionalParams.size() + ")");
+                cacheKeyParams.size() > 3,
+                "Should have more than 3 cache-key parameters (was: " + cacheKeyParams.size() + ")");
 
         // Verify the original 3 are included
-        assertTrue(functionalParams.contains("source"), "Should include 'source' parameter");
-        assertTrue(functionalParams.contains("target"), "Should include 'target' parameter");
-        assertTrue(functionalParams.contains("release"), "Should include 'release' parameter");
+        assertTrue(cacheKeyParams.contains("source"), "Should include 'source' parameter");
+        assertTrue(cacheKeyParams.contains("target"), "Should include 'target' parameter");
+        assertTrue(cacheKeyParams.contains("release"), "Should include 'release' parameter");
 
-        // Verify additional functional parameters are included (these were NOT in defaults.xml)
+        // Verify additional cache-key parameters are included (these were NOT in defaults.xml)
         assertTrue(
-                functionalParams.contains("encoding"),
+                cacheKeyParams.contains("encoding"),
                 "Should include 'encoding' parameter (auto-tracked, not in old defaults.xml)");
         assertTrue(
-                functionalParams.contains("debug"),
+                cacheKeyParams.contains("debug"),
                 "Should include 'debug' parameter (auto-tracked, not in old defaults.xml)");
         assertTrue(
-                functionalParams.contains("compilerArgs"),
+                cacheKeyParams.contains("compilerArgs"),
                 "Should include 'compilerArgs' parameter (auto-tracked, not in old defaults.xml)");
         assertTrue(
-                functionalParams.contains("annotationProcessorPaths"),
+                cacheKeyParams.contains("annotationProcessorPaths"),
                 "Should include 'annotationProcessorPaths' parameter (auto-tracked, not in old defaults.xml)");
         for (String paramName : new String[] {
             "showWarnings",
@@ -87,13 +87,13 @@ class AutoTrackingFunctionalParametersTest {
             "useIncrementalCompilation"
         }) {
             assertTrue(
-                    functionalParams.contains(paramName),
-                    "Should include '" + paramName + "' because it affects output or build outcome");
+                    cacheKeyParams.contains(paramName),
+                    "Should include '" + paramName + "' because changing it can cause a cache miss");
         }
     }
 
     @Test
-    void testMavenInstallPluginAutoTracksAllFunctionalParameters() {
+    void testMavenInstallPluginAutoTracksAllCacheKeyParameters() {
         PluginParameterLoader loader = new PluginParameterLoader();
         PluginParameterDefinition def = loader.load("maven-install-plugin");
 
@@ -102,23 +102,23 @@ class AutoTrackingFunctionalParametersTest {
         PluginParameterDefinition.GoalParameterDefinition installGoal = def.getGoal("install");
         assertNotNull(installGoal, "install goal should exist");
 
-        // Get all functional parameter names
-        Set<String> functionalParams = installGoal.getParameters().values().stream()
-                .filter(PluginParameterDefinition.ParameterDefinition::isFunctional)
+        // Get all cache-key parameter names
+        Set<String> cacheKeyParams = installGoal.getParameters().values().stream()
+                .filter(PluginParameterDefinition.ParameterDefinition::isCacheKey)
                 .map(PluginParameterDefinition.ParameterDefinition::getName)
                 .collect(Collectors.toSet());
 
         // The old defaults.xml had NO properties listed for maven-install-plugin
-        // Now auto-tracking should track all functional parameters
-        assertTrue(functionalParams.size() > 0, "Should auto-track functional parameters (old defaults.xml had 0)");
+        // Now auto-tracking should track all cache-key parameters
+        assertTrue(cacheKeyParams.size() > 0, "Should auto-track cache-key parameters (old defaults.xml had 0)");
 
         // Coordinates are parameters of install-file; install exposes its output-affecting controls.
-        assertTrue(functionalParams.contains("skip"), "Should track 'skip' parameter");
-        assertTrue(functionalParams.contains("installAtEnd"), "Should track 'installAtEnd' parameter");
+        assertTrue(cacheKeyParams.contains("skip"), "Should track 'skip' parameter");
+        assertTrue(cacheKeyParams.contains("installAtEnd"), "Should track 'installAtEnd' parameter");
     }
 
     @Test
-    void testBehavioralParametersNotAutoTracked() {
+    void testNonCacheKeyParametersNotAutoTracked() {
         PluginParameterLoader loader = new PluginParameterLoader();
         PluginParameterDefinition def = loader.load("maven-compiler-plugin");
 
@@ -127,19 +127,18 @@ class AutoTrackingFunctionalParametersTest {
         PluginParameterDefinition.GoalParameterDefinition compileGoal = def.getGoal("compile");
         assertNotNull(compileGoal);
 
-        // Get all behavioral parameter names
-        Set<String> behavioralParams = compileGoal.getParameters().values().stream()
-                .filter(PluginParameterDefinition.ParameterDefinition::isBehavioral)
+        // Get all non-cache-key parameter names
+        Set<String> nonCacheKeyParams = compileGoal.getParameters().values().stream()
+                .filter(param -> !param.isCacheKey())
                 .map(PluginParameterDefinition.ParameterDefinition::getName)
                 .collect(Collectors.toSet());
 
-        // Verify behavioral parameters exist in the definition
-        assertTrue(behavioralParams.contains("verbose"), "Definition should include 'verbose' as behavioral");
+        // Verify non-cache-key parameters exist in the definition
+        assertTrue(nonCacheKeyParams.contains("verbose"), "Definition should include 'verbose' as non-cache-key");
         assertTrue(
-                behavioralParams.contains("compilerReuseStrategy"),
-                "Definition should include 'compilerReuseStrategy' as behavioral");
+                nonCacheKeyParams.contains("compilerReuseStrategy"),
+                "Definition should include 'compilerReuseStrategy' as non-cache-key");
 
-        // Note: The auto-generation logic in CacheConfigImpl.generateReconciliationFromParameters()
-        // filters to only include functional parameters, so behavioral ones won't be tracked
+        // Note: auto-generation only includes cache-key parameters, so these won't be tracked.
     }
 }
