@@ -178,4 +178,12 @@ class PluginParameterValidationTest {
         PluginParameterDefinition compilerDef = loader.load("maven-compiler-plugin", null);
         assertNotNull(compilerDef);
     }
+
+    @Test
+    void testLoadPrefixedNamespaceDefinition() {
+        PluginParameterDefinition def = new PluginParameterLoader().load("maven-prefixed-plugin", "1.0.0");
+
+        assertNotNull(def);
+        assertNotNull(def.getGoal("execute").getParameter("source"));
+    }
 }
