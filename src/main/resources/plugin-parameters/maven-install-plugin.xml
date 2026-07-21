@@ -26,14 +26,14 @@
     <goal>
       <name>install</name>
       <parameters>
-        <!-- FUNCTIONAL: Skipping installation changes the produced local repository -->
+        <!-- cache-key=true: Skipping installation changes the produced local repository -->
         <parameter>
           <name>skip</name>
           <cache-key>true</cache-key>
           <description>Skip installation; changing it changes installed artifacts and local repository state</description>
         </parameter>
 
-        <!-- FUNCTIONAL: Affect installed artifacts or project state -->
+        <!-- cache-key=true: Changes installed artifacts or project state -->
         <parameter>
           <name>installAtEnd</name>
           <cache-key>true</cache-key>
