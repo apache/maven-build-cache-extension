@@ -27,7 +27,7 @@ jobs:
     name: Verify
     uses: apache/maven-gh-actions-shared/.github/workflows/maven-verify.yml@v5
     with:
-      maven4-enabled: false # no: we manually download and run tests with Maven 4
+      maven4-enabled: false
       matrix-exclude: '[ {"jdk": "8"} ]'
       ff-goal: '-P run-its,maven4.0 verify javadoc:jar'
       verify-goal: '-P run-its,maven4.0 verify javadoc:jar'

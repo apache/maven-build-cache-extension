@@ -38,12 +38,14 @@ Running Integration Tests
 ### Full test suite
 
 ```shell
-# Maven 4 (default)
+# Maven 3.9 (default)
 mvn verify -Prun-its
 
-# Maven 3
-mvn verify -Prun-its,maven3
+# Maven 3.10
+mvn verify -Prun-its,maven3.10
 ```
+
+Maven 4 support is incoming (waits for 4.0.0-rc-6).
 
 ### Smoke profile (quick developer check)
 
@@ -53,11 +55,11 @@ test per Maven project flavour (P01–P19) and per major cache trait (F1–F13).
 Typical runtime is significantly shorter than the full suite.
 
 ```shell
-# Maven 4
+# Maven 3.9 (default)
 mvn verify -Prun-its-smoke
 
-# Maven 3
-mvn verify -Prun-its-smoke,maven3
+# Maven 3.10
+mvn verify -Prun-its-smoke,maven3.10
 ```
 
 Tests are selected via the JUnit 5 tag `smoke`. To add a new test to the smoke

@@ -25,4 +25,4 @@ on:
 
 jobs:
   stale:
-    uses: 'apache/maven-gh-actions-shared/.github/workflows/stale.yml@v5'
+    uses: apache/maven-gh-actions-shared/.github/workflows/stale.yml@v5
