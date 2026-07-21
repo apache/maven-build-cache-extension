@@ -26,7 +26,7 @@
     <goal>
       <name>compile</name>
       <parameters>
-        <!-- FUNCTIONAL: Affect compiled bytecode or compilation behavior -->
+        <!-- FUNCTIONAL: Affect output, generated files, or build outcome -->
         <parameter>
           <name>source</name>
           <type>functional</type>
@@ -126,13 +126,13 @@
         </parameter>
         <parameter>
           <name>failOnError</name>
-          <type>behavioral</type>
-          <description>Fail build on compilation error</description>
+          <type>functional</type>
+          <description>Fail build on compilation error (changes the build outcome)</description>
         </parameter>
         <parameter>
           <name>failOnWarning</name>
-          <type>behavioral</type>
-          <description>Fail build on compilation warning</description>
+          <type>functional</type>
+          <description>Fail build on compilation warning (changes the build outcome)</description>
         </parameter>
         <parameter>
           <name>fork</name>
@@ -156,18 +156,18 @@
         </parameter>
         <parameter>
           <name>forceJavacCompilerUse</name>
-          <type>behavioral</type>
-          <description>Force use of javac compiler</description>
+          <type>functional</type>
+          <description>Force use of javac compiler (compiler implementation can affect output)</description>
         </parameter>
         <parameter>
           <name>staleMillis</name>
-          <type>behavioral</type>
-          <description>Staleness check interval for incremental compilation</description>
+          <type>functional</type>
+          <description>Staleness check interval for incremental compilation (can change generated files)</description>
         </parameter>
         <parameter>
           <name>useIncrementalCompilation</name>
-          <type>behavioral</type>
-          <description>Enable incremental compilation</description>
+          <type>functional</type>
+          <description>Enable incremental compilation (can change generated files and build outcome)</description>
         </parameter>
       </parameters>
     </goal>
@@ -273,13 +273,13 @@
         </parameter>
         <parameter>
           <name>failOnError</name>
-          <type>behavioral</type>
-          <description>Fail build on test compilation error</description>
+          <type>functional</type>
+          <description>Fail build on test compilation error (changes the build outcome)</description>
         </parameter>
         <parameter>
           <name>failOnWarning</name>
-          <type>behavioral</type>
-          <description>Fail build on test compilation warning</description>
+          <type>functional</type>
+          <description>Fail build on test compilation warning (changes the build outcome)</description>
         </parameter>
         <parameter>
           <name>fork</name>
@@ -303,18 +303,18 @@
         </parameter>
         <parameter>
           <name>forceJavacCompilerUse</name>
-          <type>behavioral</type>
-          <description>Force javac for test compilation</description>
+          <type>functional</type>
+          <description>Force javac for test compilation (compiler implementation can affect output)</description>
         </parameter>
         <parameter>
           <name>staleMillis</name>
-          <type>behavioral</type>
-          <description>Staleness check for test incremental compilation</description>
+          <type>functional</type>
+          <description>Staleness check for test incremental compilation (can change generated files)</description>
         </parameter>
         <parameter>
           <name>useIncrementalCompilation</name>
-          <type>behavioral</type>
-          <description>Enable incremental test compilation</description>
+          <type>functional</type>
+          <description>Enable incremental test compilation (can change generated files and build outcome)</description>
         </parameter>
       </parameters>
     </goal>
