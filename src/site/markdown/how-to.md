@@ -183,9 +183,10 @@ The build cache extension automatically tracks certain critical plugin propertie
 This default behavior prevents common cache invalidation issues, particularly in multi-module JPMS (Java Platform Module System)
 projects where compiler version changes can cause compilation failures.
 
-**Overriding Defaults:** When you explicitly configure `executionControl` for a plugin, your explicit configuration completely
-overrides the defaults for that plugin. For example, to track only the `release` property for maven-compiler-plugin instead
-of the functional parameters from `plugin-parameters/maven-compiler-plugin.xml`:
+**Overriding Defaults:** When you explicitly configure `executionControl` for a plugin goal, your explicit configuration
+overrides the built-in defaults for that matching plugin and goal. Other goals continue to use their defaults. For example,
+to track only the `release` property for the `compile` goal of maven-compiler-plugin instead of the functional parameters
+from `plugin-parameters/maven-compiler-plugin.xml`:
 
 ```xml
 <cache xmlns="http://maven.apache.org/BUILD-CACHE-CONFIG/1.2.0">
@@ -219,7 +220,7 @@ reconciliation configurations against known parameter definitions.
 All plugin parameters are categorized into two types:
 
 * **Functional Parameters**: Affect the compiled output or build artifacts (e.g., `source`, `target`, `release`, `encoding`)
-* **Behavioral Parameters**: Affect how the build runs but not the output (e.g., `verbose`, `fork`, `maxmem`, `skip`)
+* **Behavioral Parameters**: Affect how the build runs but not the output (e.g., `verbose`, `fork`, `maxmem`, `logLevel`)
 
 Only **functional** parameters should be tracked in reconciliation configurations, as behavioral parameters don't affect
 the build output and shouldn't invalidate the cache.

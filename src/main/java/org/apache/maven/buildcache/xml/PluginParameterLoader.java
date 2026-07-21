@@ -18,6 +18,7 @@
  */
 package org.apache.maven.buildcache.xml;
 
+import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
@@ -190,6 +191,15 @@ public class PluginParameterLoader {
 
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         factory.setNamespaceAware(true);
+        factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+        factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+        factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+        factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+        factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+        factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
+        factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
+        factory.setXIncludeAware(false);
+        factory.setExpandEntityReferences(false);
         DocumentBuilder builder = factory.newDocumentBuilder();
         Document doc = builder.parse(is);
 
@@ -201,7 +211,7 @@ public class PluginParameterLoader {
             definitions.add(parsePluginDefinition(root));
         } else {
             // Look for multiple <plugin> elements
-            NodeList pluginNodes = root.getElementsByTagName("plugin");
+            NodeList pluginNodes = root.getElementsByTagNameNS("*", "plugin");
             for (int i = 0; i < pluginNodes.getLength(); i++) {
                 Element pluginElement = (Element) pluginNodes.item(i);
                 definitions.add(parsePluginDefinition(pluginElement));
@@ -218,10 +228,10 @@ public class PluginParameterLoader {
 
         PluginParameterDefinition definition = new PluginParameterDefinition(groupId, actualArtifactId, minVersion);
 
-        NodeList goalsNodes = pluginElement.getElementsByTagName("goals");
+        NodeList goalsNodes = pluginElement.getElementsByTagNameNS("*", "goals");
         if (goalsNodes.getLength() > 0) {
             Element goalsElement = (Element) goalsNodes.item(0);
-            NodeList goalNodes = goalsElement.getElementsByTagName("goal");
+            NodeList goalNodes = goalsElement.getElementsByTagNameNS("*", "goal");
 
             for (int i = 0; i < goalNodes.getLength(); i++) {
                 Element goalElement = (Element) goalNodes.item(i);
@@ -236,10 +246,10 @@ public class PluginParameterLoader {
         String goalName = getTextContent(goalElement, "name");
         GoalParameterDefinition goal = new GoalParameterDefinition(goalName);
 
-        NodeList parametersNodes = goalElement.getElementsByTagName("parameters");
+        NodeList parametersNodes = goalElement.getElementsByTagNameNS("*", "parameters");
         if (parametersNodes.getLength() > 0) {
             Element parametersElement = (Element) parametersNodes.item(0);
-            NodeList parameterNodes = parametersElement.getElementsByTagName("parameter");
+            NodeList parameterNodes = parametersElement.getElementsByTagNameNS("*", "parameter");
 
             for (int i = 0; i < parameterNodes.getLength(); i++) {
                 Element paramElement = (Element) parameterNodes.item(i);
@@ -262,7 +272,7 @@ public class PluginParameterLoader {
     }
 
     private String getTextContent(Element parent, String tagName) {
-        NodeList nodes = parent.getElementsByTagName(tagName);
+        NodeList nodes = parent.getElementsByTagNameNS("*", tagName);
         if (nodes.getLength() > 0) {
             return nodes.item(0).getTextContent().trim();
         }
