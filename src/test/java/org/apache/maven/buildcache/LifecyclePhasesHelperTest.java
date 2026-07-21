@@ -35,11 +35,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -171,7 +170,8 @@ class LifecyclePhasesHelperTest {
         MojoExecution clean = mockedMojoExecution("clean");
         List<MojoExecution> cleanSegment = lifecyclePhasesHelper.getCleanSegment(
                 projectMock, Arrays.asList(clean, mockedMojoExecution("compile"), mockedMojoExecution("install")));
-        assertEquals(singletonList(clean), cleanSegment);
+
+        assertIterableEquals(singletonList(clean), cleanSegment);
     }
 
     /**
@@ -181,7 +181,7 @@ class LifecyclePhasesHelperTest {
     void getEmptyCleanSegment() {
         List<MojoExecution> cleanSegment = lifecyclePhasesHelper.getCleanSegment(
                 projectMock, Arrays.asList(mockedMojoExecution("compile"), mockedMojoExecution("install")));
-        assertEquals(emptyList(), cleanSegment);
+        assertTrue(cleanSegment.isEmpty());
     }
 
     /**
@@ -199,7 +199,7 @@ class LifecyclePhasesHelperTest {
                         // null lifecycle phase is possible in forked executions
                         mockedMojoExecution(null), mockedMojoExecution(null)));
 
-        assertEquals(emptyList(), cleanSegment);
+        assertTrue(cleanSegment.isEmpty());
     }
 
     /**
@@ -216,7 +216,7 @@ class LifecyclePhasesHelperTest {
                         // clean is overridden to "install" phase assuming forked execution
                         mockedMojoExecution("clean")));
 
-        assertEquals(emptyList(), cleanSegment);
+        assertTrue(cleanSegment.isEmpty());
     }
 
     @Test
@@ -230,7 +230,7 @@ class LifecyclePhasesHelperTest {
 
         List<MojoExecution> cachedSegment = lifecyclePhasesHelper.getCachedSegment(projectMock, mojoExecutions, build);
 
-        assertThat(cachedSegment).containsExactly(compile, test);
+        assertIterableEquals(Arrays.asList(compile, test), cachedSegment);
     }
 
     @Test
@@ -245,7 +245,7 @@ class LifecyclePhasesHelperTest {
 
         List<MojoExecution> cachedSegment = lifecyclePhasesHelper.getCachedSegment(projectMock, mojoExecutions, build);
 
-        assertThat(cachedSegment).isEmpty();
+        assertTrue(cachedSegment.isEmpty());
     }
 
     @Test
@@ -263,7 +263,7 @@ class LifecyclePhasesHelperTest {
 
         List<MojoExecution> cachedSegment = lifecyclePhasesHelper.getCachedSegment(projectMock, mojoExecutions, build);
 
-        assertEquals(mojoExecutions, cachedSegment);
+        assertIterableEquals(mojoExecutions, cachedSegment);
     }
 
     @ParameterizedTest
@@ -279,7 +279,7 @@ class LifecyclePhasesHelperTest {
 
         List<MojoExecution> cachedSegment = lifecyclePhasesHelper.getCachedSegment(projectMock, mojoExecutions, build);
 
-        assertEquals(mojoExecutions, cachedSegment);
+        assertIterableEquals(mojoExecutions, cachedSegment);
     }
 
     @Test
@@ -295,7 +295,7 @@ class LifecyclePhasesHelperTest {
         List<MojoExecution> notCachedSegment =
                 lifecyclePhasesHelper.getPostCachedSegment(projectMock, mojoExecutions, build);
 
-        assertThat(notCachedSegment).containsExactly(test, install);
+        assertIterableEquals(Arrays.asList(test, install), notCachedSegment);
     }
 
     @Test
@@ -311,7 +311,7 @@ class LifecyclePhasesHelperTest {
         List<MojoExecution> notCachedSegment =
                 lifecyclePhasesHelper.getPostCachedSegment(projectMock, mojoExecutions, build);
 
-        assertThat(notCachedSegment).isEqualTo(mojoExecutions);
+        assertIterableEquals(mojoExecutions, notCachedSegment);
     }
 
     @Test
@@ -330,7 +330,7 @@ class LifecyclePhasesHelperTest {
         List<MojoExecution> cachedSegment =
                 lifecyclePhasesHelper.getPostCachedSegment(projectMock, mojoExecutions, build);
 
-        assertThat(cachedSegment).isEqualTo(mojoExecutions);
+        assertIterableEquals(mojoExecutions, cachedSegment);
     }
 
     @ParameterizedTest
@@ -347,7 +347,7 @@ class LifecyclePhasesHelperTest {
         List<MojoExecution> notCachedSegment =
                 lifecyclePhasesHelper.getPostCachedSegment(projectMock, mojoExecutions, cachedBuild);
 
-        assertThat(notCachedSegment).isEmpty();
+        assertTrue(notCachedSegment.isEmpty());
     }
 
     private void publishForkedProjectEvent(MojoExecution origin) {
