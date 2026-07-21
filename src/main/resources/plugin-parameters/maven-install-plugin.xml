@@ -26,59 +26,14 @@
     <goal>
       <name>install</name>
       <parameters>
-        <!-- FUNCTIONAL: Affect what gets installed -->
+        <!-- FUNCTIONAL: Skipping installation changes the produced local repository -->
         <parameter>
-          <name>file</name>
+          <name>skip</name>
           <type>functional</type>
-          <description>The file to install</description>
-        </parameter>
-        <parameter>
-          <name>groupId</name>
-          <type>functional</type>
-          <description>GroupId of the artifact</description>
-        </parameter>
-        <parameter>
-          <name>artifactId</name>
-          <type>functional</type>
-          <description>ArtifactId of the artifact</description>
-        </parameter>
-        <parameter>
-          <name>version</name>
-          <type>functional</type>
-          <description>Version of the artifact</description>
-        </parameter>
-        <parameter>
-          <name>packaging</name>
-          <type>functional</type>
-          <description>Packaging type of the artifact</description>
-        </parameter>
-        <parameter>
-          <name>classifier</name>
-          <type>functional</type>
-          <description>Classifier of the artifact</description>
-        </parameter>
-        <parameter>
-          <name>pomFile</name>
-          <type>functional</type>
-          <description>POM file to install alongside the artifact</description>
-        </parameter>
-        <parameter>
-          <name>generatePom</name>
-          <type>functional</type>
-          <description>Generate a minimal POM if none provided</description>
-        </parameter>
-        <parameter>
-          <name>createChecksum</name>
-          <type>functional</type>
-          <description>Create MD5 and SHA1 checksums</description>
+          <description>Skip installation</description>
         </parameter>
 
         <!-- BEHAVIORAL: Affect how installation happens -->
-        <parameter>
-          <name>skip</name>
-          <type>behavioral</type>
-          <description>Skip installation</description>
-        </parameter>
         <parameter>
           <name>installAtEnd</name>
           <type>behavioral</type>
@@ -137,14 +92,19 @@
           <description>Generate a minimal POM</description>
         </parameter>
         <parameter>
-          <name>createChecksum</name>
+          <name>javadoc</name>
           <type>functional</type>
-          <description>Create checksums</description>
+          <description>Javadoc artifact to install</description>
         </parameter>
         <parameter>
-          <name>skip</name>
-          <type>behavioral</type>
-          <description>Skip file installation</description>
+          <name>localRepositoryPath</name>
+          <type>functional</type>
+          <description>Local repository path</description>
+        </parameter>
+        <parameter>
+          <name>sources</name>
+          <type>functional</type>
+          <description>Sources artifact to install</description>
         </parameter>
       </parameters>
     </goal>
