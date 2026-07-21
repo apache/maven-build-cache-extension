@@ -26,7 +26,7 @@
     <goal>
       <name>compile</name>
       <parameters>
-        <!-- FUNCTIONAL: Affect output, generated files, or build outcome -->
+        <!-- Functional parameters affect output, generated files, or build outcome; others are behavioral. -->
         <parameter>
           <name>source</name>
           <type>functional</type>
@@ -103,7 +103,7 @@
           <description>Enable preview features</description>
         </parameter>
 
-        <!-- BEHAVIORAL by default; parameters that affect output are marked FUNCTIONAL -->
+        <!-- FUNCTIONAL: Affect output, generated files, or build outcome -->
         <parameter>
           <name>verbose</name>
           <type>behavioral</type>
@@ -111,13 +111,13 @@
         </parameter>
         <parameter>
           <name>showWarnings</name>
-          <type>behavioral</type>
-          <description>Show compilation warnings</description>
+          <type>functional</type>
+          <description>Show compilation warnings (can change the build outcome with failOnWarning)</description>
         </parameter>
         <parameter>
           <name>showDeprecation</name>
-          <type>behavioral</type>
-          <description>Show deprecation warnings</description>
+          <type>functional</type>
+          <description>Show deprecation warnings (can change the build outcome with failOnWarning)</description>
         </parameter>
         <parameter>
           <name>skipMain</name>
@@ -136,18 +136,18 @@
         </parameter>
         <parameter>
           <name>fork</name>
-          <type>behavioral</type>
-          <description>Fork compiler into separate process</description>
+          <type>functional</type>
+          <description>Fork compiler into separate process (can change the compiler, output, or outcome)</description>
         </parameter>
         <parameter>
           <name>maxmem</name>
-          <type>behavioral</type>
-          <description>Maximum memory for compiler process</description>
+          <type>functional</type>
+          <description>Maximum memory for compiler process (can change the build outcome)</description>
         </parameter>
         <parameter>
           <name>meminitial</name>
-          <type>behavioral</type>
-          <description>Initial memory for compiler process</description>
+          <type>functional</type>
+          <description>Initial memory for compiler process (can change the build outcome)</description>
         </parameter>
         <parameter>
           <name>compilerReuseStrategy</name>
@@ -258,13 +258,13 @@
         </parameter>
         <parameter>
           <name>showWarnings</name>
-          <type>behavioral</type>
-          <description>Show test compilation warnings</description>
+          <type>functional</type>
+          <description>Show test compilation warnings (can change the build outcome with failOnWarning)</description>
         </parameter>
         <parameter>
           <name>showDeprecation</name>
-          <type>behavioral</type>
-          <description>Show test deprecation warnings</description>
+          <type>functional</type>
+          <description>Show test deprecation warnings (can change the build outcome with failOnWarning)</description>
         </parameter>
         <parameter>
           <name>skip</name>
@@ -283,18 +283,18 @@
         </parameter>
         <parameter>
           <name>fork</name>
-          <type>behavioral</type>
-          <description>Fork test compiler process</description>
+          <type>functional</type>
+          <description>Fork test compiler process (can change the compiler, output, or outcome)</description>
         </parameter>
         <parameter>
           <name>maxmem</name>
-          <type>behavioral</type>
-          <description>Maximum memory for test compiler</description>
+          <type>functional</type>
+          <description>Maximum memory for test compiler (can change the build outcome)</description>
         </parameter>
         <parameter>
           <name>meminitial</name>
-          <type>behavioral</type>
-          <description>Initial memory for test compiler</description>
+          <type>functional</type>
+          <description>Initial memory for test compiler (can change the build outcome)</description>
         </parameter>
         <parameter>
           <name>compilerReuseStrategy</name>
