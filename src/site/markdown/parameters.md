@@ -111,7 +111,9 @@ The following elements are supported in `maven-build-cache-config.xml` but have 
 ```xml
 
 <configuration>
-    <attachedOutputs preservePermissions="true">
+    <attachedOutputs>
+        <preservePermissions>true</preservePermissions>
+        <preserveTimestamps>true</preserveTimestamps>
         <dirNames>
             <dirName>generated-sources/apt</dirName>
         </dirNames>
@@ -119,9 +121,10 @@ The following elements are supported in `maven-build-cache-config.xml` but have 
 </configuration>
 ```
 
-| Element/Attribute     | Default | Description                                                                                              |
+| Element               | Default | Description                                                                                              |
 |-----------------------|---------|----------------------------------------------------------------------------------------------------------|
 | `preservePermissions` | `true`  | Preserve Unix file-system permissions when restoring artifacts from cache. Requires a POSIX file system. |
+| `preserveTimestamps`  | `true`  | Preserve file and directory timestamps when saving and restoring cached outputs.                        |
 | `dirNames/dirName`    | —       | Additional output directories to include in cached artifacts beyond standard Maven output directories.   |
 
 #### `<projectVersioning>` — version handling in cached artifacts
