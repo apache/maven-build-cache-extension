@@ -33,16 +33,11 @@
           <description>Skip installation</description>
         </parameter>
 
-        <!-- BEHAVIORAL: Affect how installation happens -->
+        <!-- FUNCTIONAL: Affect installed artifacts or project state -->
         <parameter>
           <name>installAtEnd</name>
-          <type>behavioral</type>
-          <description>Install artifacts at end of multi-module build</description>
-        </parameter>
-        <parameter>
-          <name>updateReleaseInfo</name>
-          <type>behavioral</type>
-          <description>Update maven-metadata.xml with release info</description>
+          <type>functional</type>
+          <description>Install artifacts at end of multi-module build (changes installed project state on failure)</description>
         </parameter>
       </parameters>
     </goal>
