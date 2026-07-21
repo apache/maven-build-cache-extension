@@ -30,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Tests that auto-tracking from plugin parameter definitions works correctly.
  * Verifies that all cache-key parameters are automatically tracked, not just a subset.
  */
-class AutoTrackingFunctionalParametersTest {
+class AutoTrackingCacheKeyParametersTest {
 
     @Test
     void testMavenCompilerPluginAutoTracksAllCacheKeyParameters() {
