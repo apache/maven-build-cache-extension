@@ -74,14 +74,10 @@ class PluginParameterValidationTest {
         GoalParameterDefinition installGoal = def.getGoal("install");
         assertNotNull(installGoal, "install goal should exist");
 
-        // Verify functional parameters
-        assertTrue(installGoal.hasParameter("file"), "Should have 'file' parameter");
-        assertTrue(installGoal.hasParameter("groupId"), "Should have 'groupId' parameter");
-
-        // Verify behavioral parameters
+        // The lifecycle install goal only exposes skip as an output-affecting parameter.
         assertTrue(installGoal.hasParameter("skip"), "Should have 'skip' parameter");
         ParameterDefinition skipParam = installGoal.getParameter("skip");
-        assertEquals(ParameterType.BEHAVIORAL, skipParam.getType());
+        assertEquals(ParameterType.FUNCTIONAL, skipParam.getType());
     }
 
     @Test

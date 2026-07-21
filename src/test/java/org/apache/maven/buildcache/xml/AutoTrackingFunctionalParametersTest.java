@@ -96,11 +96,8 @@ class AutoTrackingFunctionalParametersTest {
         // Now auto-tracking should track all functional parameters
         assertTrue(functionalParams.size() > 0, "Should auto-track functional parameters (old defaults.xml had 0)");
 
-        // Verify key functional parameters are tracked
-        assertTrue(functionalParams.contains("file"), "Should track 'file' parameter");
-        assertTrue(functionalParams.contains("groupId"), "Should track 'groupId' parameter");
-        assertTrue(functionalParams.contains("artifactId"), "Should track 'artifactId' parameter");
-        assertTrue(functionalParams.contains("version"), "Should track 'version' parameter");
+        // The lifecycle install goal only exposes skip. Coordinates are parameters of install-file.
+        assertTrue(functionalParams.contains("skip"), "Should track 'skip' parameter");
     }
 
     @Test

@@ -54,7 +54,7 @@ public class PluginParameterLoader {
 
     /**
      * Load parameter definitions for a plugin by artifact ID and version.
-     * If version is provided, finds the best matching definition (highest minVersion <= actual version).
+     * If version is provided, finds the best matching definition (highest minVersion &lt;= actual version).
      * If version is null, returns any definition for the artifactId.
      */
     public PluginParameterDefinition load(String artifactId, String pluginVersion) {
