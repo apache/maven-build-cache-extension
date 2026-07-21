@@ -877,7 +877,11 @@ public class CacheControllerImpl implements CacheController {
             try {
                 Field field = ReflectionUtils.getFieldByNameIncludingSuperclasses(propertyName, mojo.getClass());
                 if (field != null) {
-                    final Object value = ReflectionUtils.getValueIncludingSuperclasses(propertyName, mojo);
+                    final Object value = normalizeMojoProperty(
+                            propertyName,
+                            ReflectionUtils.getValueIncludingSuperclasses(propertyName, mojo),
+                            mojoExecution,
+                            executionEvent.getProject());
                     CacheUtils.addProperty(execution, propertyName, value, baseDirPath, tracked);
                     continue;
                 }
@@ -917,6 +921,30 @@ public class CacheControllerImpl implements CacheController {
                 }
             }
         }
+    }
+
+    private Object normalizeMojoProperty(
+            String propertyName, Object value, MojoExecution mojoExecution, MavenProject project) {
+        if (!(value instanceof List)
+                || !"compilerArgs".equals(propertyName)
+                || mojoExecution.getPlugin() == null
+                || !"maven-compiler-plugin".equals(mojoExecution.getPlugin().getArtifactId())) {
+            return value;
+        }
+
+        List<?> args = (List<?>) value;
+        List<Object> normalized = new ArrayList<>(args.size());
+        for (int i = 0; i < args.size(); i++) {
+            Object arg = args.get(i);
+            if ("--module-version".equals(arg)
+                    && i + 1 < args.size()
+                    && Objects.equals(project.getVersion(), args.get(i + 1))) {
+                i++;
+            } else {
+                normalized.add(arg);
+            }
+        }
+        return normalized.isEmpty() ? null : normalized;
     }
 
     private static Method getGetter(String fieldName, Class<?> clazz) {
