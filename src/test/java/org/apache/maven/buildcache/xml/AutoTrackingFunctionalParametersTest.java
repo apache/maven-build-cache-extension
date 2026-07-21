@@ -74,6 +74,13 @@ class AutoTrackingFunctionalParametersTest {
         assertTrue(
                 functionalParams.contains("annotationProcessorPaths"),
                 "Should include 'annotationProcessorPaths' parameter (auto-tracked, not in old defaults.xml)");
+        for (String paramName : new String[] {
+            "failOnError", "failOnWarning", "forceJavacCompilerUse", "staleMillis", "useIncrementalCompilation"
+        }) {
+            assertTrue(
+                    functionalParams.contains(paramName),
+                    "Should include '" + paramName + "' because it affects output or build outcome");
+        }
     }
 
     @Test
@@ -96,8 +103,9 @@ class AutoTrackingFunctionalParametersTest {
         // Now auto-tracking should track all functional parameters
         assertTrue(functionalParams.size() > 0, "Should auto-track functional parameters (old defaults.xml had 0)");
 
-        // The lifecycle install goal only exposes skip. Coordinates are parameters of install-file.
+        // Coordinates are parameters of install-file; install exposes its output-affecting controls.
         assertTrue(functionalParams.contains("skip"), "Should track 'skip' parameter");
+        assertTrue(functionalParams.contains("installAtEnd"), "Should track 'installAtEnd' parameter");
     }
 
     @Test

@@ -219,11 +219,18 @@ reconciliation configurations against known parameter definitions.
 
 All plugin parameters are categorized into two types:
 
-* **Functional Parameters**: Affect the compiled output or build artifacts (e.g., `source`, `target`, `release`, `encoding`)
-* **Behavioral Parameters**: Affect how the build runs but not the output (e.g., `verbose`, `fork`, `maxmem`, `logLevel`)
+* **Functional / output-affecting**: Changes the plugin's externally observable result, generated files, installed artifacts,
+  project state, success/failure outcome, or artifact contents.
+* **Behavioral / execution-policy**: Changes how the plugin performs the same operation without changing that observable result
+  or outcome.
 
-Only **functional** parameters should be tracked in reconciliation configurations, as behavioral parameters don't affect
-the build output and shouldn't invalidate the cache.
+Examples:
+
+* **Functional Parameters**: `source`, `target`, `release`, and `encoding`
+* **Behavioral Parameters**: `verbose`, `fork`, `maxmem`, and `logLevel`
+
+Only **functional** parameters should be tracked in reconciliation configurations, as behavioral parameters do not affect
+the result or outcome and should not invalidate the cache.
 
 #### Validation Features
 

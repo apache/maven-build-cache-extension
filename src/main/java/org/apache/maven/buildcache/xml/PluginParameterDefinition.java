@@ -136,12 +136,14 @@ public class PluginParameterDefinition {
      */
     public enum ParameterType {
         /**
-         * Functional parameters affect the compiled output or artifacts
+         * Functional parameters affect the externally observable result, generated files, installed artifacts, project state,
+         * success/failure outcome, or artifact contents
          */
         FUNCTIONAL,
 
         /**
-         * Behavioral parameters affect how the build runs but not the output
+         * Behavioral parameters change how the plugin performs the same operation without changing that observable result or
+         * outcome
          */
         BEHAVIORAL
     }
