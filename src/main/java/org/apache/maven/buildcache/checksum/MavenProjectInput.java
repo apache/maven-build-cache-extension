@@ -838,21 +838,15 @@ public class MavenProjectInput {
             return DtoUtils.createDigestedFile(artifact, hash);
         }
 
-        // Handle special dependency types that have implicit classifiers
-        String classifier = dependency.getClassifier();
-        String extension = null;
-
-        // test-jar type requires "tests" classifier and "jar" extension
-        if ("test-jar".equals(dependency.getType()) && (classifier == null || classifier.isEmpty())) {
-            classifier = "tests";
-            extension = "jar";
-        }
-
+        // Maven 3.x ArtifactHandlerManager NEVER returns null
+        ArtifactHandler handler = artifactHandlerManager.getArtifactHandler(dependency.getType());
         org.eclipse.aether.artifact.Artifact dependencyArtifact = new org.eclipse.aether.artifact.DefaultArtifact(
                 dependency.getGroupId(),
                 dependency.getArtifactId(),
-                classifier,
-                extension,
+                dependency.getClassifier() == null // dependency wins
+                        ? handler.getClassifier()
+                        : dependency.getClassifier(),
+                handler.getExtension(),
                 dependency.getVersion(),
                 new DefaultArtifactType(dependency.getType()));
         ArtifactRequest artifactRequest = new ArtifactRequest().setArtifact(dependencyArtifact);
