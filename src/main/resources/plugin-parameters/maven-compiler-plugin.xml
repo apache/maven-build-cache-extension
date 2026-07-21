@@ -120,11 +120,6 @@
           <description>Show deprecation warnings</description>
         </parameter>
         <parameter>
-          <name>skip</name>
-          <type>functional</type>
-          <description>Skip compilation entirely (no bytecode produced when true)</description>
-        </parameter>
-        <parameter>
           <name>skipMain</name>
           <type>functional</type>
           <description>Skip compiling main sources (no main bytecode produced when true)</description>
