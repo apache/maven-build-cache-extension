@@ -838,18 +838,15 @@ public class MavenProjectInput {
             return DtoUtils.createDigestedFile(artifact, hash);
         }
 
+        // Maven 3.x ArtifactHandlerManager NEVER returns null
         ArtifactHandler handler = artifactHandlerManager.getArtifactHandler(dependency.getType());
-        String classifier = dependency.getClassifier() == null
-                        || dependency.getClassifier().trim().isEmpty()
-                ? handler.getClassifier()
-                : dependency.getClassifier();
-        String extension = handler.getExtension();
-
         org.eclipse.aether.artifact.Artifact dependencyArtifact = new org.eclipse.aether.artifact.DefaultArtifact(
                 dependency.getGroupId(),
                 dependency.getArtifactId(),
-                classifier,
-                extension,
+                dependency.getClassifier() == null // dependency wins
+                        ? handler.getClassifier()
+                        : dependency.getClassifier(),
+                handler.getExtension(),
                 dependency.getVersion(),
                 new DefaultArtifactType(dependency.getType()));
         ArtifactRequest artifactRequest = new ArtifactRequest().setArtifact(dependencyArtifact);
