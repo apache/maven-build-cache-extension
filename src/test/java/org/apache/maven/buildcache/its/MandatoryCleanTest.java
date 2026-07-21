@@ -52,7 +52,7 @@ class MandatoryCleanTest {
         Path tempDirectory = Files.createTempDirectory("simple-mandatory-clean");
         verifier.getCliOptions().clear();
         verifier.addCliOption("-D" + CACHE_LOCATION_PROPERTY_NAME + "=" + tempDirectory.toAbsolutePath());
-        verifier.addCliOption("-X"); // --debug means REMOTE DEBUGGING with Maven 4 (and always was)
+        verifier.addCliOption("-X");
 
         verifier.setLogFileName("../log-1.txt");
         verifier.executeGoal("verify");
@@ -100,7 +100,7 @@ class MandatoryCleanTest {
     void disabledViaProperty(Verifier verifier) throws VerificationException {
 
         verifier.setAutoclean(false);
-        verifier.addCliOption("-X"); // --debug means REMOTE DEBUGGING with Maven 4 (and always was)
+        verifier.addCliOption("-X");
 
         verifier.setLogFileName("../log-1.txt");
         verifier.executeGoal("verify");
@@ -120,7 +120,7 @@ class MandatoryCleanTest {
 
         verifier.setLogFileName("../log-2.txt");
         verifier.getCliOptions().clear();
-        verifier.addCliOption("-X"); // --debug means REMOTE DEBUGGING with Maven 4 (and always was)
+        verifier.addCliOption("-X");
         // With "true", we do not change the initially expected behaviour
         verifier.addCliOption("-D" + CacheConfigImpl.MANDATORY_CLEAN + "=true");
         verifier.executeGoal("verify");
@@ -140,7 +140,7 @@ class MandatoryCleanTest {
 
         // With "false", we remove the need for the clean phase
         verifier.getCliOptions().clear();
-        verifier.addCliOption("-X"); // --debug means REMOTE DEBUGGING with Maven 4 (and always was)
+        verifier.addCliOption("-X");
         verifier.addCliOption("-D" + CacheConfigImpl.MANDATORY_CLEAN + "=false");
         verifier.setLogFileName("../log-3.txt");
         verifier.executeGoal("verify");
