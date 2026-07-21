@@ -38,11 +38,14 @@ Running Integration Tests
 ### Full test suite
 
 ```shell
-# Maven 4 (default)
+# Maven 3.9 (default)
 mvn verify -Prun-its
 
-# Maven 3
-mvn verify -Prun-its,maven3
+# Maven 3.10
+mvn verify -Prun-its,maven3.10
+
+# Maven 4.0 (will fail, waits 4.0.0-rc-6)
+mvn verify -Prun-its,maven4.0
 ```
 
 ### Smoke profile (quick developer check)

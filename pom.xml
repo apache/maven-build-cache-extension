@@ -521,8 +521,9 @@ under the License.
         Excludes slow/environment-specific tests (Docker, toolchains, Maven 4-only).
 
         Usage:
-          mvn verify -Prun-its-smoke                  # Maven 4 (default)
-          mvn verify -Prun-its-smoke,maven3           # Maven 3
+          mvn verify -Prun-its-smoke                  # Maven 3.9 (default)
+          mvn verify -Prun-its-smoke,maven3.10        # Maven 3.10
+          mvn verify -Prun-its-smoke,maven4.0         # Maven 4.0
       -->
       <id>run-its-smoke</id>
       <build>
