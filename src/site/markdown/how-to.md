@@ -227,7 +227,7 @@ All plugin parameters are categorized into two types:
 Examples:
 
 * **Functional Parameters**: `source`, `target`, `release`, and `encoding`
-* **Behavioral Parameters**: `verbose`, `fork`, `maxmem`, and `logLevel`
+* **Behavioral Parameters**: `verbose`, `compilerReuseStrategy`, and `logLevel`
 
 Only **functional** parameters should be tracked in reconciliation configurations, as behavioral parameters do not affect
 the result or outcome and should not invalidate the cache.

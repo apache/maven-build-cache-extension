@@ -75,7 +75,16 @@ class AutoTrackingFunctionalParametersTest {
                 functionalParams.contains("annotationProcessorPaths"),
                 "Should include 'annotationProcessorPaths' parameter (auto-tracked, not in old defaults.xml)");
         for (String paramName : new String[] {
-            "failOnError", "failOnWarning", "forceJavacCompilerUse", "staleMillis", "useIncrementalCompilation"
+            "showWarnings",
+            "showDeprecation",
+            "fork",
+            "maxmem",
+            "meminitial",
+            "failOnError",
+            "failOnWarning",
+            "forceJavacCompilerUse",
+            "staleMillis",
+            "useIncrementalCompilation"
         }) {
             assertTrue(
                     functionalParams.contains(paramName),
@@ -126,7 +135,9 @@ class AutoTrackingFunctionalParametersTest {
 
         // Verify behavioral parameters exist in the definition
         assertTrue(behavioralParams.contains("verbose"), "Definition should include 'verbose' as behavioral");
-        assertTrue(behavioralParams.contains("fork"), "Definition should include 'fork' as behavioral");
+        assertTrue(
+                behavioralParams.contains("compilerReuseStrategy"),
+                "Definition should include 'compilerReuseStrategy' as behavioral");
 
         // Note: The auto-generation logic in CacheConfigImpl.generateReconciliationFromParameters()
         // filters to only include functional parameters, so behavioral ones won't be tracked
