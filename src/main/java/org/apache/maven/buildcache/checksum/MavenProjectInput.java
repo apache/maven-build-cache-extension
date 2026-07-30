@@ -384,7 +384,13 @@ public class MavenProjectInput {
         for (Include include : includes) {
             final String path = include.getValue();
             final String glob = defaultIfEmpty(include.getGlob(), projectGlob);
-            startWalk(Paths.get(path), glob, include.isRecursive(), collectedFiles, visitedDirs);
+            startWalk(
+                    Paths.get(path),
+                    glob,
+                    include.isRecursive(),
+                    include.isIncludeHidden(),
+                    collectedFiles,
+                    visitedDirs);
         }
 
         long walkKnownPathsFinished = System.currentTimeMillis() - start;
@@ -428,15 +434,31 @@ public class MavenProjectInput {
      */
     private void startWalk(
             Path candidate, String glob, boolean recursive, List<Path> collectedFiles, Set<WalkKey> visitedDirs) {
+        startWalk(candidate, glob, recursive, false, collectedFiles, visitedDirs);
+    }
+
+    /**
+     * entry point for directory walk
+     *
+     * @param includeHidden if true, hidden files and directories (see {@link #isHidden(Path)}) are not
+     *                       skipped when scanning this candidate path
+     */
+    private void startWalk(
+            Path candidate,
+            String glob,
+            boolean recursive,
+            boolean includeHidden,
+            List<Path> collectedFiles,
+            Set<WalkKey> visitedDirs) {
         Path normalized = convertToAbsolutePath(candidate);
-        WalkKey key = new WalkKey(normalized, glob, recursive);
+        WalkKey key = new WalkKey(normalized, glob, recursive, includeHidden);
         if (visitedDirs.contains(key) || !Files.exists(normalized)) {
             return;
         }
 
         if (Files.isDirectory(normalized)) {
             if (baseDirPath.startsWith(normalized)) { // requested to walk parent, can do only non recursive
-                key = new WalkKey(normalized, glob, false);
+                key = new WalkKey(normalized, glob, false, includeHidden);
             }
             try {
                 walkDir(key, collectedFiles, visitedDirs);
@@ -498,9 +520,9 @@ public class MavenProjectInput {
             @Override
             public FileVisitResult preVisitDirectory(Path path, BasicFileAttributes basicFileAttributes)
                     throws IOException {
-                WalkKey currentDirKey =
-                        new WalkKey(path.toAbsolutePath().normalize(), key.getGlob(), key.isRecursive());
-                if (isHidden(path)) {
+                WalkKey currentDirKey = new WalkKey(
+                        path.toAbsolutePath().normalize(), key.getGlob(), key.isRecursive(), key.isIncludeHidden());
+                if (!key.isIncludeHidden() && isHidden(path)) {
                     LOGGER.debug("Skipping subtree (hidden): {}", path);
                     return FileVisitResult.SKIP_SUBTREE;
                 } else if (!isReadable(path)) {
@@ -514,7 +536,8 @@ public class MavenProjectInput {
                     return FileVisitResult.SKIP_SUBTREE;
                 }
 
-                walkDirectoryFiles(path, collectedFiles, key.getGlob(), exclusionResolver::excludesPath);
+                walkDirectoryFiles(
+                        path, collectedFiles, key.getGlob(), key.isIncludeHidden(), exclusionResolver::excludesPath);
 
                 if (!key.isRecursive()) {
                     LOGGER.debug("Skipping subtree (non recursive): {}", path);
@@ -609,7 +632,8 @@ public class MavenProjectInput {
         return null;
     }
 
-    static void walkDirectoryFiles(Path dir, List<Path> collectedFiles, String glob, Predicate<Path> mustBeSkipped) {
+    static void walkDirectoryFiles(
+            Path dir, List<Path> collectedFiles, String glob, boolean includeHidden, Predicate<Path> mustBeSkipped) {
         if (!Files.isDirectory(dir)) {
             return;
         }
@@ -621,7 +645,7 @@ public class MavenProjectInput {
                         continue;
                     }
                     File file = entry.toFile();
-                    if (file.isFile() && !isHidden(entry) && isReadable(entry)) {
+                    if (file.isFile() && (includeHidden || !isHidden(entry)) && isReadable(entry)) {
                         collectedFiles.add(entry);
                     }
                 }

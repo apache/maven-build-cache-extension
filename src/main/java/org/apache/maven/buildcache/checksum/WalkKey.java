@@ -28,11 +28,17 @@ public class WalkKey {
     private final Path normalized;
     private final String glob;
     private final boolean recursive;
+    private final boolean includeHidden;
 
     public WalkKey(Path normalized, String glob, boolean recursive) {
+        this(normalized, glob, recursive, false);
+    }
+
+    public WalkKey(Path normalized, String glob, boolean recursive, boolean includeHidden) {
         this.normalized = normalized;
         this.glob = glob;
         this.recursive = recursive;
+        this.includeHidden = includeHidden;
     }
 
     @Override
@@ -49,6 +55,9 @@ public class WalkKey {
         if (recursive != key.recursive) {
             return false;
         }
+        if (includeHidden != key.includeHidden) {
+            return false;
+        }
         if (!normalized.equals(key.normalized)) {
             return false;
         }
@@ -60,6 +69,7 @@ public class WalkKey {
         int result = normalized.hashCode();
         result = 31 * result + glob.hashCode();
         result = 31 * result + (recursive ? 1 : 0);
+        result = 31 * result + (includeHidden ? 1 : 0);
         return result;
     }
 
@@ -75,8 +85,13 @@ public class WalkKey {
         return recursive;
     }
 
+    public boolean isIncludeHidden() {
+        return includeHidden;
+    }
+
     @Override
     public String toString() {
-        return "WalkKey{" + "normalized=" + normalized + ", glob='" + glob + '\'' + ", recursive=" + recursive + '}';
+        return "WalkKey{" + "normalized=" + normalized + ", glob='" + glob + '\'' + ", recursive=" + recursive
+                + ", includeHidden=" + includeHidden + '}';
     }
 }

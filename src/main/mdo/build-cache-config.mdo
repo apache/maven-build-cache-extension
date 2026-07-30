@@ -951,6 +951,15 @@ under the License.
                     <type>String</type>
                     <description>Files in a directory are filtered by matching their names against this glob.</description>
                 </field>
+                <field xml.attribute="true">
+                    <name>includeHidden</name>
+                    <type>boolean</type>
+                    <description><![CDATA[By default, hidden files and directories (as determined by
+                        <code>Files.isHidden</code>, or by a name starting with a dot) are always skipped when
+                        scanning for input files, even if they would otherwise match this include. Set to
+                        <code>true</code> to also scan hidden entries under this include.]]></description>
+                    <defaultValue>false</defaultValue>
+                </field>
             </fields>
         </class>
 
