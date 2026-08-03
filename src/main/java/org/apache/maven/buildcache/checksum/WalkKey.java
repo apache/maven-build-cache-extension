@@ -30,6 +30,10 @@ public class WalkKey {
     private final boolean recursive;
     private final boolean includeHidden;
 
+    /**
+     * @deprecated use {@link #WalkKey(Path, String, boolean, boolean)} instead
+     */
+    @Deprecated
     public WalkKey(Path normalized, String glob, boolean recursive) {
         this(normalized, glob, recursive, false);
     }

@@ -362,21 +362,23 @@ public class MavenProjectInput {
         org.apache.maven.model.Build build = project.getBuild();
 
         final boolean recursive = true;
-        startWalk(Paths.get(build.getSourceDirectory()), projectGlob, recursive, collectedFiles, visitedDirs);
+        startWalk(Paths.get(build.getSourceDirectory()), projectGlob, recursive, false, collectedFiles, visitedDirs);
         for (Resource resource : build.getResources()) {
-            startWalk(Paths.get(resource.getDirectory()), projectGlob, recursive, collectedFiles, visitedDirs);
+            startWalk(Paths.get(resource.getDirectory()), projectGlob, recursive, false, collectedFiles, visitedDirs);
         }
 
-        startWalk(Paths.get(build.getTestSourceDirectory()), projectGlob, recursive, collectedFiles, visitedDirs);
+        startWalk(
+                Paths.get(build.getTestSourceDirectory()), projectGlob, recursive, false, collectedFiles, visitedDirs);
         for (Resource testResource : build.getTestResources()) {
-            startWalk(Paths.get(testResource.getDirectory()), projectGlob, recursive, collectedFiles, visitedDirs);
+            startWalk(
+                    Paths.get(testResource.getDirectory()), projectGlob, recursive, false, collectedFiles, visitedDirs);
         }
 
         Properties properties = project.getProperties();
         for (String name : properties.stringPropertyNames()) {
             if (name.startsWith(CACHE_INPUT_NAME) && !CACHE_INPUT_GLOB_NAME.equals(name)) {
                 String path = properties.getProperty(name);
-                startWalk(Paths.get(path), projectGlob, recursive, collectedFiles, visitedDirs);
+                startWalk(Paths.get(path), projectGlob, recursive, false, collectedFiles, visitedDirs);
             }
         }
 
@@ -427,14 +429,6 @@ public class MavenProjectInput {
     private Path convertToAbsolutePath(Path path) {
         Path resolvedPath = path.isAbsolute() ? path : baseDirPath.resolve(path);
         return resolvedPath.toAbsolutePath().normalize();
-    }
-
-    /**
-     * entry point for directory walk
-     */
-    private void startWalk(
-            Path candidate, String glob, boolean recursive, List<Path> collectedFiles, Set<WalkKey> visitedDirs) {
-        startWalk(candidate, glob, recursive, false, collectedFiles, visitedDirs);
     }
 
     /**
@@ -583,15 +577,21 @@ public class MavenProjectInput {
             if ("true".equals(Xpp3DomUtils.getAttribute(configChild, CACHE_INPUT_NAME))) {
                 LOGGER.info(
                         "Found tag marked with {} attribute. Tag: {}, value: {}", CACHE_INPUT_NAME, tagName, tagValue);
-                startWalk(Paths.get(tagValue), glob, propertyConfig.isRecursive(), files, visitedDirs);
+                startWalk(Paths.get(tagValue), glob, propertyConfig.isRecursive(), false, files, visitedDirs);
             } else {
                 final Path candidate = getPathOrNull(tagValue);
                 if (candidate != null) {
-                    startWalk(candidate, glob, propertyConfig.isRecursive(), files, visitedDirs);
+                    startWalk(candidate, glob, propertyConfig.isRecursive(), false, files, visitedDirs);
                     if ("descriptorRef"
                             .equals(tagName)) { // hardcoded logic for assembly plugin which could reference files
                         // omitting .xml suffix
-                        startWalk(Paths.get(tagValue + ".xml"), glob, propertyConfig.isRecursive(), files, visitedDirs);
+                        startWalk(
+                                Paths.get(tagValue + ".xml"),
+                                glob,
+                                propertyConfig.isRecursive(),
+                                false,
+                                files,
+                                visitedDirs);
                     }
                 }
             }
