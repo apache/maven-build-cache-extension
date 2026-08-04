@@ -580,7 +580,7 @@ under the License.
     <profile>
       <id>maven4.0</id>
       <properties>
-        <maven.version>4.0.0-rc-5</maven.version>
+        <maven.version>4.0.0-rc-6</maven.version>
         <maven.dir>maven4.0</maven.dir>
         <maven.basedir>${project.build.directory}/${maven.dir}</maven.basedir>
       </properties>
