@@ -85,7 +85,8 @@ supporting get/put operations. Working examples:
 
 See [Remote cache setup](remote-cache.html) for a detailed description of the remote cache setup
 
-## See also
+See also
+--------
 
 * [Usage](usage.html) - usage and activation details
 * [Remote cache setup](remote-cache.html) - shared cache setup procedure
