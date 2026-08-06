@@ -301,12 +301,12 @@ This reference drives the correctness test cases in Group Q and `CacheInvalidati
 
 | ID   | Feature                                                 | XML / System Property                           | Status | Test Reference                                                          |
 |------|---------------------------------------------------------|-------------------------------------------------|--------|-------------------------------------------------------------------------|
-| F8.1 | Full reactor — each module independently cached         | implicit                                        | ✅      | `Issue21Test`, `UpstreamModuleChangeDownstreamMissTest`                 |
-| F8.2 | Partial reactor (`-pl`) — targeted modules cached       | implicit `-pl`                                  | ✅      | `multimodule/MultiModulePartialBuildTest`                               |
-| F8.3 | Partial reactor with upstream restore (`-pl -am`)       | implicit `-pl -am`                              | ✅      | `multimodule/MultiModulePartialWithAmTest`                              |
-| F8.4 | Parallel builds (`-T`) — no cross-thread corruption     | implicit `-T`                                   | ✅      | `multimodule/ParallelBuildTest`                                         |
-| F8.5 | `scanProfiles` — include active profiles in cache key   | `<multiModule><scanProfiles>`                   | ✅      | `multimodule/ScanProfilesTest`                                          |
-| F8.6 | Per-module `skipCache` / `enabled` override via POM     | `maven.build.cache.skipCache` / `.enabled`      | ✅      | `PerModuleFlagsTest`                                                    |
+| F8.1 | Full reactor — each module independently cached                      | implicit                                        | ✅      | `Issue21Test`, `UpstreamModuleChangeDownstreamMissTest`                 |
+| F8.2 | Partial reactor (`-pl`) — targeted modules cached                    | implicit `-pl`                                  | ✅      | `multimodule/MultiModulePartialBuildTest`                               |
+| F8.3 | Partial reactor with upstream restore (`-pl -am`)                    | implicit `-pl -am`                              | ✅      | `multimodule/MultiModulePartialWithAmTest`                              |
+| F8.4 | Parallel builds (`-T`) — no cross-thread corruption                  | implicit `-T`                                   | ✅      | `multimodule/ParallelBuildTest`                                         |
+| F8.5 | `scanProfiles` — include active profiles in cache key                | `<multiModule><scanProfiles>`                   | ✅      | `multimodule/ScanProfilesTest`                                          |
+| F8.6 | Per-module `skipCache` / `skipSave` / `enabled` override via POM     | `maven.build.cache.skipCache` / `.enabled`      | ✅      | `PerModuleFlagsTest`                                                    |
 | F8.7 | Subtree build of leaf module — cache hit via `rootDirectory` anchor     | implicit (`.mvn/` traversal)                    | ✅      | `multimodule/SubtreeBuildCacheHitTest#subtreeBuildHitsCacheAfterFullReactorBuild`                          |
 | F8.8 | Partial reactor with upstream dep — `-am` puts B in `session.getProjects()` so checksum matches; no discovery config | implicit `-pl -am`                              | ✅      | `multimodule/SubtreeBuildCacheHitTest#partialReactorWithAmHitsCacheWithoutDiscovery`                       |
 | F8.9 | Subtree build with upstream dep + `<discovery><scanProfiles>` — full re-scan from root activates profile, discovers B with matching effective model | `<multiModule><discovery><scanProfiles>`         | ✅      | `multimodule/SubtreeBuildCacheHitTest#subtreeWithDiscoveryAndScanProfileHitsCacheAfterFullReactorBuild`    |
@@ -529,7 +529,7 @@ cache behaviors are project-agnostic.
 | ID   | Scenario                                          | Features   | Reference Project         | Status                                                 |
 |------|---------------------------------------------------|------------|---------------------------|--------------------------------------------------------|
 | I-01 | Full reactor: each module independently cached    | F8.1       | legacy: `build-extension` | ✅ `Issue21Test`                                        |
-| I-02 | Per-module skipCache / disabled via POM           | F8.6       | **P10**                   | ✅ `PerModuleFlagsTest`                                 |
+| I-02 | Per-module skipCache / skipSave /disabled via POM | F8.6       | **P10**                   | ✅ `PerModuleFlagsTest`                                 |
 | I-03 | Upstream module change → downstream miss          | F8.1       | **P02**                   | ✅ `multimodule/UpstreamModuleChangeDownstreamMissTest` |
 | I-04 | Partial reactor `-pl module`                      | F8.2       | **P10**                   | ✅ `multimodule/MultiModulePartialBuildTest`            |
 | I-05 | Partial reactor `-pl module -am` upstream restore | F8.3       | **P10**                   | ✅ `multimodule/MultiModulePartialWithAmTest`           |
@@ -668,7 +668,7 @@ Master traceability table mapping behaviors to test classes and reference projec
 | TC-027 | Forked lifecycle execution tracked and cached                              | `ForkedExecutionsTest`                                        | P12                               | ✅      |
 | TC-028 | Duplicate goal executions deduped correctly                                | `DuplicateGoalsTest`                                          | P01                               | ✅      |
 | TC-029 | logAll flag dumps all mojo properties                                      | `LogAllPropertiesTest`                                        | P19                               | ✅      |
-| TC-030 | Per-module skipCache via POM property                                      | `PerModuleFlagsTest`                                          | P10                               | ✅      |
+| TC-030 | Per-module skipCache / skipSave via POM property                           | `PerModuleFlagsTest`                                          | P10                               | ✅      |
 | TC-031 | Per-module cache disabled via POM property                                 | `PerModuleFlagsTest`                                          | P10                               | ✅      |
 | TC-032 | `skipCache=true` global: rebuilds all, still writes                        | `SkipBuildExtensionTest`                                      | PARAM P01-P19                     | ✅      |
 | TC-033 | `skipSave=true`: reads cache, does not write                               | `BuildExtensionTest.skipSaving`                               | PARAM P01-P19                     | ✅      |
@@ -809,7 +809,7 @@ All `maven.build.cache.*` properties recognized by `CacheConfigImpl`. Resolution
 | `maven.build.cache.restoreOnDiskArtifacts`  | `true`                                                 | boolean    | — (CLI / POM property)                             |
 | `maven.build.cache.alwaysRunPlugins`        | —                                                      | comma-list | `<executionControl><runAlways>` (partial override) |
 | `maven.build.cache.skipCache`               | `false`                                                | boolean    | — (CLI / POM property)                             |
-| `maven.build.cache.skipSave`                | `false`                                                | boolean    | — (CLI only)                                       |
+| `maven.build.cache.skipSave`                | `false`                                                | boolean    | — (CLI / POM property)                             |
 | `maven.build.cache.mandatoryClean`          | `false`                                                | boolean    | `<configuration><mandatoryClean>`                  |
 | `maven.build.cache.processPlugins`          | `true`                                                 | boolean    | — (POM property per-project)                       |
 | `maven.build.cache.input.glob`              | —                                                      | glob       | `<input><global><glob>` (per-project override)     |
