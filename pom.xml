@@ -217,14 +217,11 @@ under the License.
       <version>${slf4jVersion}</version>
     </dependency>
 
+    <!-- Not compiled against: ships the "dav" Wagon provider so that a remote cache configured with a
+         dav: URL works. No Maven distribution bundles it, only wagon-file/wagon-http. -->
     <dependency>
       <groupId>org.apache.maven.wagon</groupId>
       <artifactId>wagon-webdav-jackrabbit</artifactId>
-      <version>${wagonVersion}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.maven.wagon</groupId>
-      <artifactId>wagon-provider-api</artifactId>
       <version>${wagonVersion}</version>
     </dependency>
 
