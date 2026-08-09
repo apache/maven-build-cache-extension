@@ -151,10 +151,10 @@ public class LifecyclePhasesHelper extends AbstractExecutionListener {
      * highest phase reached). Goals that don't map to a real phase (e.g. a goal invoked directly with no
      * default phase) are skipped.
      * <p>
-     * We store this on the cache entry ({@link Build#getGoals()} / {@link Build#getHighestCompletedGoal()})
-     * instead of the raw command-line goals. That way a single-goal build like {@code compiler:compile} is
-     * remembered as the phase {@code compile}, and a later {@code mvn package} can tell it already covers
-     * compile rather than choking on the literal string {@code "compiler:compile"}.
+     * We store this on the cache entry (see {@link Build#getHighestCompletedGoal()}) instead of the raw
+     * command-line goals. That way a single-goal build like {@code compiler:compile} is remembered as the phase
+     * {@code compile}, and a later {@code mvn package} can tell it already covers compile rather than choking on
+     * the literal string {@code "compiler:compile"}.
      */
     public List<String> getCoveredPhases(MavenProject project, List<MojoExecution> mojoExecutions) {
         List<String> covered = new ArrayList<>();
