@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!---
+ Licensed to the Apache Software Foundation (ASF) under one or more
+ contributor license agreements.  See the NOTICE file distributed with
+ this work for additional information regarding copyright ownership.
+ The ASF licenses this file to You under the Apache License, Version 2.0
+ (the "License"); you may not use this file except in compliance with
+ the License.  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+<cache xmlns="http://maven.apache.org/BUILD-CACHE-CONFIG/1.2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://maven.apache.org/BUILD-CACHE-CONFIG/1.2.0 https://maven.apache.org/xsd/build-cache-config-1.2.0.xsd">
+
+    <!--
+        Template Maven build cache configuration
+     -->
+
+    <configuration>
+        <enabled>true</enabled>
+        <hashAlgorithm>SHA-256</hashAlgorithm>
+        <validateXml>true</validateXml>
+        <mandatoryClean>true</mandatoryClean>
+        <remote enabled="false"></remote>
+        <local>
+            <maxBuildsCached>3</maxBuildsCached>
+        </local>
+        <projectVersioning adjustMetaInf="true"/>
+        <attachedOutputs>
+            <dirNames>
+                <dirName>classes</dirName>
+                <dirName>test-classes</dirName>
+                <dirName>generated-sources</dirName>
+                <dirName>generated-test-sources</dirName>
+                <dirName>antrun</dirName>
+                <dirName>quarkus-app</dirName>
+                <dirName>maven-archiver</dirName>
+                <dirName glob="test_backup.mv.db" />
+                <dirName glob="test_backup.NO_REGEN.db" />
+                <dirName glob="quarkus-artifact.properties" />
+            </dirNames>
+        </attachedOutputs>
+
+    </configuration>
+
+    <input>
+        <global>
+            <!-- If not defined, default glob is "*" -->
+            <glob>*</glob>
+            <includes>
+                <!-- By default, project sources and resources directories are included (src/main/java and src/main/resources) -->
+                <!-- In this example, the goal is to include a wider range of src directories (like src/main/assembly or src/main/groovy) -->
+                <include>src/</include>
+            </includes>
+            <excludes>
+                <!-- We don't want a static "hash" pom resolution (it would conflict the will to adjust the version in the manifest), -->
+                <!-- we exclude this specific file (as it is already by default since it is not in an include folder -->
+                <!-- The need to rebuild a project based on the pom is already computed with some intelligence by the extension. -->
+                <exclude>pom.xml</exclude>
+
+                <!-- Also excluding everything located in this project specific folder -->
+                <!-- <exclude>src/main/javagen/**</exclude> -->
+
+                <!-- liquibase stuff -->
+                <exclude glob="src/main/resources/META-INF/liquibase/**/full-changelog.xml" matcherType="PATH" entryType="FILE" />
+                <exclude glob="src/main/resources/META-INF/liquibase/**/generated"          matcherType="PATH" entryType="DIRECTORY" />
+            </excludes>
+        </global>
+        <plugins>
+            <plugin artifactId="formatter-maven-plugin">
+                <effectivePom>
+                    <excludeProperties>
+                        <excludeProperty>skipFormatting</excludeProperty>
+                    </excludeProperties>
+                </effectivePom>
+            </plugin>
+            <plugin artifactId="maven-surefire-plugin">
+                <effectivePom>
+                    <excludeProperties>
+                        <excludeProperty>skipTests</excludeProperty>
+                        <excludeProperty>skip</excludeProperty>
+                    </excludeProperties>
+                </effectivePom>
+            </plugin>
+            <plugin artifactId="maven-failsafe-plugin">
+                <effectivePom>
+                    <excludeProperties>
+                        <excludeProperty>skipTests</excludeProperty>
+                        <excludeProperty>skipITs</excludeProperty>
+                        <excludeProperty>skip</excludeProperty>
+                    </excludeProperties>
+                </effectivePom>
+            </plugin>
+        </plugins>
+    </input>
+    <executionControl>
+        <runAlways>
+            <plugins>
+                <plugin artifactId="maven-failsafe-plugin"/>
+                <plugin artifactId="maven-surefire-plugin"/>
+                <plugin artifactId="maven-toolchains-plugin"/>
+                <plugin artifactId="flatten-maven-plugin"/>
+            </plugins>
+            <executions>
+            </executions>
+            <goalsLists>
+                <goalsList artifactId="maven-install-plugin">
+                    <goals>
+                        <goal>install</goal>
+                    </goals>
+                </goalsList>
+                <goalsList artifactId="maven-deploy-plugin">
+                    <goals>
+                        <goal>deploy</goal>
+                    </goals>
+                </goalsList>
+            </goalsLists>
+        </runAlways>
+        <ignoreMissing>
+            <plugins>
+                <plugin artifactId="flatten-maven-plugin" />
+                <plugin artifactId="formatter-maven-plugin" />
+                <plugin artifactId="maven-clean-plugin" />
+            </plugins>
+        </ignoreMissing>
+        <reconcile>
+            <plugins>
+                <plugin artifactId="maven-surefire-plugin" goal="test">
+                    <reconciles>
+                        <reconcile propertyName="skipTests" skipValue="true"/>
+                        <reconcile propertyName="skip" skipValue="true"/>
+                    </reconciles>
+                </plugin>
+                <plugin artifactId="maven-failsafe-plugin" goal="test">
+                    <reconciles>
+                        <reconcile propertyName="skipTests" skipValue="true"/>
+                        <reconcile propertyName="skipITs" skipValue="true"/>
+                        <reconcile propertyName="skip" skipValue="true"/>
+                    </reconciles>
+                </plugin>
+                <plugin artifactId="formatter-maven-plugin" goal="format">
+                    <nologs>
+                        <nolog propertyName="skipFormatting"/>
+                    </nologs>
+                </plugin>
+                <plugin artifactId="export-properties-maven-plugin" goal="export-properties">
+                    <nologs>
+                        <nolog propertyName="properties"/>
+                    </nologs>
+                </plugin>
+                <plugin artifactId="echo-maven-plugin" goal="echo">
+                    <nologs>
+                        <nolog propertyName="message"/>
+                    </nologs>
+                </plugin>
+            </plugins>
+        </reconcile>
+    </executionControl>
+</cache>

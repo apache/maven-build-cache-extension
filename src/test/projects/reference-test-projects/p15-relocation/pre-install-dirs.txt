@@ -1,0 +1,3 @@
+# Install new-artifact first (relocation target), then old-artifact (carries relocation metadata)
+_new-artifact
+_relocated-artifact

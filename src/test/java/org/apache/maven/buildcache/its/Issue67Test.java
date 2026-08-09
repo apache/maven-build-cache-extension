@@ -43,7 +43,7 @@ class Issue67Test {
     @Test
     void simple(Verifier verifier) throws VerificationException, IOException {
         verifier.setAutoclean(false);
-        verifier.setMavenDebug(true);
+        verifier.addCliOption("-X");
 
         // First build, nothing in cache
         verifier.setLogFileName("../log.txt");
@@ -62,7 +62,6 @@ class Issue67Test {
                 Files.deleteIfExists(Paths.get(jarCachePath)), "mbuildcache-67.jar was expected in the local cache");
 
         // Second build, with a corrupted cache
-        verifier.setMavenDebug(false);
         verifier.setLogFileName("../log-2.txt");
         verifier.executeGoal("clean");
         verifier.verifyFileNotPresent(GENERATED_JAR);

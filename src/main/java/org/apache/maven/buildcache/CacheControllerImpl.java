@@ -373,7 +373,11 @@ public class CacheControllerImpl implements CacheController {
         if (!Files.exists(restorationPath)) {
             Files.createDirectories(restorationPath);
         }
-        CacheUtils.unzip(cachedZip.toPath(), restorationPath, cacheConfig.isPreservePermissions());
+        CacheUtils.unzip(
+                cachedZip.toPath(),
+                restorationPath,
+                cacheConfig.isPreservePermissions(),
+                cacheConfig.isPreserveTimestamps());
         LOGGER.debug("Restored directory artifact by unzipping: {} -> {}", artifact.getFileName(), restorationPath);
     }
 
@@ -412,12 +416,14 @@ public class CacheControllerImpl implements CacheController {
 
         try {
             RestoredArtifact restoredProjectArtifact = null;
+            boolean restoredProjectArtifactIsDirectory = false;
             List<RestoredArtifact> restoredAttachedArtifacts = new ArrayList<>();
 
             if (build.getArtifact() != null && isNotBlank(build.getArtifact().getFileName())) {
                 final Artifact artifactInfo = build.getArtifact();
                 String originalVersion = artifactInfo.getVersion();
                 artifactInfo.setVersion(project.getVersion());
+                restoredProjectArtifactIsDirectory = artifactInfo.isIsDirectory();
                 // TODO if remote is forced, probably need to refresh or reconcile all files
                 final Future<File> downloadTask =
                         createDownloadTask(cacheResult, context, project, artifactInfo, originalVersion);
@@ -470,7 +476,10 @@ public class CacheControllerImpl implements CacheController {
             }
             // Actually modify project at the end in case something went wrong during restoration,
             // in which case, the project is unmodified and we continue with normal build.
-            if (restoredProjectArtifact != null) {
+            //
+            // Also, only restore the project artifact, if it was an actually fully build JAR,
+            // and not the cached compile results.
+            if (restoredProjectArtifact != null && !restoredProjectArtifactIsDirectory) {
                 project.setArtifact(restoredProjectArtifact);
                 // need to include package lifecycle to save build info for incremental builds
                 if (!project.hasLifecyclePhase("package")) {
@@ -703,7 +712,12 @@ public class CacheControllerImpl implements CacheController {
             File originalFile)
             throws IOException {
         Path tempZip = Files.createTempFile("maven-cache-", "-" + project.getArtifactId() + ".zip");
-        boolean hasFiles = CacheUtils.zip(originalFile.toPath(), tempZip, "*", cacheConfig.isPreservePermissions());
+        boolean hasFiles = CacheUtils.zip(
+                originalFile.toPath(),
+                tempZip,
+                "*",
+                cacheConfig.isPreservePermissions(),
+                cacheConfig.isPreserveTimestamps());
         if (hasFiles) {
             // Temporarily replace artifact file with zip for saving
             projectArtifact.setFile(tempZip.toFile());
@@ -845,7 +859,7 @@ public class CacheControllerImpl implements CacheController {
         final Object mojo = executionEvent.getMojo();
 
         final File baseDir = executionEvent.getProject().getBasedir();
-        final String baseDirPath = FilenameUtils.normalizeNoEndSeparator(baseDir.getAbsolutePath()) + File.separator;
+        final Path baseDirPath = baseDir.toPath();
 
         final List<Parameter> parameters = mojoExecution.getMojoDescriptor().getParameters();
         for (Parameter parameter : parameters) {
@@ -864,14 +878,14 @@ public class CacheControllerImpl implements CacheController {
                 Field field = ReflectionUtils.getFieldByNameIncludingSuperclasses(propertyName, mojo.getClass());
                 if (field != null) {
                     final Object value = ReflectionUtils.getValueIncludingSuperclasses(propertyName, mojo);
-                    DtoUtils.addProperty(execution, propertyName, value, baseDirPath, tracked);
+                    CacheUtils.addProperty(execution, propertyName, value, baseDirPath, tracked);
                     continue;
                 }
                 // no field but maybe there is a getter with standard naming and no args
                 Method getter = getGetter(propertyName, mojo.getClass());
                 if (getter != null) {
                     Object value = getter.invoke(mojo);
-                    DtoUtils.addProperty(execution, propertyName, value, baseDirPath, tracked);
+                    CacheUtils.addProperty(execution, propertyName, value, baseDirPath, tracked);
                     continue;
                 }
 
@@ -887,6 +901,19 @@ public class CacheControllerImpl implements CacheController {
                 if (tracked) {
                     throw new IllegalArgumentException("Property configured in cache introspection config " + "for "
                             + mojo + " is not accessible: " + propertyName);
+                }
+            }
+        }
+        // add properties with expressions
+        for (TrackedProperty trackedProperty : trackedProperties) {
+            if (trackedProperty.getExpression() != null) {
+                String propertyName = trackedProperty.getPropertyName();
+                if (!isExcluded(propertyName, logAll, noLogProperties, forceLogProperties)) {
+                    Object value = CacheUtils.interpolateExpression(
+                            trackedProperty.getExpression(),
+                            executionEvent.getSession(),
+                            executionEvent.getExecution());
+                    CacheUtils.addProperty(execution, propertyName, value, baseDirPath, true);
                 }
             }
         }
@@ -1041,7 +1068,8 @@ public class CacheControllerImpl implements CacheController {
             throws IOException {
         Path temp = Files.createTempFile("maven-incremental-", project.getArtifactId());
         temp.toFile().deleteOnExit();
-        boolean hasFile = CacheUtils.zip(dir, temp, glob, cacheConfig.isPreservePermissions());
+        boolean hasFile = CacheUtils.zip(
+                dir, temp, glob, cacheConfig.isPreservePermissions(), cacheConfig.isPreserveTimestamps());
         if (hasFile) {
             projectHelper.attachArtifact(project, "zip", classifier, temp.toFile());
         }
@@ -1056,7 +1084,8 @@ public class CacheControllerImpl implements CacheController {
         if (!Files.exists(outputDir)) {
             Files.createDirectories(outputDir);
         }
-        CacheUtils.unzip(artifactFilePath, outputDir, cacheConfig.isPreservePermissions());
+        CacheUtils.unzip(
+                artifactFilePath, outputDir, cacheConfig.isPreservePermissions(), cacheConfig.isPreserveTimestamps());
     }
 
     // TODO: move to config

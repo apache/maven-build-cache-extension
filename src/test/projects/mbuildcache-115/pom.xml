@@ -34,7 +34,8 @@
             <plugin>
                 <groupId>io.github.ascopes</groupId>
                 <artifactId>protobuf-maven-plugin</artifactId>
-                <version>2.7.0</version>
+                <!-- minimum Maven 4 compatible version; original was not compatible -->
+                <version>2.10.6</version>
 
                 <configuration>
                     <protocVersion>3.24.0</protocVersion>

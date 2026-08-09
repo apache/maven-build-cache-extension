@@ -36,7 +36,7 @@ class DuplicateGoalsTest {
 
         // run with an extra goal
         verifier.setLogFileName("../log-1.txt");
-        verifier.setMavenDebug(true);
+        verifier.addCliOption("-X");
         verifier.executeGoals(Arrays.asList("compile", "test"));
         verifier.verifyErrorFreeLog();
 

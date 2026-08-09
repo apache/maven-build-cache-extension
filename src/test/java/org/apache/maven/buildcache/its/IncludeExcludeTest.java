@@ -44,7 +44,7 @@ class IncludeExcludeTest {
     @Test
     void includeExclude(Verifier verifier) throws VerificationException {
         verifier.setAutoclean(false);
-        verifier.setMavenDebug(true);
+        verifier.addCliOption("-X");
 
         // First build
         verifier.setLogFileName("../log-1.txt");
@@ -59,7 +59,7 @@ class IncludeExcludeTest {
     }
 
     private void verifyLogs(Verifier verifier) throws VerificationException {
-        final String nbFilesToFind = "9";
+        final String nbFilesToFind = "11";
 
         verifier.verifyErrorFreeLog();
 
@@ -87,6 +87,9 @@ class IncludeExcludeTest {
         findLineContaining(srcInputs, "Test.java");
         findLineContaining(srcInputs, "second_circle.txt");
         findLineContaining(srcInputs, "third_circle.txt");
+        // includeHidden="true" on the folder_with_hidden_files include: the dotfile is scanned...
+        findLineContaining(srcInputs, "visible_file.txt");
+        findLineContaining(srcInputs, ".hidden_file.txt");
 
         // Verify that excluded directories are "cut" from inspection as soon as possible
         String blacklistedLine = LogFileUtils.findFirstLineContainingTextsInLogs(

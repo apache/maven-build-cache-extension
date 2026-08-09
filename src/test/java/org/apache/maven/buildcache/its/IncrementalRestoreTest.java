@@ -103,7 +103,7 @@ class IncrementalRestoreTest {
     @Test
     void simple(Verifier verifier) throws VerificationException, IOException {
         verifier.setAutoclean(false);
-        verifier.setMavenDebug(true);
+        verifier.addCliOption("-X");
 
         initialBuild(verifier);
         verifyPackageWithCache(verifier);
@@ -253,7 +253,6 @@ class IncrementalRestoreTest {
     }
 
     private void cleanBuild(Verifier verifier) throws VerificationException {
-        verifier.setMavenDebug(false);
         verifier.setLogFileName("../log-clean.txt");
         verifier.executeGoal("clean");
         verifier.verifyFileNotPresent(GENERATED_JAR);

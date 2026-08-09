@@ -17,7 +17,9 @@
 
 ## Usage
 
-Once the extension is activated, the cache automatically kicks in on every `package` or higher phase.
+Once the extension is activated, the cache kicks in automatically. By default, compile-phase builds
+(`mvn compile`, `mvn test-compile`) are cached in addition to `package` and later phases. Set
+`-Dmaven.build.cache.cacheCompile=false` to restrict caching to the `package` phase and above.
 
 ## Subtree builds
 
@@ -51,9 +53,9 @@ Disable in config:
 ```xml
 
 <cache>
-  <configuration>
-    <enabled>false</enabled>
-  </configuration>
+    <configuration>
+        <enabled>false</enabled>
+    </configuration>
 </cache>
 ```
 
@@ -64,6 +66,7 @@ On the command line:
 ```
 
 When a configuration is disabled by default in the config, it can be enabled via the command line with:
+
 ```
 -Dmaven.build.cache.enabled=true
 ```

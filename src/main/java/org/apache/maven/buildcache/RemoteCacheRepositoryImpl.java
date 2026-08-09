@@ -25,7 +25,6 @@ import javax.inject.Named;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -33,8 +32,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.http.HttpStatus;
-import org.apache.http.client.HttpResponseException;
 import org.apache.maven.SessionScoped;
 import org.apache.maven.buildcache.checksum.MavenProjectInput;
 import org.apache.maven.buildcache.xml.Build;
@@ -46,7 +43,6 @@ import org.apache.maven.buildcache.xml.report.CacheReport;
 import org.apache.maven.buildcache.xml.report.ProjectReport;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.project.MavenProject;
-import org.apache.maven.wagon.ResourceDoesNotExistException;
 import org.eclipse.aether.RepositorySystemSession;
 import org.eclipse.aether.repository.Authentication;
 import org.eclipse.aether.repository.Proxy;
@@ -155,15 +151,10 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
             GetTask task = new GetTask(new URI(url));
             transporter.get(task);
             return Optional.of(task.getDataBytes());
-        } catch (ResourceDoesNotExistException e) {
-            logNotFound(fullUrl, e);
-            return Optional.empty();
         } catch (Exception e) {
-            // this can be wagon used so the exception may be different
-            // we want wagon users not flooded with logs when not found
-            if ((e instanceof HttpResponseException
-                            || e.getClass().getName().equals(HttpResponseException.class.getName()))
-                    && getStatusCode(e) == HttpStatus.SC_NOT_FOUND) {
+            // the transport in use (native HTTP, Wagon, ...) decides how a missing resource is signalled,
+            // so let it classify the failure instead of matching on transport specific exception types
+            if (isNotFound(e)) {
                 logNotFound(fullUrl, e);
                 return Optional.empty();
             }
@@ -177,20 +168,15 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
         }
     }
 
-    private int getStatusCode(Exception ex) {
-        // just to avoid this when using wagon provide
-        // java.lang.ClassCastException: class org.apache.http.client.HttpResponseException cannot be cast to class
-        // org.apache.http.client.HttpResponseException
-        // (org.apache.http.client.HttpResponseException is in unnamed module of loader
-        // org.codehaus.plexus.classworlds.realm.ClassRealm @23cd4ff2;
-        //
-        try {
-            Method method = ex.getClass().getMethod("getStatusCode");
-            return (int) method.invoke(ex);
-        } catch (Throwable t) {
-            LOGGER.debug(t.getMessage(), t);
-            return 0;
-        }
+    /**
+     * Asks the transport whether the failure means "the resource is not there", so that a cache miss is not
+     * reported as an error. Every {@link Transporter} implementation knows its own not-found signal: the native
+     * HTTP transports map a 404/410 response, the Wagon transport maps
+     * {@code org.apache.maven.wagon.ResourceDoesNotExistException}. Delegating also avoids comparing exception
+     * types across class realms, which never matches when the transport is loaded by another realm.
+     */
+    private boolean isNotFound(Exception e) {
+        return transporter != null && transporter.classify(e) == Transporter.ERROR_NOT_FOUND;
     }
 
     private void logNotFound(String fullUrl, Exception e) {

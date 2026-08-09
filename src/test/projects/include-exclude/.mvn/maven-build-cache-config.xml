@@ -24,6 +24,9 @@ under the License.
 			<includes>
 				<include>folder_outside_src</include>
 				<include>third_folder_outside_src</include>
+				<!-- includeHidden="true": also scan the dotfile in this folder, which would
+				     otherwise be skipped as hidden by default -->
+				<include includeHidden="true">folder_with_hidden_files</include>
 			</includes>
 			<excludes>
 				<!-- Exclude directory in the default included src folder-->

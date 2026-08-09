@@ -25,11 +25,16 @@ import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
 import org.junit.jupiter.api.Test;
 
+import static org.apache.maven.buildcache.its.CacheITUtils.CACHE_SAVED;
+import static org.apache.maven.buildcache.util.LogFileUtils.findFirstLineContainingTextsInLogs;
+import static org.junit.jupiter.api.Assertions.assertNull;
+
 @IntegrationTest("src/test/projects/per-module-flags")
 class PerModuleFlagsTest {
     private static final String PROJECT_NAME_MODULE1 = "org.apache.maven.caching.test.multimodule:module1";
     private static final String PROJECT_NAME_MODULE2 = "org.apache.maven.caching.test.multimodule:module2";
     private static final String PROJECT_NAME_MODULE3 = "org.apache.maven.caching.test.multimodule:module3";
+    private static final String PROJECT_NAME_MODULE4 = "org.apache.maven.caching.test.multimodule:module4";
 
     @Test
     void simple(Verifier verifier) throws VerificationException, IOException {
@@ -39,6 +44,9 @@ class PerModuleFlagsTest {
         verifier.setLogFileName("../log-1.txt");
         verifier.executeGoal("verify");
         verifier.verifyErrorFreeLog();
+        assertNull(
+                findFirstLineContainingTextsInLogs(verifier, CACHE_SAVED, PROJECT_NAME_MODULE4),
+                "Module skipSave must prevent cache writes");
 
         // 2nd build
         verifier.setLogFileName("../log-2.txt");
@@ -48,5 +56,8 @@ class PerModuleFlagsTest {
         verifier.verifyTextInLog("Project " + PROJECT_NAME_MODULE2
                 + " is marked as requiring force rebuild, will skip lookup in build cache");
         verifier.verifyTextInLog("Cache is explicitly disabled on project level for " + PROJECT_NAME_MODULE3);
+        assertNull(
+                findFirstLineContainingTextsInLogs(verifier, CACHE_SAVED, PROJECT_NAME_MODULE4),
+                "Module skipSave must prevent cache writes");
     }
 }

@@ -23,6 +23,7 @@ import javax.annotation.Nonnull;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
@@ -33,7 +34,6 @@ import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -84,7 +84,6 @@ import org.apache.maven.model.PluginExecution;
 import org.apache.maven.model.Resource;
 import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
 import org.apache.maven.project.MavenProject;
-import org.codehaus.plexus.util.WriterFactory;
 import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.artifact.DefaultArtifactType;
 import org.eclipse.aether.resolution.ArtifactRequest;
@@ -97,12 +96,12 @@ import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.replaceEachRepeatedly;
 import static org.apache.commons.lang3.StringUtils.stripToEmpty;
-import static org.apache.maven.buildcache.CacheUtils.isPom;
 import static org.apache.maven.buildcache.CacheUtils.isSnapshot;
 import static org.apache.maven.buildcache.xml.CacheConfigImpl.CACHE_ENABLED_PROPERTY_NAME;
 import static org.apache.maven.buildcache.xml.CacheConfigImpl.CACHE_SKIP;
 import static org.apache.maven.buildcache.xml.CacheConfigImpl.RESTORE_GENERATED_SOURCES_PROPERTY_NAME;
 import static org.apache.maven.buildcache.xml.CacheConfigImpl.RESTORE_ON_DISK_ARTIFACTS_PROPERTY_NAME;
+import static org.apache.maven.buildcache.xml.CacheConfigImpl.SKIP_SAVE;
 
 /**
  * MavenProjectInput
@@ -112,7 +111,7 @@ public class MavenProjectInput {
     /**
      * Version of cache implementation. It is recommended to change to simplify remote cache maintenance
      */
-    public static final String CACHE_IMPLEMENTATION_VERSION = "v1.1";
+    public static final String CACHE_IMPLEMENTATION_VERSION = "v1.2";
 
     /**
      * property name to pass glob value. The glob to be used to list directory files in plugins scanning
@@ -188,7 +187,7 @@ public class MavenProjectInput {
         final long t0 = System.currentTimeMillis();
 
         final String effectivePom = getEffectivePom(normalizedModelProvider.normalizedModel(project));
-        final SortedSet<Path> inputFiles = isPom(project) ? Collections.emptySortedSet() : getInputFiles();
+        final SortedSet<Path> inputFiles = getInputFiles();
         final SortedMap<String, String> dependenciesChecksum = getMutableDependencies();
         final SortedMap<String, String> pluginDependenciesChecksum = getMutablePluginDependencies();
 
@@ -341,15 +340,19 @@ public class MavenProjectInput {
      */
     private String getEffectivePom(Model prototype) throws IOException {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
-
-        try (Writer writer = WriterFactory.newXmlWriter(output)) {
-            new MavenXpp3Writer().write(writer, prototype);
-
-            // normalize env specifics
-            final String[] searchList = {baseDirPath.toString(), "\\", "windows", "linux"};
-            final String[] replacementList = {"", "/", "os.classifier", "os.classifier"};
-            return replaceEachRepeatedly(output.toString(), searchList, replacementList);
+        try (Writer writer = new OutputStreamWriter(output, StandardCharsets.UTF_8)) {
+            new MavenXpp3Writer().write(output, prototype);
         }
+
+        // normalize env specifics
+        final String[] searchList = {baseDirPath.toString(), "\\", "windows", "linux"};
+        final String[] replacementList = {"", "/", "os.classifier", "os.classifier"};
+
+        String result = output.toString(StandardCharsets.UTF_8.name());
+        result = result.replace("\r\n", "\n");
+        result = result.trim();
+
+        return replaceEachRepeatedly(result, searchList, replacementList);
     }
 
     private SortedSet<Path> getInputFiles() {
@@ -360,21 +363,23 @@ public class MavenProjectInput {
         org.apache.maven.model.Build build = project.getBuild();
 
         final boolean recursive = true;
-        startWalk(Paths.get(build.getSourceDirectory()), projectGlob, recursive, collectedFiles, visitedDirs);
+        startWalk(Paths.get(build.getSourceDirectory()), projectGlob, recursive, false, collectedFiles, visitedDirs);
         for (Resource resource : build.getResources()) {
-            startWalk(Paths.get(resource.getDirectory()), projectGlob, recursive, collectedFiles, visitedDirs);
+            startWalk(Paths.get(resource.getDirectory()), projectGlob, recursive, false, collectedFiles, visitedDirs);
         }
 
-        startWalk(Paths.get(build.getTestSourceDirectory()), projectGlob, recursive, collectedFiles, visitedDirs);
+        startWalk(
+                Paths.get(build.getTestSourceDirectory()), projectGlob, recursive, false, collectedFiles, visitedDirs);
         for (Resource testResource : build.getTestResources()) {
-            startWalk(Paths.get(testResource.getDirectory()), projectGlob, recursive, collectedFiles, visitedDirs);
+            startWalk(
+                    Paths.get(testResource.getDirectory()), projectGlob, recursive, false, collectedFiles, visitedDirs);
         }
 
         Properties properties = project.getProperties();
         for (String name : properties.stringPropertyNames()) {
             if (name.startsWith(CACHE_INPUT_NAME) && !CACHE_INPUT_GLOB_NAME.equals(name)) {
                 String path = properties.getProperty(name);
-                startWalk(Paths.get(path), projectGlob, recursive, collectedFiles, visitedDirs);
+                startWalk(Paths.get(path), projectGlob, recursive, false, collectedFiles, visitedDirs);
             }
         }
 
@@ -382,7 +387,13 @@ public class MavenProjectInput {
         for (Include include : includes) {
             final String path = include.getValue();
             final String glob = defaultIfEmpty(include.getGlob(), projectGlob);
-            startWalk(Paths.get(path), glob, include.isRecursive(), collectedFiles, visitedDirs);
+            startWalk(
+                    Paths.get(path),
+                    glob,
+                    include.isRecursive(),
+                    include.isIncludeHidden(),
+                    collectedFiles,
+                    visitedDirs);
         }
 
         long walkKnownPathsFinished = System.currentTimeMillis() - start;
@@ -423,18 +434,26 @@ public class MavenProjectInput {
 
     /**
      * entry point for directory walk
+     *
+     * @param includeHidden if true, hidden files and directories (see {@link #isHidden(Path)}) are not
+     *                       skipped when scanning this candidate path
      */
     private void startWalk(
-            Path candidate, String glob, boolean recursive, List<Path> collectedFiles, Set<WalkKey> visitedDirs) {
+            Path candidate,
+            String glob,
+            boolean recursive,
+            boolean includeHidden,
+            List<Path> collectedFiles,
+            Set<WalkKey> visitedDirs) {
         Path normalized = convertToAbsolutePath(candidate);
-        WalkKey key = new WalkKey(normalized, glob, recursive);
+        WalkKey key = new WalkKey(normalized, glob, recursive, includeHidden);
         if (visitedDirs.contains(key) || !Files.exists(normalized)) {
             return;
         }
 
         if (Files.isDirectory(normalized)) {
             if (baseDirPath.startsWith(normalized)) { // requested to walk parent, can do only non recursive
-                key = new WalkKey(normalized, glob, false);
+                key = new WalkKey(normalized, glob, false, includeHidden);
             }
             try {
                 walkDir(key, collectedFiles, visitedDirs);
@@ -496,9 +515,9 @@ public class MavenProjectInput {
             @Override
             public FileVisitResult preVisitDirectory(Path path, BasicFileAttributes basicFileAttributes)
                     throws IOException {
-                WalkKey currentDirKey =
-                        new WalkKey(path.toAbsolutePath().normalize(), key.getGlob(), key.isRecursive());
-                if (isHidden(path)) {
+                WalkKey currentDirKey = new WalkKey(
+                        path.toAbsolutePath().normalize(), key.getGlob(), key.isRecursive(), key.isIncludeHidden());
+                if (!key.isIncludeHidden() && isHidden(path)) {
                     LOGGER.debug("Skipping subtree (hidden): {}", path);
                     return FileVisitResult.SKIP_SUBTREE;
                 } else if (!isReadable(path)) {
@@ -512,7 +531,8 @@ public class MavenProjectInput {
                     return FileVisitResult.SKIP_SUBTREE;
                 }
 
-                walkDirectoryFiles(path, collectedFiles, key.getGlob(), exclusionResolver::excludesPath);
+                walkDirectoryFiles(
+                        path, collectedFiles, key.getGlob(), key.isIncludeHidden(), exclusionResolver::excludesPath);
 
                 if (!key.isRecursive()) {
                     LOGGER.debug("Skipping subtree (non recursive): {}", path);
@@ -558,15 +578,21 @@ public class MavenProjectInput {
             if ("true".equals(Xpp3DomUtils.getAttribute(configChild, CACHE_INPUT_NAME))) {
                 LOGGER.info(
                         "Found tag marked with {} attribute. Tag: {}, value: {}", CACHE_INPUT_NAME, tagName, tagValue);
-                startWalk(Paths.get(tagValue), glob, propertyConfig.isRecursive(), files, visitedDirs);
+                startWalk(Paths.get(tagValue), glob, propertyConfig.isRecursive(), false, files, visitedDirs);
             } else {
                 final Path candidate = getPathOrNull(tagValue);
                 if (candidate != null) {
-                    startWalk(candidate, glob, propertyConfig.isRecursive(), files, visitedDirs);
+                    startWalk(candidate, glob, propertyConfig.isRecursive(), false, files, visitedDirs);
                     if ("descriptorRef"
                             .equals(tagName)) { // hardcoded logic for assembly plugin which could reference files
                         // omitting .xml suffix
-                        startWalk(Paths.get(tagValue + ".xml"), glob, propertyConfig.isRecursive(), files, visitedDirs);
+                        startWalk(
+                                Paths.get(tagValue + ".xml"),
+                                glob,
+                                propertyConfig.isRecursive(),
+                                false,
+                                files,
+                                visitedDirs);
                     }
                 }
             }
@@ -607,7 +633,8 @@ public class MavenProjectInput {
         return null;
     }
 
-    static void walkDirectoryFiles(Path dir, List<Path> collectedFiles, String glob, Predicate<Path> mustBeSkipped) {
+    static void walkDirectoryFiles(
+            Path dir, List<Path> collectedFiles, String glob, boolean includeHidden, Predicate<Path> mustBeSkipped) {
         if (!Files.isDirectory(dir)) {
             return;
         }
@@ -619,7 +646,7 @@ public class MavenProjectInput {
                         continue;
                     }
                     File file = entry.toFile();
-                    if (file.isFile() && !isHidden(entry) && isReadable(entry)) {
+                    if (file.isFile() && (includeHidden || !isHidden(entry)) && isReadable(entry)) {
                         collectedFiles.add(entry);
                     }
                 }
@@ -836,11 +863,15 @@ public class MavenProjectInput {
             return DtoUtils.createDigestedFile(artifact, hash);
         }
 
+        // Maven 3.x ArtifactHandlerManager NEVER returns null
+        ArtifactHandler handler = artifactHandlerManager.getArtifactHandler(dependency.getType());
         org.eclipse.aether.artifact.Artifact dependencyArtifact = new org.eclipse.aether.artifact.DefaultArtifact(
                 dependency.getGroupId(),
                 dependency.getArtifactId(),
-                dependency.getClassifier(),
-                null,
+                dependency.getClassifier() == null // dependency wins
+                        ? handler.getClassifier()
+                        : dependency.getClassifier(),
+                handler.getExtension(),
                 dependency.getVersion(),
                 new DefaultArtifactType(dependency.getType()));
         ArtifactRequest artifactRequest = new ArtifactRequest().setArtifact(dependencyArtifact);
@@ -981,5 +1012,16 @@ public class MavenProjectInput {
      */
     public static boolean isCacheDisabled(MavenProject project) {
         return !Boolean.parseBoolean(project.getProperties().getProperty(CACHE_ENABLED_PROPERTY_NAME, "true"));
+    }
+
+    /**
+     * Skip cache saving on a per-project level via a property.
+     * Defaults to false.
+     * {@code <maven.build.cache.skipSave>true<maven.build.cache.skipSave/>}
+     * @param project current project
+     * @return true if saving should be skipped for this project
+     */
+    public static boolean isSkipSave(MavenProject project) {
+        return Boolean.parseBoolean(project.getProperties().getProperty(SKIP_SAVE, "false"));
     }
 }
