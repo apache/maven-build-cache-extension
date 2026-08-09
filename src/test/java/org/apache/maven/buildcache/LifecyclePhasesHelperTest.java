@@ -29,6 +29,7 @@ import org.apache.maven.lifecycle.DefaultLifecycles;
 import org.apache.maven.lifecycle.Lifecycle;
 import org.apache.maven.lifecycle.internal.stub.LifecyclesTestUtils;
 import org.apache.maven.plugin.MojoExecution;
+import org.apache.maven.plugin.descriptor.MojoDescriptor;
 import org.apache.maven.project.MavenProject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -350,6 +351,85 @@ class LifecyclePhasesHelperTest {
         assertThat(notCachedSegment).isEmpty();
     }
 
+    /**
+     * A goal run from the command line has no phase of its own, so the helper should use the goal's default
+     * phase instead — that's what lets a single goal take part in caching.
+     */
+    @Test
+    void resolveHighestLifecyclePhaseCliGoalUsesDefaultPhase() {
+        String phase = lifecyclePhasesHelper.resolveHighestLifecyclePhase(
+                projectMock, singletonList(mockedCliGoal("compile")));
+        assertEquals("compile", phase);
+    }
+
+    /**
+     * A command-line goal with no default phase (like jetty:run) resolves to null, which keeps it out of caching.
+     */
+    @Test
+    void resolveHighestLifecyclePhaseCliGoalWithoutDefaultPhase() {
+        String phase =
+                lifecyclePhasesHelper.resolveHighestLifecyclePhase(projectMock, singletonList(mockedCliGoal(null)));
+        assertEquals(null, phase);
+    }
+
+    @Test
+    void getCleanSegmentForCliGoalIsEmpty() {
+        // compiler:compile maps to the "compile" phase, which is later than clean -> empty clean segment
+        List<MojoExecution> cleanSegment =
+                lifecyclePhasesHelper.getCleanSegment(projectMock, singletonList(mockedCliGoal("compile")));
+        assertThat(cleanSegment).isEmpty();
+    }
+
+    @Test
+    void getCoveredPhasesMapsCliGoalToItsPhase() {
+        List<String> covered =
+                lifecyclePhasesHelper.getCoveredPhases(projectMock, singletonList(mockedCliGoal("compile")));
+        assertEquals(singletonList("compile"), covered);
+    }
+
+    @Test
+    void getCoveredPhasesOrdersByLifecycleAndDedups() {
+        List<String> covered = lifecyclePhasesHelper.getCoveredPhases(
+                projectMock,
+                Arrays.asList(
+                        mockedMojoExecution("install"),
+                        mockedMojoExecution("compile"),
+                        mockedMojoExecution("compile"),
+                        mockedMojoExecution("test")));
+        // distinct, ordered earliest -> latest; last element is the highest covered phase
+        assertEquals(Arrays.asList("compile", "test", "install"), covered);
+    }
+
+    @Test
+    void getCoveredPhasesIgnoresUnresolvablePhases() {
+        // a CLI goal with no default phase contributes nothing
+        List<String> covered = lifecyclePhasesHelper.getCoveredPhases(
+                projectMock, Arrays.asList(mockedMojoExecution("compile"), mockedCliGoal(null)));
+        assertEquals(singletonList("compile"), covered);
+    }
+
+    /**
+     * When a fork is started by a command-line goal (like jetty:run), its mojos should keep their own real
+     * phases so the forked lifecycle can be matched against the cache and restored.
+     */
+    @Test
+    void resolveForkedCliOriginatedUsesOwnPhase() {
+        MojoExecution cliOrigin = mockedCliGoal(null); // e.g. jetty:run, no phase
+        publishForkedProjectEvent(cliOrigin);
+
+        String phase = lifecyclePhasesHelper.resolveHighestLifecyclePhase(
+                projectMock, Arrays.asList(mockedMojoExecution("compile"), mockedMojoExecution("test-compile")));
+        assertEquals("test-compile", phase);
+    }
+
+    @Test
+    void getForkOrigin() {
+        assertEquals(null, lifecyclePhasesHelper.getForkOrigin(projectMock));
+        MojoExecution origin = mockedMojoExecution("install");
+        publishForkedProjectEvent(origin);
+        assertEquals(origin, lifecyclePhasesHelper.getForkOrigin(projectMock));
+    }
+
     private void publishForkedProjectEvent(MojoExecution origin) {
 
         ExecutionEvent eventMock = mock(ExecutionEvent.class);
@@ -365,6 +445,21 @@ class LifecyclePhasesHelperTest {
         MojoExecution mojoExecution = mock(MojoExecution.class);
         when(mojoExecution.getLifecyclePhase()).thenReturn(phase);
         when(mojoExecution.toString()).thenReturn(phase);
+        return mojoExecution;
+    }
+
+    /**
+     * Mocks a goal run from the command line: no phase of its own, {@link MojoExecution.Source#CLI} source, and a
+     * descriptor whose default phase is {@code defaultPhase} (pass null for goals like jetty:run that have none).
+     */
+    private static MojoExecution mockedCliGoal(String defaultPhase) {
+        MojoExecution mojoExecution = mock(MojoExecution.class);
+        when(mojoExecution.getLifecyclePhase()).thenReturn(null);
+        when(mojoExecution.getSource()).thenReturn(MojoExecution.Source.CLI);
+        MojoDescriptor descriptor = mock(MojoDescriptor.class);
+        when(descriptor.getPhase()).thenReturn(defaultPhase);
+        when(mojoExecution.getMojoDescriptor()).thenReturn(descriptor);
+        when(mojoExecution.toString()).thenReturn("cli-goal(" + defaultPhase + ")");
         return mojoExecution;
     }
 }

@@ -625,8 +625,16 @@ public class CacheControllerImpl implements CacheController {
                 return;
             }
 
+            // Save the phases this build covered instead of the raw command-line goals. That keeps the stored
+            // "highest completed goal" a real phase name even for a single goal (compiler:compile -> "compile"),
+            // so a later phase build can compare against it without tripping over "Unsupported phase". If nothing
+            // resolved to a phase, fall back to whatever goals were on the command line.
+            List<String> coverageGoals = providerLifecyclePhasesHelper.get().getCoveredPhases(project, mojoExecutions);
+            if (coverageGoals.isEmpty()) {
+                coverageGoals = session.getGoals();
+            }
             final Build build = new Build(
-                    session.getGoals(),
+                    coverageGoals,
                     projectArtifactDto,
                     attachedArtifactDtos,
                     context.getInputInfo(),

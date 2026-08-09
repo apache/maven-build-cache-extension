@@ -116,8 +116,23 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
             // so forks should rerun too
             boolean forkedExecution = lifecyclePhasesHelper.isForkedProject(project);
             String projectName = getVersionlessProjectKey(project);
+            // Full caching (look up, restore and save) applies to a normal lifecycle build, or to goals typed
+            // on the command line when they all map to a real phase after clean (e.g. mvn compiler:compile).
+            boolean cacheEligible = !forkedExecution
+                    && (source == Source.LIFECYCLE
+                            || (source == Source.CLI
+                                    && cacheConfig.isCacheSingleGoal()
+                                    && isCacheableCliInvocation(mojoExecutions)));
+            // When a command-line goal forks a lifecycle (e.g. jetty:run forks test-compile via
+            // @Execute(phase=...)), let that fork restore from cache but never save. We skip forks that happen
+            // inside a normal build: that build already handles caching, and joining in would just cause an
+            // extra, pointless cache lookup (see ForkedExecutionsTest / ForkedExecutionCoreExtensionTest).
+            boolean forkedRestoreEligible = forkedExecution
+                    && cacheConfig.isRestoreForkedExecutions()
+                    && source == Source.LIFECYCLE
+                    && isCliOriginatedFork(project);
             List<MojoExecution> cleanPhase = null;
-            if (source == Source.LIFECYCLE && !forkedExecution) {
+            if (cacheEligible || forkedRestoreEligible) {
                 if (!cacheIsDisabled) {
                     cacheState = cacheConfig.initialize();
                     if (cacheState == INITIALIZED) {
@@ -174,7 +189,7 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                     }
                 }
 
-                if (cacheState == INITIALIZED && (!result.isSuccess() || !restored)) {
+                if (cacheState == INITIALIZED && !forkedExecution && (!result.isSuccess() || !restored)) {
                     boolean skipSave = cacheConfig.isSkipSave() || MavenProjectInput.isSkipSave(project);
                     if (skipSave) {
                         LOGGER.debug("Cache saving is disabled.");
@@ -199,7 +214,11 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                 }
             }
 
-            if (cacheConfig.isFailFast() && !result.isSuccess() && !skipCache && !forkedExecution) {
+            if (cacheConfig.isFailFast()
+                    && !result.isSuccess()
+                    && !skipCache
+                    && cacheEligible
+                    && cacheState == INITIALIZED) {
                 throw new LifecycleExecutionException(
                         "Failed to restore project[" + projectName + "] from cache, failing build.", project);
             }
@@ -259,6 +278,48 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
             }
         }
         return Source.LIFECYCLE;
+    }
+
+    /**
+     * Decides whether a set of goals typed on the command line can be cached.
+     * <p>
+     * Every goal has to be non-aggregator and bound by default (via {@code @Mojo(defaultPhase=...)}) to a real
+     * phase after clean. This keeps single-goal caching to goals that produce the same output the matching phase
+     * would — e.g. {@code compiler:compile} is really the {@code compile} phase — and it naturally leaves out
+     * long-running goals like {@code jetty:run} or {@code exec:java} (no default phase) and clean-bound goals.
+     *
+     * @param mojoExecutions the goals requested on the command line
+     * @return true if the whole invocation can go through the normal phase-based caching
+     */
+    private boolean isCacheableCliInvocation(List<MojoExecution> mojoExecutions) {
+        if (mojoExecutions == null || mojoExecutions.isEmpty()) {
+            return false;
+        }
+        for (MojoExecution mojoExecution : mojoExecutions) {
+            if (mojoExecution.getMojoDescriptor() == null
+                    || mojoExecution.getMojoDescriptor().isAggregator()) {
+                return false;
+            }
+            String phase = mojoExecution.getMojoDescriptor().getPhase();
+            if (!lifecyclePhasesHelper.isSupportedPhase(phase) || !lifecyclePhasesHelper.isLaterPhaseThanClean(phase)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Tells whether this fork was started by a goal typed on the command line (like {@code mvn jetty:run}),
+     * rather than a fork happening inside a normal build (e.g. a plugin bound to {@code verify} that forks a
+     * lifecycle). Only the first kind should restore from cache, so a normal build stays the sole owner of
+     * caching.
+     *
+     * @param project the (forked) current project
+     * @return true if the mojo that started the fork came from the command line ({@link Source#CLI})
+     */
+    private boolean isCliOriginatedFork(MavenProject project) {
+        MojoExecution forkOrigin = lifecyclePhasesHelper.getForkOrigin(project);
+        return forkOrigin != null && forkOrigin.getSource() == Source.CLI;
     }
 
     private CacheRestorationStatus restoreProject(

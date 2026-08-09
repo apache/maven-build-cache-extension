@@ -1,0 +1,56 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+package org.apache.maven.buildcache.its.singlegoal;
+
+import org.apache.maven.buildcache.its.junit.IntegrationTest;
+import org.apache.maven.it.VerificationException;
+import org.apache.maven.it.Verifier;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+/**
+ * The reverse of {@link CompileGoalThenPackageEscalationTest}: after {@code mvn package} saves a cache entry,
+ * running {@code mvn compiler:compile} must compare cleanly and not throw "Unsupported phase". The compile goal
+ * maps to the {@code compile} phase, which the package entry already covers.
+ */
+@IntegrationTest("src/test/projects/lifecycle-phases")
+class PackageThenCompileGoalTest {
+
+    private static final String CACHE_SAVED = "Saved Build to local file";
+    private static final String UNSUPPORTED_PHASE = "Unsupported phase";
+
+    @Test
+    void compileGoalAfterPackageDoesNotThrow(Verifier verifier) throws VerificationException {
+        verifier.setAutoclean(false);
+
+        // First run — package; cache saved at the package level
+        verifier.setLogFileName("../log-1.txt");
+        verifier.executeGoal("package");
+        verifier.verifyErrorFreeLog();
+        verifier.verifyTextInLog(CACHE_SAVED);
+
+        // Second run — compiler:compile maps to the "compile" phase, which comes before the cached "package".
+        // Comparing the two phases must stay on known phases and not throw.
+        verifier.setLogFileName("../log-2.txt");
+        verifier.executeGoal("compiler:compile");
+        verifier.verifyErrorFreeLog();
+        assertThrows(VerificationException.class, () -> verifier.verifyTextInLog(UNSUPPORTED_PHASE));
+    }
+}

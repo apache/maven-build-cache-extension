@@ -124,6 +124,11 @@ public class LifecyclePhasesHelper extends AbstractExecutionListener {
      * Example: isLaterPhase("install", "clean") returns true;
      */
     public boolean isLaterPhase(String phase, String other) {
+        // A goal run straight from the command line has no phase of its own (null). Treat that as
+        // "earlier than everything" so it never counts as later than clean or later than a cached build.
+        if (phase == null) {
+            return false;
+        }
         if (!phases.contains(phase)) {
             throw new IllegalArgumentException("Unsupported phase: " + phase);
         }
@@ -132,6 +137,37 @@ public class LifecyclePhasesHelper extends AbstractExecutionListener {
         }
 
         return phases.indexOf(phase) > phases.indexOf(other);
+    }
+
+    /**
+     * Whether the given phase is a known lifecycle phase (non-null and part of the active lifecycles).
+     */
+    public boolean isSupportedPhase(String phase) {
+        return phase != null && phases.contains(phase);
+    }
+
+    /**
+     * Lists the lifecycle phases these mojos cover, sorted from earliest to latest (so the last one is the
+     * highest phase reached). Goals that don't map to a real phase (e.g. a goal invoked directly with no
+     * default phase) are skipped.
+     * <p>
+     * We store this on the cache entry ({@link Build#getGoals()} / {@link Build#getHighestCompletedGoal()})
+     * instead of the raw command-line goals. That way a single-goal build like {@code compiler:compile} is
+     * remembered as the phase {@code compile}, and a later {@code mvn package} can tell it already covers
+     * compile rather than choking on the literal string {@code "compiler:compile"}.
+     */
+    public List<String> getCoveredPhases(MavenProject project, List<MojoExecution> mojoExecutions) {
+        List<String> covered = new ArrayList<>();
+        for (MojoExecution mojoExecution : mojoExecutions) {
+            String phase = resolveMojoExecutionLifecyclePhase(project, mojoExecution);
+            if (isSupportedPhase(phase) && !covered.contains(phase)) {
+                covered.add(phase);
+            }
+        }
+        // Sort by lifecycle order so the last entry is the highest phase, whatever order the goals were typed.
+        // Every entry is a known phase here, so isLaterPhase won't throw.
+        covered.sort((a, b) -> a.equals(b) ? 0 : (isLaterPhase(a, b) ? 1 : -1));
+        return covered;
     }
 
     /**
@@ -161,18 +197,39 @@ public class LifecyclePhasesHelper extends AbstractExecutionListener {
 
         MojoExecution forkOrigin = forkedProjectToOrigin.get(project);
 
-        // if forked, take originating mojo as a lifecycle phase source
         if (forkOrigin == null) {
-            return mojoExecution.getLifecyclePhase();
+            String phase = mojoExecution.getLifecyclePhase();
+            if (phase == null && mojoExecution.getMojoDescriptor() != null) {
+                // A goal run straight from the command line has no phase. Use the phase the goal binds to by
+                // default (its @Mojo(defaultPhase=...)) so it can take part in caching, e.g. compiler:compile
+                // behaves like the compile phase. Stays null for goals with no default phase (like jetty:run),
+                // which simply keeps them out of the cache.
+                phase = mojoExecution.getMojoDescriptor().getPhase();
+            }
+            return phase;
         } else {
+            // This mojo belongs to a forked lifecycle. If the fork was kicked off by a goal typed on the
+            // command line (for example jetty:run forks test-compile via @Execute(phase=...)), its mojos have
+            // their own real phases, so we use those and can restore the cached compile output. If instead the
+            // fork happens inside a normal build, we keep the old behavior and use the originating mojo's phase
+            // (that kind of fork is never cached on its own).
+            String phase;
+            if (forkOrigin.getSource() == MojoExecution.Source.CLI) {
+                phase = mojoExecution.getLifecyclePhase();
+                if (phase == null) {
+                    phase = forkOrigin.getLifecyclePhase();
+                }
+            } else {
+                phase = forkOrigin.getLifecyclePhase();
+            }
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug(
-                        "Mojo execution {} is forked, returning phase {} from originating mojo {}",
+                        "Mojo execution {} is forked, resolved phase {} (originating mojo {})",
                         CacheUtils.mojoExecutionKey(mojoExecution),
-                        forkOrigin.getLifecyclePhase(),
+                        phase,
                         CacheUtils.mojoExecutionKey(forkOrigin));
             }
-            return forkOrigin.getLifecyclePhase();
+            return phase;
         }
     }
 
@@ -216,5 +273,14 @@ public class LifecyclePhasesHelper extends AbstractExecutionListener {
 
     public boolean isForkedProject(MavenProject project) {
         return forkedProjectToOrigin.containsKey(project);
+    }
+
+    /**
+     * Returns the mojo that started the fork for this (forked) project, or {@code null} if the project isn't
+     * running as a fork right now. Lets callers tell a fork started by a command-line goal (like
+     * {@code jetty:run}) apart from one that happens inside a normal build.
+     */
+    public MojoExecution getForkOrigin(MavenProject project) {
+        return forkedProjectToOrigin.get(project);
     }
 }
