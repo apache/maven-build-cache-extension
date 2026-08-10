@@ -130,7 +130,8 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
             boolean forkedRestoreEligible = forkedExecution
                     && cacheConfig.isRestoreForkedExecutions()
                     && source == Source.LIFECYCLE
-                    && isCliOriginatedFork(project);
+                    && isCliOriginatedFork(project)
+                    && forkReachesCacheablePhase(project, mojoExecutions);
             List<MojoExecution> cleanPhase = null;
             if (cacheEligible || forkedRestoreEligible) {
                 if (!cacheIsDisabled) {
@@ -296,6 +297,13 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
             return false;
         }
         for (MojoExecution mojoExecution : mojoExecutions) {
+            // Only cache a pure command-line run. Something like "mvn package compiler:compile" mixes
+            // lifecycle mojos with the typed goal, and caching that mix would skip the goal the user
+            // explicitly asked for (see AdditionalGoalAfterLifecycleTest). So if anything isn't from the
+            // command line, don't cache.
+            if (mojoExecution.getSource() != Source.CLI) {
+                return false;
+            }
             if (mojoExecution.getMojoDescriptor() == null
                     || mojoExecution.getMojoDescriptor().isAggregator()) {
                 return false;
@@ -320,6 +328,27 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
     private boolean isCliOriginatedFork(MavenProject project) {
         MojoExecution forkOrigin = lifecyclePhasesHelper.getForkOrigin(project);
         return forkOrigin != null && forkOrigin.getSource() == Source.CLI;
+    }
+
+    /**
+     * Tells whether a forked lifecycle actually reaches a real phase after clean.
+     * <p>
+     * A goal that forks a phase — like {@code jetty:run} with {@code @Execute(phase="test-compile")} — does,
+     * so its fork can restore compiled output from the cache. A goal that forks another goal
+     * ({@code @Execute(goal="...")}) doesn't: the forked mojos have no phase. Trying to restore then would put
+     * back the artifacts but run nothing, silently skipping the goal — so we let those forks just run.
+     *
+     * @param project        the (forked) current project
+     * @param mojoExecutions the mojos scheduled for the forked lifecycle
+     * @return true if the fork's highest phase is a known phase later than clean
+     */
+    private boolean forkReachesCacheablePhase(MavenProject project, List<MojoExecution> mojoExecutions) {
+        if (mojoExecutions == null || mojoExecutions.isEmpty()) {
+            return false;
+        }
+        String highestPhase = lifecyclePhasesHelper.resolveHighestLifecyclePhase(project, mojoExecutions);
+        return lifecyclePhasesHelper.isSupportedPhase(highestPhase)
+                && lifecyclePhasesHelper.isLaterPhaseThanClean(highestPhase);
     }
 
     private CacheRestorationStatus restoreProject(

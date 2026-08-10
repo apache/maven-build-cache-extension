@@ -422,6 +422,21 @@ class LifecyclePhasesHelperTest {
         assertEquals("test-compile", phase);
     }
 
+    /**
+     * A goal that forks another goal ({@code @Execute(goal=...)}) has no phase on either side, so the highest
+     * phase must come back null. That's what tells the strategy to let the fork run instead of restoring
+     * artifacts and skipping the goal.
+     */
+    @Test
+    void resolveForkedCliOriginatedGoalOnlyResolvesToNull() {
+        MojoExecution cliOrigin = mockedCliGoal(null); // e.g. a goal that forks via @Execute(goal=...)
+        publishForkedProjectEvent(cliOrigin);
+
+        String phase = lifecyclePhasesHelper.resolveHighestLifecyclePhase(
+                projectMock, singletonList(mockedMojoExecution(null)));
+        assertEquals(null, phase);
+    }
+
     @Test
     void getForkOrigin() {
         assertEquals(null, lifecyclePhasesHelper.getForkOrigin(projectMock));

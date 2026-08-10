@@ -18,7 +18,6 @@
  */
 package org.apache.maven.buildcache;
 
-import javax.annotation.Nonnull;
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -103,7 +102,12 @@ public class LifecyclePhasesHelper extends AbstractExecutionListener {
         forkedProjectToOrigin.remove(event.getProject(), event.getMojoExecution());
     }
 
-    @Nonnull
+    /**
+     * Resolves the highest lifecycle phase reached by the given mojo executions.
+     *
+     * @return the highest phase, or {@code null} when the last mojo has no phase — e.g. a command-line goal
+     *         with no default phase, or a goal that forks another goal ({@code @Execute(goal=...)})
+     */
     public String resolveHighestLifecyclePhase(MavenProject project, List<MojoExecution> mojoExecutions) {
         return resolveMojoExecutionLifecyclePhase(project, CacheUtils.getLast(mojoExecutions));
     }
