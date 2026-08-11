@@ -156,6 +156,17 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
             }
 
             boolean restorable = result.isSuccess() || result.isPartialSuccess();
+            // A forked lifecycle skips compilation on a cache hit, so the entry must be able to put back the
+            // compiled output (target/classes, target/test-classes). If it only holds the final JAR, restoring
+            // would leave the fork with no classes, so we skip the restore and let it recompile instead.
+            if (restorable
+                    && forkedExecution
+                    && !cacheController.canRestoreForkedOutputs(result, project, mojoExecutions)) {
+                LOGGER.info(
+                        "Cache entry for {} has no compiled output to restore for the forked build; recompiling.",
+                        projectName);
+                restorable = false;
+            }
             boolean restored = false; // if partially restored need to save increment
 
             if (restorable) {

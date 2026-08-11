@@ -20,4 +20,17 @@ under the License.
 <cache xmlns="http://maven.apache.org/BUILD-CACHE-CONFIG/1.2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xsi:schemaLocation="http://maven.apache.org/BUILD-CACHE-CONFIG/1.2.0 https://maven.apache.org/xsd/build-cache-config-1.2.0.xsd">
 
+    <!--
+      Cache the compiled output directories too, not just the final JAR. A goal that forks test-compile (like
+      jetty:run) restores those directories from the cache instead of recompiling, so they must be stored.
+    -->
+    <configuration>
+        <attachedOutputs>
+            <dirNames>
+                <dirName>classes</dirName>
+                <dirName>test-classes</dirName>
+            </dirNames>
+        </attachedOutputs>
+    </configuration>
+
 </cache>

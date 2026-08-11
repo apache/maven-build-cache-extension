@@ -288,6 +288,21 @@ mvn install       # populates the cache
 mvn jetty:run     # the forked test-compile restores from cache, then the server starts
 ```
 
+For this to help, the cache entry has to actually contain the compiled output — otherwise the fork would skip
+compilation and find no classes, so the extension detects that and recompiles instead. Make sure `target/classes`
+(and `target/test-classes`) are cached by listing them under `<attachedOutputs>`:
+
+```xml
+<configuration>
+  <attachedOutputs>
+    <dirNames>
+      <dirName>classes</dirName>
+      <dirName>test-classes</dirName>
+    </dirNames>
+  </attachedOutputs>
+</configuration>
+```
+
 This works with the default builder and with parallel builds (`-T`), but not with the `concurrent` builder. To
 turn it off and always recompile before the goal runs:
 

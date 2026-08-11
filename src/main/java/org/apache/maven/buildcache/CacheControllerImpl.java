@@ -494,6 +494,64 @@ public class CacheControllerImpl implements CacheController {
         return restorationReport;
     }
 
+    @Override
+    public boolean canRestoreForkedOutputs(
+            CacheResult cacheResult, MavenProject project, List<MojoExecution> mojoExecutions) {
+        final Build build = cacheResult.getBuildInfo();
+        if (build == null) {
+            return false;
+        }
+        // The forked lifecycle skips compilation on a cache hit, so its output directories must come from the
+        // entry. They are stored as attached "extra output" dirs, which are only put back when generated-source
+        // restoration is on. If it's off, the classes would never land on disk, so don't restore the fork.
+        if (!cacheConfig.isRestoreGeneratedSources() || !MavenProjectInput.isRestoreGeneratedSources(project)) {
+            return false;
+        }
+        // Only require the output dirs the fork actually reaches: target/classes once it hits compile,
+        // target/test-classes once it hits test-compile. If a required directory isn't in the entry, restoring
+        // would leave the fork with no classes, so we bail out and let it recompile.
+        final LifecyclePhasesHelper helper = providerLifecyclePhasesHelper.get();
+        final String highestPhase = helper.resolveHighestLifecyclePhase(project, mojoExecutions);
+        if (!helper.isSupportedPhase(highestPhase)) {
+            return false;
+        }
+        final Path baseDir = project.getBasedir().toPath();
+        if (isPhaseReached(helper, highestPhase, "compile")
+                && !coversDirectory(build, baseDir, Paths.get(project.getBuild().getOutputDirectory()))) {
+            return false;
+        }
+        if (isPhaseReached(helper, highestPhase, "test-compile")
+                && !coversDirectory(build, baseDir, Paths.get(project.getBuild().getTestOutputDirectory()))) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Whether {@code highestPhase} is at or past {@code target} in the lifecycle.
+     */
+    private boolean isPhaseReached(LifecyclePhasesHelper helper, String highestPhase, String target) {
+        return highestPhase.equals(target) || helper.isLaterPhase(highestPhase, target);
+    }
+
+    /**
+     * Whether the cache entry holds a restorable directory artifact for the given output directory. Directory
+     * outputs are stored as attached artifacts whose {@code filePath} is the directory relative to the project
+     * base (see {@link #attachDirIfNotEmpty}).
+     */
+    private boolean coversDirectory(Build build, Path baseDir, Path directory) {
+        final Path relative = baseDir.relativize(directory.toAbsolutePath());
+        final String wanted = FilenameUtils.separatorsToUnix(relative.toString());
+        for (Artifact attached : build.getAttachedArtifacts()) {
+            if (OutputType.ARTIFACT != OutputType.fromClassifier(attached.getClassifier())
+                    && isNotBlank(attached.getFileName())
+                    && wanted.equals(FilenameUtils.separatorsToUnix(attached.getFilePath()))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /**
      * Helper method similar to {@link org.apache.maven.project.MavenProjectHelper#attachArtifact} to work specifically
      * with restored from cache artifacts
