@@ -38,6 +38,19 @@ public interface CacheController {
 
     ArtifactRestorationReport restoreProjectArtifacts(CacheResult cacheResult);
 
+    /**
+     * Tells whether a cache entry can put back the compiled output a forked lifecycle would otherwise build
+     * (typically {@code target/classes} and {@code target/test-classes}). A forked goal such as
+     * {@code jetty:run} skips compilation on a cache hit, so if the entry only holds the final JAR the project
+     * would be left with no classes. Callers use this to only restore a fork when the classes are actually there.
+     *
+     * @param cacheResult    the cache hit under consideration
+     * @param project        the (forked) project being built
+     * @param mojoExecutions the mojos scheduled for the forked lifecycle (used to see which phases it reaches)
+     * @return true if the entry carries every compiled output directory the fork reaches
+     */
+    boolean canRestoreForkedOutputs(CacheResult cacheResult, MavenProject project, List<MojoExecution> mojoExecutions);
+
     void save(
             CacheResult cacheResult,
             List<MojoExecution> mojoExecutions,

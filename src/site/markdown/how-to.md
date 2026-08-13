@@ -259,3 +259,53 @@ This is useful when:
 * You want to ensure cache entries always contain packaged artifacts (JARs, WARs, etc.)
 * Your workflow relies on artifacts being available in the local repository
 * You prefer the traditional behavior where only complete builds are cached
+
+### I want to cache a single goal run from the command line
+
+Goals invoked directly, like `mvn compiler:compile`, are cached when the goal has a default lifecycle phase that
+comes after `clean` — the extension treats the goal as that phase. So a second run with the same inputs restores
+instead of recompiling:
+
+```shell
+mvn compiler:compile   # first run saves, second run restores
+```
+
+Goals with no default phase (for example `jetty:run` or `exec:java`) and mixed invocations such as
+`mvn package dependency:tree` are left alone and just run. To turn this off:
+
+```shell
+mvn compiler:compile -Dmaven.build.cache.cacheSingleGoal=false
+```
+
+### I want `jetty:run` (or `spring-boot:run`) to reuse cached compilation
+
+These goals compile the project first by forking a `test-compile` lifecycle before the server starts. By default
+that forked build reuses previously cached classes instead of recompiling (the fork only reads from the cache, it
+never writes to it):
+
+```shell
+mvn install       # populates the cache
+mvn jetty:run     # the forked test-compile restores from cache, then the server starts
+```
+
+For this to help, the cache entry has to actually contain the compiled output — otherwise the fork would skip
+compilation and find no classes, so the extension detects that and recompiles instead. Make sure `target/classes`
+(and `target/test-classes`) are cached by listing them under `<attachedOutputs>`:
+
+```xml
+<configuration>
+  <attachedOutputs>
+    <dirNames>
+      <dirName>classes</dirName>
+      <dirName>test-classes</dirName>
+    </dirNames>
+  </attachedOutputs>
+</configuration>
+```
+
+This works with the default builder and with parallel builds (`-T`), but not with the `concurrent` builder. To
+turn it off and always recompile before the goal runs:
+
+```shell
+mvn jetty:run -Dmaven.build.cache.restoreForkedExecutions=false
+```

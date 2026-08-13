@@ -325,7 +325,11 @@ This reference drives the correctness test cases in Group Q and `CacheInvalidati
 | F9.6 | `clean`-only run → cache bypassed entirely              | implicit                                                  | ✅      | `SkipBuildExtensionTest.simple`                                        |
 | F9.7 | `clean verify` → clean runs first, then cache           | implicit                                                  | ✅      | `lifecyclephases/CleanVerifyTest`                                      |
 | F9.8 | `mandatoryClean` blocks save without prior clean        | `<mandatoryClean>` / `-Dmaven.build.cache.mandatoryClean` | ✅      | `MandatoryCleanTest`                                                   |
-| F9.9 | `verify` phase (with integration tests) cached          | implicit                                                  | ✅      | `BuildExtensionTest.simple`                                            |
+| F9.9 | `verify` phase (with integration tests) cached          | implicit                                                  | ✅      | `BuildExtensionTest.simple`                                           |
+| F9.10 | Single goal mapped to a phase cached (e.g. `compiler:compile`) | `-Dmaven.build.cache.cacheSingleGoal`              | ✅      | `singlegoal/CompileGoalCachedTest`                                    |
+| F9.11 | Single-goal entry escalates to/from a phase build without error | implicit                                          | ✅      | `singlegoal/CompileGoalThenPackageEscalationTest`, `singlegoal/PackageThenCompileGoalTest` |
+| F9.12 | `cacheSingleGoal=false` → single goal bypasses cache    | `-Dmaven.build.cache.cacheSingleGoal`                     | ✅      | `singlegoal/SingleGoalDisabledTest`                                   |
+| F9.13 | Forked lifecycle of a CLI goal restores from cache (never saves) | `-Dmaven.build.cache.restoreForkedExecutions`    | ✅      | `singlegoal/ForkedLifecycleRestoreTest`, `singlegoal/ForkedRestoreDisabledTest`, `singlegoal/RunGoalNotCachedTest` |
 
 ---
 
@@ -461,6 +465,10 @@ cache behaviors are project-agnostic.
 | C-05 | Install phase: artifact in local repo    | F9.4       | legacy: `lifecycle-phases` | ✅ `InstallPhaseTest`                           |
 | C-06 | Clean-only run → cache bypassed          | F9.6       | PARAM P01-P19              | ✅ `SkipBuildExtensionTest.simple`              |
 | C-07 | `clean verify` — clean then cached build | F9.7       | PARAM P01-P19              | ✅ `lifecyclephases/CleanVerifyTest`            |
+| C-08 | Single goal `compiler:compile` cached    | F9.10      | legacy: `lifecycle-phases` | ✅ `singlegoal/CompileGoalCachedTest`           |
+| C-09 | Single-goal ↔ phase escalation (both directions) | F9.11 | legacy: `lifecycle-phases` | ✅ `singlegoal/CompileGoalThenPackageEscalationTest`, `singlegoal/PackageThenCompileGoalTest` |
+| C-10 | `cacheSingleGoal=false` → goal bypasses cache | F9.12 | legacy: `lifecycle-phases` | ✅ `singlegoal/SingleGoalDisabledTest`          |
+| C-11 | CLI goal fork restores compile (never saves) | F9.13 | new: `single-goal-fork` | ✅ `singlegoal/ForkedLifecycleRestoreTest`, `singlegoal/ForkedRestoreDisabledTest`, `singlegoal/RunGoalNotCachedTest` |
 
 ### Group D: Plugin Execution & Reconciliation
 
@@ -760,12 +768,19 @@ Master traceability table mapping behaviors to test classes and reference projec
 | TC-119 | Subtree build of leaf module-api (no inter-module deps) from its own directory: Maven traverses up to `.mvn/`; cache key anchored to `rootDirectory` is identical to the full-reactor key → cache hit | `SubtreeBuildCacheHitTest#subtreeBuildHitsCacheAfterFullReactorBuild` | P02 | ✅ |
 | TC-120 | Partial reactor `-pl module-core -am` (no discovery): `-am` puts module-api into `session.getProjects()`; extension computes module-core's checksum with module-api as a reactor sibling, matching the full-reactor key → cache hit for both B and C | `SubtreeBuildCacheHitTest#partialReactorWithAmHitsCacheWithoutDiscovery` | P02 | ✅ |
 | TC-121 | Subtree build from module-core's dir with `<discovery><scanProfiles><scanProfile>full-reactor</scanProfile></scanProfiles>`: only C in reactor; extension detects non-root context, re-scans from root pom activating the `full-reactor` profile (whose property is in every module's effective POM), discovers module-api with the same checksum as the full-reactor build → cache hit for C | `SubtreeBuildCacheHitTest#subtreeWithDiscoveryAndScanProfileHitsCacheAfterFullReactorBuild` | P02 | ✅ |
+| TC-122 | Single goal `compiler:compile` cached and restored on second run                | `singlegoal/CompileGoalCachedTest`                | legacy: `lifecycle-phases` | ✅ |
+| TC-123 | `compiler:compile` then `package`: escalates without "Unsupported phase"        | `singlegoal/CompileGoalThenPackageEscalationTest` | legacy: `lifecycle-phases` | ✅ |
+| TC-124 | `package` then `compiler:compile`: compares cleanly without "Unsupported phase" | `singlegoal/PackageThenCompileGoalTest`           | legacy: `lifecycle-phases` | ✅ |
+| TC-125 | `cacheSingleGoal=false`: single goal bypasses cache                             | `singlegoal/SingleGoalDisabledTest`               | legacy: `lifecycle-phases` | ✅ |
+| TC-126 | CLI goal's forked lifecycle (`dependency:analyze` → test-compile) restores compile from cache | `singlegoal/ForkedLifecycleRestoreTest` | new: `single-goal-fork` | ✅ |
+| TC-127 | `restoreForkedExecutions=false`: forked lifecycle recompiles (no restore)       | `singlegoal/ForkedRestoreDisabledTest`            | new: `single-goal-fork`    | ✅ |
+| TC-128 | Run-style goal with no default phase saves no cache entry                       | `singlegoal/RunGoalNotCachedTest`                 | new: `single-goal-fork`    | ✅ |
 
 **Summary:**
 
 | Total TCs | ✅ Existing | ❌ Missing |
 |-----------|------------|-----------|
-| **121**   | **119**    | **2**     |
+| **128**   | **126**    | **2**     |
 
 ---
 

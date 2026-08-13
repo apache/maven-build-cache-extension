@@ -21,6 +21,22 @@ Once the extension is activated, the cache kicks in automatically. By default, c
 (`mvn compile`, `mvn test-compile`) are cached in addition to `package` and later phases. Set
 `-Dmaven.build.cache.cacheCompile=false` to restrict caching to the `package` phase and above.
 
+### Single goal invocations
+
+Goals invoked directly from the command line (e.g. `mvn compiler:compile`, `mvn resources:resources`) are also
+cached when their default lifecycle phase is a real, post-clean phase — such an invocation behaves like running
+that phase. Goals with no default phase (e.g. `jetty:run`, `exec:java`) and mixed lifecycle+CLI invocations
+(e.g. `mvn package dependency:tree`) are left untouched and simply run. This can be disabled with
+`-Dmaven.build.cache.cacheSingleGoal=false`.
+
+### Forked lifecycle restore
+
+Some goals fork a prerequisite lifecycle before running — for example `jetty:run` and `spring-boot:run` fork
+`test-compile` so the application is compiled before the server starts. When such a goal is invoked directly, the
+forked lifecycle restores previously cached outputs instead of recompiling (it never saves a cache entry of its
+own). This is effective with the default `singlethreaded` builder and with `multithreaded` (`-T`); it does not
+apply to the `concurrent` builder. Disable it with `-Dmaven.build.cache.restoreForkedExecutions=false`.
+
 ## Subtree builds
 
 The build could be invoked on any module in the project and will try to discover the cache by introspecting

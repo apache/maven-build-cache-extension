@@ -99,6 +99,8 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     public static final String ALWAYS_RUN_PLUGINS = "maven.build.cache.alwaysRunPlugins";
     public static final String MANDATORY_CLEAN = "maven.build.cache.mandatoryClean";
     public static final String CACHE_COMPILE = "maven.build.cache.cacheCompile";
+    public static final String CACHE_SINGLE_GOAL = "maven.build.cache.cacheSingleGoal";
+    public static final String RESTORE_FORKED_EXECUTIONS = "maven.build.cache.restoreForkedExecutions";
 
     /**
      * Flag to control if we should skip lookup for cached artifacts globally or for a particular project even if
@@ -546,6 +548,16 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     @Override
     public boolean isCacheCompile() {
         return getProperty(CACHE_COMPILE, true);
+    }
+
+    @Override
+    public boolean isCacheSingleGoal() {
+        return getProperty(CACHE_SINGLE_GOAL, true);
+    }
+
+    @Override
+    public boolean isRestoreForkedExecutions() {
+        return getProperty(RESTORE_FORKED_EXECUTIONS, true);
     }
 
     @Override
