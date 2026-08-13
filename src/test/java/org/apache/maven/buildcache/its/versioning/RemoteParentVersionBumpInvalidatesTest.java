@@ -76,6 +76,7 @@ class RemoteParentVersionBumpInvalidatesTest {
         corpInstallV1.setAutoclean(false);
         corpInstallV1.setSystemProperty("projectVersion", System.getProperty("projectVersion"));
         corpInstallV1.setLocalRepo(System.getProperty("localRepo"));
+        corpInstallV1.addCliOption("-Dmaven.build.cache.skipCache=true");
         corpInstallV1.setLogFileName("log-corp-v10-install.txt");
         corpInstallV1.executeGoal("install");
         corpInstallV1.verifyErrorFreeLog();
@@ -101,6 +102,7 @@ class RemoteParentVersionBumpInvalidatesTest {
         corpInstallV11.setAutoclean(false);
         corpInstallV11.setSystemProperty("projectVersion", System.getProperty("projectVersion"));
         corpInstallV11.setLocalRepo(System.getProperty("localRepo"));
+        corpInstallV11.addCliOption("-Dmaven.build.cache.skipCache=true");
         corpInstallV11.setLogFileName("log-corp-v11-install.txt");
         corpInstallV11.executeGoal("install");
         corpInstallV11.verifyErrorFreeLog();
