@@ -29,7 +29,7 @@ under the License.
 
   <groupId>org.apache.maven.extensions</groupId>
   <artifactId>maven-build-cache-extension</artifactId>
-  <version>1.3.0</version>
+  <version>1.3.1-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>Apache Maven Build Cache Extension</name>
@@ -40,7 +40,7 @@ under the License.
   <scm>
     <connection>scm:git:https://github.com/apache/maven-build-cache-extension.git</connection>
     <developerConnection>scm:git:https://github.com/apache/maven-build-cache-extension.git</developerConnection>
-    <tag>maven-build-cache-extension-1.3.0</tag>
+    <tag>HEAD</tag>
     <url>https://github.com/apache/maven-build-cache-extension/tree/${project.scm.tag}</url>
   </scm>
   <issueManagement>
@@ -59,7 +59,7 @@ under the License.
   </distributionManagement>
 
   <properties>
-    <project.build.outputTimestamp>2026-08-13T11:18:38Z</project.build.outputTimestamp>
+    <project.build.outputTimestamp>2026-08-13T11:18:57Z</project.build.outputTimestamp>
     <javaVersion>8</javaVersion>
     <minimalMavenBuildVersion>3.9.0</minimalMavenBuildVersion>
     <minimalJavaBuildVersion>11</minimalJavaBuildVersion>
