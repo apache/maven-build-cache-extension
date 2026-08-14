@@ -81,14 +81,20 @@ processing rules in an XML file.
 To maximize correctness:
 
 * Select every relevant file as input to the engine
-* Add all the functional plugin parameters to the reconciliation
+* Add all plugin parameters marked `<cache-key>true</cache-key>` to the reconciliation
 
 To maximize reuse you need to:
 
 * Filter out non-essential files (documentation, IDE configs, and similar)
-* Minimize the overall number of controlled plugin parameters and exclude behavioral plugin parameters (like the number
+* Minimize the overall number of controlled plugin parameters and exclude non-cache-key plugin parameters (like the number
   of threads or log level)
 * Make source code relocatable (environment agnostic)
+
+**Note:** The build cache extension includes a parameter validation system that uses the `<cache-key>` annotation to
+identify properties that must invalidate the cache when their values change. The annotation defaults to `false`.
+The system validates reconciliation configurations and warns about unknown or non-cache-key parameters. See the
+[Parameter Validation section](how-to.html#Parameter_Validation_and_Categorization) for details on adding definitions
+for new plugins.
 
 Effectively, cache setup involves inspecting the build, taking these decisions, and reflecting them in the cache
 configuration.
