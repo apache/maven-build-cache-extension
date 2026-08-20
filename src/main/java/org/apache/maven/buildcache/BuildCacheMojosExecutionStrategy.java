@@ -124,14 +124,17 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                                     && cacheConfig.isCacheSingleGoal()
                                     && isCacheableCliInvocation(mojoExecutions)));
             // When a command-line goal forks a lifecycle (e.g. jetty:run forks test-compile via
-            // @Execute(phase=...)), let that fork restore from cache but never save. We skip forks that happen
-            // inside a normal build: that build already handles caching, and joining in would just cause an
-            // extra, pointless cache lookup (see ForkedExecutionsTest / ForkedExecutionCoreExtensionTest).
+            // @Execute(phase=...)), let that fork restore from - and, by default, save to - the cache. We skip
+            // forks that happen inside a normal build: that build already handles caching, and joining in would
+            // cause an extra, pointless cache lookup (see ForkedExecutionsTest / ForkedExecutionCoreExtensionTest).
             boolean forkedRestoreEligible = forkedExecution
                     && cacheConfig.isRestoreForkedExecutions()
                     && source == Source.LIFECYCLE
                     && isCliOriginatedFork(project)
                     && forkReachesCacheablePhase(project, mojoExecutions);
+            // Such a fork may also save what it built, so the next run can restore it. The save path still
+            // refuses to overwrite a cache entry that already reached a later phase (see canSaveForkedBuild).
+            boolean forkedSaveEligible = forkedRestoreEligible && cacheConfig.isSaveForkedExecutions();
             List<MojoExecution> cleanPhase = null;
             if (cacheEligible || forkedRestoreEligible) {
                 if (!cacheIsDisabled) {
@@ -177,11 +180,11 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
             }
 
             try {
-                if (cacheState == INITIALIZED && !restored && !forkedExecution) {
+                if (cacheState == INITIALIZED && !restored && (!forkedExecution || forkedSaveEligible)) {
                     // Move pre-existing artifacts to staging directory to prevent caching stale files
                     // from previous builds (e.g., after source changes or from cache restored
                     // with clock skew). This ensures save() only sees fresh files built during this session.
-                    // Skip for forked executions since they don't cache and shouldn't modify artifacts.
+                    // Also done for a CLI-originated fork that will save, since it runs without a clean.
                     // Skip when cache is disabled to avoid accessing uninitialized cache configuration.
                     try {
                         cacheController.stagePreExistingArtifacts(session, project);
@@ -201,27 +204,22 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                     }
                 }
 
-                if (cacheState == INITIALIZED && !forkedExecution && (!result.isSuccess() || !restored)) {
-                    boolean skipSave = cacheConfig.isSkipSave() || MavenProjectInput.isSkipSave(project);
-                    if (skipSave) {
-                        LOGGER.debug("Cache saving is disabled.");
-                    } else if (cacheConfig.isMandatoryClean()
-                            && lifecyclePhasesHelper
-                                    .getCleanSegment(project, mojoExecutions)
-                                    .isEmpty()) {
-                        LOGGER.debug("Cache storing is skipped since there was no \"clean\" phase.");
-                    } else {
-                        final Map<String, MojoExecutionEvent> executionEvents =
-                                mojoListener.getProjectExecutions(project);
-                        cacheController.save(result, mojoExecutions, executionEvents);
-                    }
+                if (cacheState == INITIALIZED) {
+                    saveToCache(
+                            result,
+                            project,
+                            mojoExecutions,
+                            projectName,
+                            forkedExecution,
+                            forkedSaveEligible,
+                            restored);
                 }
             } finally {
                 // Always restore staged files after build completes (whether save ran or not).
                 // Files that were rebuilt are discarded; files that weren't rebuilt are restored.
-                // Skip for forked executions since they don't stage artifacts.
+                // Mirror the staging condition above, so a saving fork also gets its staged files back.
                 // Skip when cache is disabled since staging was not performed.
-                if (cacheState == INITIALIZED && !restored && !forkedExecution) {
+                if (cacheState == INITIALIZED && !restored && (!forkedExecution || forkedSaveEligible)) {
                     cacheController.restoreStagedArtifacts(session, project);
                 }
             }
@@ -236,6 +234,38 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
             }
         } catch (MojoExecutionException e) {
             throw new LifecycleExecutionException(e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Saves the build to the cache when appropriate. Runs for a normal build, and for a CLI-originated fork that
+     * is save-eligible (so a later run can restore it). A fork won't overwrite an entry that already reached a
+     * later phase (see {@link CacheController#canSaveForkedBuild}).
+     */
+    private void saveToCache(
+            CacheResult result,
+            MavenProject project,
+            List<MojoExecution> mojoExecutions,
+            String projectName,
+            boolean forkedExecution,
+            boolean forkedSaveEligible,
+            boolean restored) {
+        if ((forkedExecution && !forkedSaveEligible) || (result.isSuccess() && restored)) {
+            return;
+        }
+        boolean skipSave = cacheConfig.isSkipSave() || MavenProjectInput.isSkipSave(project);
+        if (skipSave) {
+            LOGGER.debug("Cache saving is disabled.");
+        } else if (cacheConfig.isMandatoryClean()
+                && lifecyclePhasesHelper
+                        .getCleanSegment(project, mojoExecutions)
+                        .isEmpty()) {
+            LOGGER.debug("Cache storing is skipped since there was no \"clean\" phase.");
+        } else if (forkedExecution && !cacheController.canSaveForkedBuild(result, project, mojoExecutions)) {
+            LOGGER.debug("Skipping fork save: a cache entry already covers a later phase for {}.", projectName);
+        } else {
+            final Map<String, MojoExecutionEvent> executionEvents = mojoListener.getProjectExecutions(project);
+            cacheController.save(result, mojoExecutions, executionEvents);
         }
     }
 

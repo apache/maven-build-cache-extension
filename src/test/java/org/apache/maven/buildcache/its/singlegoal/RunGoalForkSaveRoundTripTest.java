@@ -23,27 +23,35 @@ import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
-
 /**
- * A run-style goal with no default phase ({@code dependency:analyze}, standing in for {@code jetty:run}) should
- * not create a cache entry when run against an empty cache. The goal can't be cached (no default phase), and its
- * forked lifecycle only reads from the cache, never writes to it. The build should still succeed.
+ * A run-style goal that forks a lifecycle now caches across runs. {@code dependency:analyze} declares
+ * {@code @Execute(phase="test-compile")} (the same trick {@code jetty:run} uses), so it forks a build before the
+ * goal. On the first run against an empty cache the fork builds and saves; on the second run the fork restores
+ * that output instead of compiling again.
  */
 @IntegrationTest("src/test/projects/single-goal-fork")
-class RunGoalNotCachedTest {
+class RunGoalForkSaveRoundTripTest {
 
+    private static final String PROJECT_NAME = "org.apache.maven.caching.test:single-goal-fork";
+    private static final String CACHE_HIT = "Found cached build, restoring " + PROJECT_NAME + " from cache";
     private static final String CACHE_SAVED = "Saved Build to local file";
+    private static final String SKIPPED_COMPILE = "Skipping plugin execution (cached): compiler:compile";
 
     @Test
-    void runGoalDoesNotSaveCacheEntry(Verifier verifier) throws VerificationException {
+    void forkSavesThenRestores(Verifier verifier) throws VerificationException {
         verifier.setAutoclean(false);
 
-        // Empty cache: run the goal directly. Neither the goal (no default phase) nor its read-only fork
-        // should write a cache entry.
+        // First run — empty cache: the fork misses, builds, and saves what it produced.
         verifier.setLogFileName("../log-1.txt");
         verifier.executeGoal("dependency:analyze");
         verifier.verifyErrorFreeLog();
-        assertThrows(VerificationException.class, () -> verifier.verifyTextInLog(CACHE_SAVED));
+        verifier.verifyTextInLog(CACHE_SAVED);
+
+        // Second run — the fork restores the compiled output saved by the first run instead of recompiling.
+        verifier.setLogFileName("../log-2.txt");
+        verifier.executeGoal("dependency:analyze");
+        verifier.verifyErrorFreeLog();
+        verifier.verifyTextInLog(CACHE_HIT);
+        verifier.verifyTextInLog(SKIPPED_COMPILE);
     }
 }
