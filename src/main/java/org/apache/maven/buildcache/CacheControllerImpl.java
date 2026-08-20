@@ -56,6 +56,7 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.UnaryOperator;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -507,24 +508,93 @@ public class CacheControllerImpl implements CacheController {
         if (!cacheConfig.isRestoreGeneratedSources() || !MavenProjectInput.isRestoreGeneratedSources(project)) {
             return false;
         }
-        // Only require the output dirs the fork actually reaches: target/classes once it hits compile,
-        // target/test-classes once it hits test-compile. If a required directory isn't in the entry, restoring
-        // would leave the fork with no classes, so we bail out and let it recompile.
+        final MavenSession session = cacheResult.getContext().getSession();
         final LifecyclePhasesHelper helper = providerLifecyclePhasesHelper.get();
         final String highestPhase = helper.resolveHighestLifecyclePhase(project, mojoExecutions);
         if (!helper.isSupportedPhase(highestPhase)) {
             return false;
         }
         final Path baseDir = project.getBasedir().toPath();
+        // On a hit the fork skips compilation, so the entry must carry the output it would have built:
+        // target/classes once it reaches compile, target/test-classes once it reaches test-compile. Don't ask
+        // for output the fork wouldn't build though - compilation skipped (maven.main.skip / maven.test.skip,
+        // e.g. -P quick-build) or no sources - otherwise a quick-build or test-less module could never restore.
         if (isPhaseReached(helper, highestPhase, "compile")
+                && wouldCompile(project, session, "maven.main.skip", project.getCompileSourceRoots())
                 && !coversDirectory(build, baseDir, Paths.get(project.getBuild().getOutputDirectory()))) {
             return false;
         }
         if (isPhaseReached(helper, highestPhase, "test-compile")
+                && wouldCompile(project, session, "maven.test.skip", project.getTestCompileSourceRoots())
                 && !coversDirectory(build, baseDir, Paths.get(project.getBuild().getTestOutputDirectory()))) {
             return false;
         }
         return true;
+    }
+
+    @Override
+    public boolean canSaveForkedBuild(
+            CacheResult cacheResult, MavenProject project, List<MojoExecution> mojoExecutions) {
+        // Never overwrite an entry that already reached a later phase (entries are keyed by checksum alone):
+        // save only when nothing is cached yet, or the fork got further than what's there.
+        final Build existing = cacheResult.getBuildInfo();
+        if (existing == null) {
+            return true;
+        }
+        final LifecyclePhasesHelper helper = providerLifecyclePhasesHelper.get();
+        final String highestPhase = helper.resolveHighestLifecyclePhase(project, mojoExecutions);
+        if (!helper.isSupportedPhase(highestPhase) || !helper.isSupportedPhase(existing.getHighestCompletedGoal())) {
+            // Can't compare phases safely - keep the existing entry rather than risk degrading it.
+            return false;
+        }
+        return helper.isLaterPhaseThanBuild(highestPhase, existing);
+    }
+
+    /**
+     * Whether the fork would really compile this output: the skip flag isn't set and there are sources. If not,
+     * the cache entry needn't carry that output directory.
+     */
+    private static boolean wouldCompile(
+            MavenProject project, MavenSession session, String skipProperty, List<String> sourceRoots) {
+        return !isFlagSet(project, session, skipProperty) && hasSourceFiles(sourceRoots);
+    }
+
+    /**
+     * Reads a boolean flag from the project properties (so profiles like {@code quick-build} are honoured)
+     * or, failing that, the session user/system properties (so a command line {@code -D} is honoured).
+     */
+    private static boolean isFlagSet(MavenProject project, MavenSession session, String property) {
+        String value = project.getProperties().getProperty(property);
+        if (value == null) {
+            value = session.getUserProperties().getProperty(property);
+        }
+        if (value == null) {
+            value = session.getSystemProperties().getProperty(property);
+        }
+        return Boolean.parseBoolean(value);
+    }
+
+    /**
+     * Whether any of the given source roots holds at least one file, i.e. compiling them would produce output.
+     */
+    private static boolean hasSourceFiles(List<String> sourceRoots) {
+        if (sourceRoots == null) {
+            return false;
+        }
+        for (String root : sourceRoots) {
+            final Path dir = Paths.get(root);
+            if (!Files.isDirectory(dir)) {
+                continue;
+            }
+            try (Stream<Path> walk = Files.walk(dir)) {
+                if (walk.anyMatch(Files::isRegularFile)) {
+                    return true;
+                }
+            } catch (IOException e) {
+                LOGGER.debug("Failed to scan source root {}: {}", root, e.getMessage());
+            }
+        }
+        return false;
     }
 
     /**

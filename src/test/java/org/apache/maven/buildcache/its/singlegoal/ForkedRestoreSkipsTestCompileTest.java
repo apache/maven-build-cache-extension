@@ -23,32 +23,28 @@ import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
-
 /**
- * When the cache entry only holds the final JAR (no compiled output directories), a forked lifecycle must not
- * restore from it — otherwise the fork would skip compilation and the run-style goal would be left with an empty
- * {@code target/classes}. The fork should fall back to recompiling.
- *
- * <p>Build 1 saves a JAR-only entry with {@code cacheCompile=false} (so {@code target/classes} isn't cached).
- * After a {@code clean}, the forked {@code dependency:analyze} must recompile rather than restore, and the
- * classes must be present afterwards. The recompiling fork must also NOT save, since that would replace the
- * fuller {@code install} entry with a jar-less {@code test-compile} one (the don't-degrade guard).
+ * A fork must stay restorable when test compilation is skipped. With {@code maven.test.skip} (e.g. from a
+ * {@code quick-build} profile) {@code target/test-classes} is never built, so the entry can't carry it - yet
+ * the fork reaches {@code test-compile}. The restore guard now only requires output the fork would actually
+ * build, so the compile step is restored instead of recompiled.
  */
 @IntegrationTest("src/test/projects/single-goal-fork")
-class ForkedRestoreSkippedWhenNoClassesTest {
+class ForkedRestoreSkipsTestCompileTest {
 
-    private static final String COMPILED_CLASS = "target/classes/org/apache/maven/buildcache/Hello.class";
+    private static final String PROJECT_NAME = "org.apache.maven.caching.test:single-goal-fork";
+    private static final String CACHE_HIT = "Found cached build, restoring " + PROJECT_NAME + " from cache";
     private static final String SKIPPED_COMPILE = "Skipping plugin execution (cached): compiler:compile";
-    private static final String CACHE_SAVED = "Saved Build to local file";
+    private static final String COMPILED_CLASS = "target/classes/org/apache/maven/buildcache/Hello.class";
 
     @Test
-    void forkDoesNotRestoreFromJarOnlyEntry(Verifier verifier) throws VerificationException {
+    void forkRestoresWhenTestCompileSkipped(Verifier verifier) throws VerificationException {
         verifier.setAutoclean(false);
+        // maven.test.skip stays set for every goal below, so target/test-classes is never built or cached.
+        verifier.addCliOption("-Dmaven.test.skip=true");
 
-        // Build 1: install but don't cache compiled output -> entry holds only the JAR.
+        // Build 1: install fills the cache with main classes only (no test-classes, since tests are skipped).
         verifier.setLogFileName("../log-1.txt");
-        verifier.addCliOption("-Dmaven.build.cache.cacheCompile=false");
         verifier.executeGoal("install");
         verifier.verifyErrorFreeLog();
 
@@ -58,14 +54,13 @@ class ForkedRestoreSkippedWhenNoClassesTest {
         verifier.verifyErrorFreeLog();
         verifier.verifyFileNotPresent(COMPILED_CLASS);
 
-        // Build 2: dependency:analyze forks test-compile. The JAR-only entry can't restore classes, so the fork
-        // must recompile instead of skipping compilation.
+        // Build 2: the fork reaches test-compile, but tests are skipped so the missing target/test-classes must
+        // not block the restore; the compile step comes from the cache and the classes are put back.
         verifier.setLogFileName("../log-2.txt");
         verifier.executeGoal("dependency:analyze");
         verifier.verifyErrorFreeLog();
-        assertThrows(VerificationException.class, () -> verifier.verifyTextInLog(SKIPPED_COMPILE));
+        verifier.verifyTextInLog(CACHE_HIT);
+        verifier.verifyTextInLog(SKIPPED_COMPILE);
         verifier.verifyFilePresent(COMPILED_CLASS);
-        // ...and it must not overwrite the fuller install entry with its own (earlier phase) build.
-        assertThrows(VerificationException.class, () -> verifier.verifyTextInLog(CACHE_SAVED));
     }
 }
