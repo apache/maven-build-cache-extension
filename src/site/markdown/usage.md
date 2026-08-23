@@ -29,13 +29,16 @@ that phase. Goals with no default phase (e.g. `jetty:run`, `exec:java`) and mixe
 (e.g. `mvn package dependency:tree`) are left untouched and simply run. This can be disabled with
 `-Dmaven.build.cache.cacheSingleGoal=false`.
 
-### Forked lifecycle restore
+### Forked lifecycle caching
 
 Some goals fork a prerequisite lifecycle before running — for example `jetty:run` and `spring-boot:run` fork
 `test-compile` so the application is compiled before the server starts. When such a goal is invoked directly, the
-forked lifecycle restores previously cached outputs instead of recompiling (it never saves a cache entry of its
-own). This is effective with the default `singlethreaded` builder and with `multithreaded` (`-T`); it does not
-apply to the `concurrent` builder. Disable it with `-Dmaven.build.cache.restoreForkedExecutions=false`.
+forked lifecycle takes part in the cache: it restores previously cached outputs instead of recompiling, and it
+saves what it builds so a later run can restore it. A fork never overwrites a cache entry that already reached a
+later phase, and it does not require compiled output the build would not produce (test compilation skipped, or no
+sources). This is effective with the default `singlethreaded` builder and with `multithreaded` (`-T`); it does
+not apply to the `concurrent` builder. Restore and save can be turned off independently with
+`-Dmaven.build.cache.restoreForkedExecutions=false` and `-Dmaven.build.cache.saveForkedExecutions=false`.
 
 ## Subtree builds
 

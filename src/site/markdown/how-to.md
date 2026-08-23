@@ -279,13 +279,13 @@ mvn compiler:compile -Dmaven.build.cache.cacheSingleGoal=false
 
 ### I want `jetty:run` (or `spring-boot:run`) to reuse cached compilation
 
-These goals compile the project first by forking a `test-compile` lifecycle before the server starts. By default
-that forked build reuses previously cached classes instead of recompiling (the fork only reads from the cache, it
-never writes to it):
+These goals compile the project first by forking a `test-compile` lifecycle before the server starts. That
+forked build takes part in the cache: it restores previously cached classes instead of recompiling, and it also
+saves what it builds — so the compilation is cached across runs, even from `jetty:run` alone:
 
 ```shell
-mvn install       # populates the cache
-mvn jetty:run     # the forked test-compile restores from cache, then the server starts
+mvn jetty:run     # first run: the forked test-compile builds and caches the classes
+mvn jetty:run     # next run: the fork restores them from cache, then the server starts
 ```
 
 For this to help, the cache entry has to actually contain the compiled output — otherwise the fork would skip
@@ -303,9 +303,14 @@ compilation and find no classes, so the extension detects that and recompiles in
 </configuration>
 ```
 
-This works with the default builder and with parallel builds (`-T`), but not with the `concurrent` builder. To
-turn it off and always recompile before the goal runs:
+A fork never overwrites a cache entry that a fuller build (e.g. `mvn install`) already stored, and it doesn't
+require `target/test-classes` when test compilation is skipped (`-Dmaven.test.skip`, e.g. a `quick-build`
+profile) or when the module has no test sources.
+
+This works with the default builder and with parallel builds (`-T`), but not with the `concurrent` builder. The
+fork's restore and save can be turned off independently:
 
 ```shell
-mvn jetty:run -Dmaven.build.cache.restoreForkedExecutions=false
+mvn jetty:run -Dmaven.build.cache.restoreForkedExecutions=false   # always recompile, don't restore
+mvn jetty:run -Dmaven.build.cache.saveForkedExecutions=false      # don't cache what the fork built
 ```

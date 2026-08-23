@@ -51,6 +51,19 @@ public interface CacheController {
      */
     boolean canRestoreForkedOutputs(CacheResult cacheResult, MavenProject project, List<MojoExecution> mojoExecutions);
 
+    /**
+     * Tells whether a forked lifecycle may save its build. Entries are keyed by checksum alone, so a fork that
+     * stopped early (e.g. {@code jetty:run} at {@code test-compile}) must not overwrite a fuller entry (e.g.
+     * from {@code mvn install}). True only when nothing is cached yet, or the fork got further than the existing
+     * entry.
+     *
+     * @param cacheResult    the current lookup (its build info is the existing entry, if any)
+     * @param project        the (forked) project being built
+     * @param mojoExecutions the mojos scheduled for the forked lifecycle
+     * @return true if saving would not degrade an existing entry
+     */
+    boolean canSaveForkedBuild(CacheResult cacheResult, MavenProject project, List<MojoExecution> mojoExecutions);
+
     void save(
             CacheResult cacheResult,
             List<MojoExecution> mojoExecutions,
