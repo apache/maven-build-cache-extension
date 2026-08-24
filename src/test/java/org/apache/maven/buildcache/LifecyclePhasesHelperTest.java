@@ -377,7 +377,7 @@ class LifecyclePhasesHelperTest {
         // compiler:compile maps to the "compile" phase, which is later than clean -> empty clean segment
         List<MojoExecution> cleanSegment =
                 lifecyclePhasesHelper.getCleanSegment(projectMock, singletonList(mockedCliGoal("compile")));
-        assertThat(cleanSegment).isEmpty();
+        assertTrue(cleanSegment.isEmpty());
     }
 
     @Test
