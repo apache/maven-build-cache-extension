@@ -112,15 +112,14 @@ class RemoteCacheDavTest {
         dav.close();
     }
 
-    public static Stream<Arguments> transports() {
-        return Stream.of(Arguments.of("wagon"), Arguments.of("http"));
+    public static Stream<Arguments> urlSchemes() {
+        return Stream.of(Arguments.of("http://"), Arguments.of("dav:http://"));
     }
 
     @ParameterizedTest
-    @MethodSource("transports")
-    void doTestRemoteCache(String transport) throws VerificationException, IOException {
-        String url =
-                ("wagon".equals(transport) ? "dav:" : "") + "http://localhost:" + dav.getFirstMappedPort() + "/mbce";
+    @MethodSource("urlSchemes")
+    void doTestRemoteCache(String scheme) throws VerificationException, IOException {
+        String url = scheme + "localhost:" + dav.getFirstMappedPort() + "/mbce";
         substitute(
                 basedir.resolve(".mvn/maven-build-cache-config.xml"),
                 "url",
@@ -138,8 +137,8 @@ class RemoteCacheDavTest {
 
         verifier.getCliOptions().clear();
         verifier.addCliOption("--settings=" + settings);
-        verifier.addCliOption("-D" + HTTP_TRANSPORT_PRIORITY + "=" + ("wagon".equals(transport) ? "0" : "10"));
-        verifier.addCliOption("-D" + WAGON_TRANSPORT_PRIORITY + "=" + ("wagon".equals(transport) ? "10" : "0"));
+        verifier.addCliOption("-D" + HTTP_TRANSPORT_PRIORITY + "=10");
+        verifier.addCliOption("-D" + WAGON_TRANSPORT_PRIORITY + "=0");
         verifier.addCliOption("-D" + MAVEN_BUILD_CACHE_REMOTE_SAVE_ENABLED + "=false");
         verifier.setLogFileName("../log-1.txt");
         verifier.executeGoals(Arrays.asList("clean", "install"));
@@ -152,12 +151,8 @@ class RemoteCacheDavTest {
 
         verifier.getCliOptions().clear();
         verifier.addCliOption("--settings=" + settings);
-        if (!"wagon".equals(transport)) {
-            verifier.setSystemProperty("aether.transport.http.supportWebDav", "true");
-            verifier.setSystemProperty("aether.connector.http.supportWebDav", "true");
-        }
-        verifier.addCliOption("-D" + HTTP_TRANSPORT_PRIORITY + "=" + ("wagon".equals(transport) ? "0" : "10"));
-        verifier.addCliOption("-D" + WAGON_TRANSPORT_PRIORITY + "=" + ("wagon".equals(transport) ? "10" : "0"));
+        verifier.addCliOption("-D" + HTTP_TRANSPORT_PRIORITY + "=10");
+        verifier.addCliOption("-D" + WAGON_TRANSPORT_PRIORITY + "=0");
         verifier.addCliOption("-D" + MAVEN_BUILD_CACHE_REMOTE_SAVE_ENABLED + "=true");
         verifier.setLogFileName("../log-2.txt");
         verifier.executeGoals(Arrays.asList("clean", "install"));
@@ -170,12 +165,8 @@ class RemoteCacheDavTest {
 
         verifier.getCliOptions().clear();
         verifier.addCliOption("--settings=" + settings);
-        if (!"wagon".equals(transport)) {
-            verifier.setSystemProperty("aether.transport.http.supportWebDav", "true");
-            verifier.setSystemProperty("aether.connector.http.supportWebDav", "true");
-        }
-        verifier.addCliOption("-D" + HTTP_TRANSPORT_PRIORITY + "=" + ("wagon".equals(transport) ? "0" : "10"));
-        verifier.addCliOption("-D" + WAGON_TRANSPORT_PRIORITY + "=" + ("wagon".equals(transport) ? "10" : "0"));
+        verifier.addCliOption("-D" + HTTP_TRANSPORT_PRIORITY + "=10");
+        verifier.addCliOption("-D" + WAGON_TRANSPORT_PRIORITY + "=0");
         verifier.addCliOption("-D" + MAVEN_BUILD_CACHE_REMOTE_SAVE_ENABLED + "=false");
         verifier.setLogFileName("../log-3.txt");
         verifier.executeGoals(Arrays.asList("clean", "install"));
@@ -206,8 +197,8 @@ class RemoteCacheDavTest {
         verifier.getCliOptions().clear();
         verifier.addCliOption("--settings=" + settings);
         verifier.addCliOption("-X");
-        verifier.addCliOption("-D" + HTTP_TRANSPORT_PRIORITY + "=" + ("wagon".equals(transport) ? "0" : "10"));
-        verifier.addCliOption("-D" + WAGON_TRANSPORT_PRIORITY + "=" + ("wagon".equals(transport) ? "10" : "0"));
+        verifier.addCliOption("-D" + HTTP_TRANSPORT_PRIORITY + "=10");
+        verifier.addCliOption("-D" + WAGON_TRANSPORT_PRIORITY + "=0");
         verifier.addCliOption("-D" + MAVEN_BUILD_CACHE_REMOTE_SAVE_ENABLED + "=true");
         verifier.setSystemProperty(REMOTE_URL_PROPERTY_NAME, url);
         verifier.setSystemProperty(REMOTE_SERVER_ID_PROPERTY_NAME, REPO_ID);
