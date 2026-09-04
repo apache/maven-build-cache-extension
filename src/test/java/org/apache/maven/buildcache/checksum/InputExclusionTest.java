@@ -268,6 +268,66 @@ class InputExclusionTest {
     }
 
     /**
+     * Regression test for https://github.com/apache/maven-build-cache-extension/issues/525
+     *
+     * A plugin config value (e.g. a {@code <directory>} tag on maven-resources-plugin) can point into a
+     * sibling reactor module's directory tree. Without excluding that sibling's own build output
+     * directories too, its {@code target/} contents (jar timestamps, {@code maven-status} files, ...) end
+     * up hashed as inputs, so the checksum flaps even though nothing in this project's own sources
+     * changed.
+     *
+     * @throws IOException
+     */
+    @Test
+    void exclusionOfSiblingReactorModuleBuildOutput() throws IOException {
+        Path modADir = Files.createDirectories(testFolder.resolve("mod-a"));
+        Path modATarget = Files.createDirectories(modADir.resolve("target"));
+        Path modATargetFile = Files.createFile(modATarget.resolve("mod-a-1.0.jar"));
+        Path modASourceFile = Files.createFile(modADir.resolve("resource.txt"));
+
+        Path modBDir = Files.createDirectories(testFolder.resolve("mod-b"));
+        Path modBTarget = Files.createDirectories(modBDir.resolve("target"));
+        Path modBTargetFile = Files.createFile(modBTarget.resolve("mod-b-1.0.jar"));
+
+        MavenProject projectA = mockProjectWithBuild(modADir);
+        MavenProject projectB = mockProjectWithBuild(modBDir);
+
+        CacheConfig cacheConfig = Mockito.mock(CacheConfig.class);
+        Mockito.when(cacheConfig.getGlobalExcludePaths()).thenReturn(new ArrayList<>());
+
+        // Without reactor context (existing 2-arg constructor / pre-fix behavior), mod-a's own build
+        // output is invisible to mod-b's resolver: nothing stops a plugin-config walk that reaches into
+        // mod-a from hashing mod-a's target/ contents.
+        ExclusionResolver resolverWithoutReactorContext = new ExclusionResolver(projectB, cacheConfig);
+        Assertions.assertFalse(resolverWithoutReactorContext.excludesPath(modATargetFile));
+
+        // With the full reactor project list, mod-b's resolver also excludes every sibling's own build
+        // output, including mod-a's.
+        ExclusionResolver resolverWithReactorContext =
+                new ExclusionResolver(projectB, cacheConfig, Arrays.asList(projectA, projectB));
+        Assertions.assertTrue(resolverWithReactorContext.excludesPath(modATargetFile));
+        // mod-a's actual sources are untouched, they must still be treated as real inputs.
+        Assertions.assertFalse(resolverWithReactorContext.excludesPath(modASourceFile));
+        // mod-b's own target/ is still excluded as before.
+        Assertions.assertTrue(resolverWithReactorContext.excludesPath(modBTargetFile));
+    }
+
+    private MavenProject mockProjectWithBuild(Path baseDir) {
+        MavenProject mavenProject = Mockito.mock(MavenProject.class);
+        Mockito.when(mavenProject.getBasedir()).thenReturn(baseDir.toFile());
+        Mockito.when(mavenProject.getProperties()).thenReturn(new Properties());
+
+        Build build = Mockito.mock(Build.class);
+        Mockito.when(build.getDirectory()).thenReturn(baseDir.resolve("target").toString());
+        Mockito.when(build.getOutputDirectory())
+                .thenReturn(baseDir.resolve("target/classes").toString());
+        Mockito.when(build.getTestOutputDirectory())
+                .thenReturn(baseDir.resolve("target/test-classes").toString());
+        Mockito.when(mavenProject.getBuild()).thenReturn(build);
+        return mavenProject;
+    }
+
+    /**
      * Via project properties, excludes :
      * - all files in folder 1
      * - the json file in subfolder 1
