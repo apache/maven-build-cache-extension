@@ -17,10 +17,11 @@
 
 name: Verify 4.0
 
-# Maven 4 disabled for now: let's focus on Resolver 2 first
-# on:
-#  push:
-#  pull_request:
+# Maven 4 is not verified on every push: let's focus on Resolver 2 first. Start this workflow by
+# hand from the Actions tab when a Maven 4 run is wanted. Commenting the trigger out instead makes
+# the file invalid, which GitHub reports as a failed run on every push and pull request.
+on:
+  workflow_dispatch:
 
 jobs:
   build:
