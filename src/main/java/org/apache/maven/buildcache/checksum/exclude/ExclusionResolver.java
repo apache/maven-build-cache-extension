@@ -84,7 +84,8 @@ public class ExclusionResolver {
      */
     public ExclusionResolver(MavenProject project, CacheConfig config, List<MavenProject> allReactorProjects) {
         addDefaultExcludes(project);
-        for (MavenProject reactorProject : allReactorProjects == null ? Collections.emptyList() : allReactorProjects) {
+        for (MavenProject reactorProject :
+                allReactorProjects == null ? Collections.<MavenProject>emptyList() : allReactorProjects) {
             if (reactorProject != project) {
                 addDefaultExcludes(reactorProject);
             }
