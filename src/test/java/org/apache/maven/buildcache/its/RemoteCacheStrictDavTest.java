@@ -24,6 +24,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
@@ -124,10 +125,16 @@ class RemoteCacheStrictDavTest {
         }
     }
 
+    /**
+     * Substitutes {@code ${name}} placeholders in a file. The replacement goes through
+     * {@link Matcher#quoteReplacement} because one of the values is a filesystem path: on Windows its backslashes
+     * would otherwise be read as escapes and silently dropped.
+     */
     private static void substitute(Path path, String... strings) throws IOException {
         String str = new String(Files.readAllBytes(path), StandardCharsets.UTF_8);
         for (int i = 0; i < strings.length / 2; i++) {
-            str = str.replaceAll(Pattern.quote("${" + strings[i * 2] + "}"), strings[i * 2 + 1]);
+            str = str.replaceAll(
+                    Pattern.quote("${" + strings[i * 2] + "}"), Matcher.quoteReplacement(strings[i * 2 + 1]));
         }
         Files.deleteIfExists(path);
         Files.write(path, str.getBytes(StandardCharsets.UTF_8));
