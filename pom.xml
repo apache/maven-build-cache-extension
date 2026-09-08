@@ -73,7 +73,7 @@ under the License.
     <maven.basedir>${project.build.directory}/${maven.dir}</maven.basedir>
 
     <resolverVersion>1.9.27</resolverVersion>
-    <slf4jVersion>1.7.36</slf4jVersion>
+    <slf4jVersion>2.0.19</slf4jVersion>
     <mockitoVersion>4.11.0</mockitoVersion>
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
     <maven.site.path>extensions-archives/${project.artifactId}-LATEST</maven.site.path>
