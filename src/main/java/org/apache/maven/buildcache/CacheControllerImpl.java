@@ -1178,9 +1178,16 @@ public class CacheControllerImpl implements CacheController {
             }
 
             String buildId = UUID.randomUUID().toString();
+            LOGGER.info(
+                    "Saving cache report {} with {} project entries",
+                    buildId,
+                    cacheReport.getProjects().size());
             localCache.saveCacheReport(buildId, session, cacheReport);
         } catch (Exception e) {
             LOGGER.error("Cannot save incremental build aggregated report", e);
+            if (cacheConfig.isFailFast()) {
+                throw new IllegalStateException("Cannot save incremental build aggregated report", e);
+            }
         }
     }
 
