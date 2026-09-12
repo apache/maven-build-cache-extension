@@ -286,7 +286,7 @@ public class CacheUtils {
                 ZipArchiveEntry entry = entries.nextElement();
                 Path file = out.resolve(entry.getName());
                 if (!file.normalize().startsWith(out.normalize())) {
-                    throw new RuntimeException("Bad zip entry");
+                    throw new IOException("Bad zip entry");
                 }
                 if (entry.isDirectory()) {
                     Files.createDirectories(file);
