@@ -68,6 +68,7 @@ import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.buildcache.artifact.ArtifactRestorationReport;
 import org.apache.maven.buildcache.artifact.OutputType;
 import org.apache.maven.buildcache.artifact.RestoredArtifact;
+import org.apache.maven.buildcache.checksum.DependencyGraphResolutionException;
 import org.apache.maven.buildcache.checksum.MavenProjectInput;
 import org.apache.maven.buildcache.hash.HashAlgorithm;
 import org.apache.maven.buildcache.hash.HashFactory;
@@ -199,7 +200,14 @@ public class CacheControllerImpl implements CacheController {
 
         String projectName = getVersionlessProjectKey(project);
 
-        ProjectsInputInfo inputInfo = projectInputCalculator.calculateInput(project);
+        final ProjectsInputInfo inputInfo;
+        try {
+            inputInfo = projectInputCalculator.calculateInput(project);
+        } catch (DependencyGraphResolutionException e) {
+            LOGGER.warn("Skipping build cache for {}: {}", projectName, e.getMessage());
+            LOGGER.debug("Dependency graph could not be resolved", e);
+            return empty();
+        }
 
         final CacheContext context = new CacheContext(project, inputInfo, session);
 
