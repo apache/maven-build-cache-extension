@@ -40,6 +40,7 @@ import org.apache.maven.buildcache.xml.build.ProjectsInputInfo;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.project.MavenProject;
+import org.apache.maven.project.ProjectDependenciesResolver;
 import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.RepositorySystemSession;
 import org.junit.jupiter.api.BeforeEach;
@@ -99,6 +100,9 @@ class MavenProjectInputReactorAndSystemScopeRegressionTest {
     @TempDir
     Path tempDir;
 
+    @Mock
+    private ProjectDependenciesResolver dependenciesResolver;
+
     private MavenProjectInput mavenProjectInput;
 
     @BeforeEach
@@ -142,7 +146,8 @@ class MavenProjectInputReactorAndSystemScopeRegressionTest {
                 config,
                 repoSystem,
                 remoteCache,
-                artifactHandlerManager);
+                artifactHandlerManager,
+                dependenciesResolver);
     }
 
     @Test

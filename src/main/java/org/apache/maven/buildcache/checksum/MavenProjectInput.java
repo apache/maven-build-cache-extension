@@ -51,6 +51,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 
 import org.apache.commons.lang3.Strings;
+import org.apache.maven.RepositoryUtils;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.artifact.handler.ArtifactHandler;
@@ -83,12 +84,19 @@ import org.apache.maven.model.Plugin;
 import org.apache.maven.model.PluginExecution;
 import org.apache.maven.model.Resource;
 import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
+import org.apache.maven.project.DefaultDependencyResolutionRequest;
+import org.apache.maven.project.DependencyResolutionException;
+import org.apache.maven.project.DependencyResolutionResult;
 import org.apache.maven.project.MavenProject;
+import org.apache.maven.project.ProjectDependenciesResolver;
 import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.artifact.DefaultArtifactType;
+import org.eclipse.aether.graph.DependencyNode;
 import org.eclipse.aether.resolution.ArtifactRequest;
 import org.eclipse.aether.resolution.ArtifactResolutionException;
 import org.eclipse.aether.resolution.ArtifactResult;
+import org.eclipse.aether.util.graph.transformer.ConflictResolver;
+import org.eclipse.aether.util.graph.visitor.PreorderNodeListGenerator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -140,6 +148,7 @@ public class MavenProjectInput {
     private final ProjectInputCalculator projectInputCalculator;
     private final Path baseDirPath;
     private final ArtifactHandlerManager artifactHandlerManager;
+    private final ProjectDependenciesResolver dependenciesResolver;
 
     /**
      * The project glob to use every time there is no override
@@ -161,7 +170,8 @@ public class MavenProjectInput {
             CacheConfig config,
             RepositorySystem repoSystem,
             RemoteCacheRepository remoteCache,
-            ArtifactHandlerManager artifactHandlerManager) {
+            ArtifactHandlerManager artifactHandlerManager,
+            ProjectDependenciesResolver dependenciesResolver) {
         this.project = project;
         this.normalizedModelProvider = normalizedModelProvider;
         this.multiModuleSupport = multiModuleSupport;
@@ -181,6 +191,7 @@ public class MavenProjectInput {
 
         this.fileComparator = new PathIgnoringCaseComparator();
         this.artifactHandlerManager = artifactHandlerManager;
+        this.dependenciesResolver = dependenciesResolver;
     }
 
     public ProjectsInputInfo calculateChecksum() throws IOException {
@@ -665,7 +676,59 @@ public class MavenProjectInput {
     }
 
     private SortedMap<String, String> getMutableDependencies() throws IOException {
-        return getMutableDependenciesHashes("", project.getDependencies());
+        SortedMap<String, String> hashes = getMutableDependenciesHashes("", project.getDependencies());
+        if (project.getDependencies().isEmpty()) {
+            return hashes;
+        }
+
+        // Collect through Maven so dependency management, exclusions and scope mediation match the build.
+        // Resolve only additional external snapshots; reactor dependencies use project checksums.
+        DefaultDependencyResolutionRequest request =
+                new DefaultDependencyResolutionRequest(project, session.getRepositorySession());
+        request.setResolutionFilter((node, parents) -> {
+            org.eclipse.aether.artifact.Artifact artifact = node.getArtifact();
+            return artifact != null
+                    && artifact.isSnapshot()
+                    && node.getData().get(ConflictResolver.NODE_DATA_WINNER) == null
+                    && !hashes.containsKey(KeyUtils.getVersionlessArtifactKey(RepositoryUtils.toArtifact(artifact)))
+                    && !multiModuleSupport
+                            .tryToResolveProject(
+                                    artifact.getGroupId(), artifact.getArtifactId(), artifact.getBaseVersion())
+                            .isPresent();
+        });
+        try {
+            DependencyResolutionResult result = dependenciesResolver.resolve(request);
+            PreorderNodeListGenerator nodes = new PreorderNodeListGenerator();
+            result.getDependencyGraph().accept(nodes);
+            for (DependencyNode node : nodes.getNodes()) {
+                if (node.getDependency() == null || node.getData().get(ConflictResolver.NODE_DATA_WINNER) != null) {
+                    continue;
+                }
+                org.eclipse.aether.artifact.Artifact artifact = node.getArtifact();
+                String key = KeyUtils.getVersionlessArtifactKey(RepositoryUtils.toArtifact(artifact));
+                if (hashes.containsKey(key)) {
+                    continue;
+                }
+                Optional<MavenProject> reactorProject = multiModuleSupport.tryToResolveProject(
+                        artifact.getGroupId(), artifact.getArtifactId(), artifact.getBaseVersion());
+                if (reactorProject.isPresent()) {
+                    hashes.put(
+                            key,
+                            projectInputCalculator
+                                    .calculateInput(reactorProject.get())
+                                    .getChecksum());
+                } else if (artifact.isSnapshot()) {
+                    hashes.put(
+                            key,
+                            config.getHashFactory()
+                                    .createAlgorithm()
+                                    .hash(artifact.getFile().toPath()));
+                }
+            }
+        } catch (DependencyResolutionException e) {
+            throw new DependencyGraphResolutionException("Cannot resolve snapshot inputs for " + project.getId(), e);
+        }
+        return hashes;
     }
 
     private SortedMap<String, String> getMutablePluginDependencies() throws IOException {
