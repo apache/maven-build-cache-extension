@@ -45,6 +45,9 @@ This document contains various configuration parameters supported by the cache e
 | `-Dmaven.build.cache.restoreForkedExecutions=(true/false)` | Restore cached results during a forked lifecycle triggered by a directly invoked goal via `@Execute(phase=...)` (e.g. the `test-compile` fork of `jetty:run`). Only effective with the singlethreaded/multithreaded builders. (default is true) | Avoid recompiling before running `jetty:run`, `spring-boot:run`, etc.                           |
 | `-Dmaven.build.cache.saveForkedExecutions=(true/false)`    | Save what such a forked lifecycle built, so a later run can restore it. A fork never overwrites a cache entry that already reached a later phase. Only effective with the singlethreaded/multithreaded builders. (default is true) | Cache `jetty:run` / `spring-boot:run` across runs, not just the first build that populated the cache |
 | `-Dmaven.build.cache.maxLocalBuildsCached=<n>`             | Maximum number of cached build records retained per project in the local cache. Overrides `maxBuildsCached` from the XML config. (default: `3`)                                                                                            | Limit local cache disk usage or retain more builds for bisecting failures                       |
+| `-Dmaven.build.cache.maxRemoteBuildsCached=<n>`             | Remote retention limit. Only applies when remote cleanup is explicitly enabled.                                                                                                                                                | Opt-in remote retention |
+| `-Dmaven.build.cache.remote.cleanup.enabled=false`          | Disable remote cleanup for one invocation.                                                                                                                                                                                       | Emergency/diagnostic override |
+| `-Dmaven.build.cache.remote.retention.strategy=<name>`      | Explicit remote retention provider (`nexus`, `directory-listing`, or `unsupported`). Unknown names fail configuration.                                                                                                           | Select retention independently of URL |
 
 ### Project-level properties
 
@@ -109,6 +112,21 @@ The following elements are supported in `maven-build-cache-config.xml` but have 
 | `id`           | `cache`    | Matches a `<server>` entry in `settings.xml` for authentication. Overridable via `-Dmaven.build.cache.remote.server.id`.                    |
 | `transport`    | `resolver` | Transport layer. Currently only `resolver` (Maven Resolver / Aether) is supported.                                                          |
 | `saveToRemote` | `false`    | Save build outputs to the remote cache. Recommended to enable on CI agents only. Overridable via `-Dmaven.build.cache.remote.save.enabled`. |
+| `cleanupEnabled` | `false` | Enable remote retention cleanup. Cleanup is best effort unless `failFast` is enabled. |
+
+The following remote retention elements are available under `<remote>`:
+
+| Element | Default | Description |
+|---------|---------|-------------|
+| `maxBuildsCached` | `0` | Maximum number of builds retained per project. A positive value is required when `cleanupEnabled="true"`. Overridable with `-Dmaven.build.cache.maxRemoteBuildsCached`. |
+| `cleanupGracePeriodSeconds` | `300` | Minimum age of a remote entry before deletion. `0` permits immediate cleanup. Overridable with `-Dmaven.build.cache.remote.cleanup.gracePeriodSeconds`. |
+| `retentionStrategy` | none | Provider name: `nexus`, `directory-listing`, or `unsupported`. Required when `cleanupEnabled="true"`. Overridable with `-Dmaven.build.cache.remote.retention.strategy`. |
+
+Remote cleanup selects a `RemoteCacheRetentionStrategyProvider` by its `name()` through Plexus/Sisu discovery. Providers implement the public
+`org.apache.maven.buildcache.RemoteCacheRetentionStrategyProvider` interface and return an
+`org.apache.maven.buildcache.RemoteCacheRetentionStrategy`. Providers receive the remote URL, authorization value,
+an authenticated `RemoteCacheHttpClient`, `CacheConfig`, and `XmlService`; no separate strategy JAR is required for the built-in providers. HTTP(S) remotes are
+supported by the built-in directory-listing and Nexus Raw providers. Other Resolver transports are unsupported.
 
 #### `<attachedOutputs>` — extra output directories and permissions
 
