@@ -978,9 +978,14 @@ public class MavenProjectInput {
                 if (reactorPom.isPresent()) {
                     ProjectsInputInfo reactorInput = projectInputCalculator.calculateInput(
                             reactorPom.get(), includeTestDependencies || isTestArtifact(dependency));
+                    String reactorPomPrefix =
+                            keyPrefix + KeyUtils.getVersionlessArtifactKey(createDependencyArtifact(dependency)) + "|";
                     for (DigestItem item : reactorInput.getItems()) {
                         if ("dependency".equals(item.getType())) {
-                            result.put(keyPrefix + item.getValue(), item.getHash());
+                            // Keep these fallback inputs distinct from artifacts selected by the
+                            // consumer's Resolver graph. Otherwise a reactor POM dependency can
+                            // suppress the hash of a differently mediated external SNAPSHOT.
+                            result.put(reactorPomPrefix + item.getValue(), item.getHash());
                         }
                     }
                     if (hasIncompleteDependencyGraph(reactorInput)) {

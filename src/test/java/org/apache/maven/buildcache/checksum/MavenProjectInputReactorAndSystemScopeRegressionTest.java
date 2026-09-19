@@ -33,6 +33,7 @@ import org.apache.maven.buildcache.MultiModuleSupport;
 import org.apache.maven.buildcache.NormalizedModelProvider;
 import org.apache.maven.buildcache.ProjectInputCalculator;
 import org.apache.maven.buildcache.RemoteCacheRepository;
+import org.apache.maven.buildcache.hash.HashChecksum;
 import org.apache.maven.buildcache.hash.HashFactory;
 import org.apache.maven.buildcache.xml.CacheConfig;
 import org.apache.maven.buildcache.xml.build.DigestItem;
@@ -47,6 +48,9 @@ import org.eclipse.aether.collection.CollectRequest;
 import org.eclipse.aether.collection.CollectResult;
 import org.eclipse.aether.collection.DependencyCollectionException;
 import org.eclipse.aether.graph.DefaultDependencyNode;
+import org.eclipse.aether.repository.LocalArtifactRequest;
+import org.eclipse.aether.repository.LocalArtifactResult;
+import org.eclipse.aether.repository.LocalRepositoryManager;
 import org.eclipse.aether.resolution.ArtifactRequest;
 import org.eclipse.aether.resolution.ArtifactResult;
 import org.junit.jupiter.api.BeforeEach;
@@ -59,6 +63,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -346,8 +351,80 @@ class MavenProjectInputReactorAndSystemScopeRegressionTest {
         SortedMap<String, String> hashes = (SortedMap<String, String>)
                 getMutableDependenciesHashes.invoke(mavenProjectInput, "", Collections.singletonList(dependency));
 
-        assertEquals(Collections.singleton("com.example:mutable-child:jar"), hashes.keySet());
-        assertEquals("child-checksum", hashes.get("com.example:mutable-child:jar"));
+        assertEquals(
+                Collections.singleton("com.example:reactor-pom:pom|com.example:mutable-child:jar"), hashes.keySet());
+        assertEquals("child-checksum", hashes.get("com.example:reactor-pom:pom|com.example:mutable-child:jar"));
+    }
+
+    @Test
+    void reactorPomFallbackDoesNotHideResolverSelectedSnapshotChanges() throws Exception {
+        Dependency externalRoot = new Dependency();
+        externalRoot.setGroupId("com.example");
+        externalRoot.setArtifactId("external-root");
+        externalRoot.setVersion("1.0");
+        externalRoot.setType("jar");
+
+        Dependency reactorPomRoot = new Dependency();
+        reactorPomRoot.setGroupId("com.example");
+        reactorPomRoot.setArtifactId("reactor-pom");
+        reactorPomRoot.setVersion("1.0-SNAPSHOT");
+        reactorPomRoot.setType("pom");
+        when(project.getDependencies()).thenReturn(List.of(externalRoot, reactorPomRoot));
+        when(project.getRemoteProjectRepositories()).thenReturn(Collections.emptyList());
+
+        MavenProject reactorPom = mock(MavenProject.class);
+        when(multiModuleSupport.tryToResolveProject("com.example", "reactor-pom", "1.0-SNAPSHOT"))
+                .thenReturn(java.util.Optional.of(reactorPom));
+        ProjectsInputInfo reactorInput = new ProjectsInputInfo();
+        reactorInput.setChecksum("reactor-pom-checksum");
+        DigestItem reactorSnapshot = new DigestItem();
+        reactorSnapshot.setType("dependency");
+        reactorSnapshot.setValue("com.example:shared:jar");
+        reactorSnapshot.setHash("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+        reactorInput.getItems().add(reactorSnapshot);
+        when(projectInputCalculator.calculateInput(reactorPom, true)).thenReturn(reactorInput);
+
+        DefaultArtifact selectedSnapshot = new DefaultArtifact("com.example", "shared", "jar", "2.0-SNAPSHOT");
+        DefaultDependencyNode graphRoot = new DefaultDependencyNode((org.eclipse.aether.graph.Dependency) null);
+        DefaultDependencyNode externalNode = new DefaultDependencyNode(new org.eclipse.aether.graph.Dependency(
+                new DefaultArtifact("com.example", "external-root", "jar", "1.0"), "compile"));
+        externalNode
+                .getChildren()
+                .add(new DefaultDependencyNode(new org.eclipse.aether.graph.Dependency(selectedSnapshot, "compile")));
+        graphRoot.getChildren().add(externalNode);
+        CollectResult collectResult = new CollectResult(new CollectRequest());
+        collectResult.setRoot(graphRoot);
+        when(repoSystem.collectDependencies(any(RepositorySystemSession.class), any(CollectRequest.class)))
+                .thenReturn(collectResult);
+
+        Path selectedArtifact = tempDir.resolve("shared-2.0-SNAPSHOT.jar");
+        Files.writeString(selectedArtifact, "before");
+        LocalRepositoryManager localRepositoryManager = mock(LocalRepositoryManager.class);
+        when(repositorySystemSession.getLocalRepositoryManager()).thenReturn(localRepositoryManager);
+        when(localRepositoryManager.find(any(RepositorySystemSession.class), any(LocalArtifactRequest.class)))
+                .thenAnswer(invocation -> new LocalArtifactResult(invocation.getArgument(1))
+                        .setFile(selectedArtifact.toFile())
+                        .setAvailable(true));
+
+        Method getMutableDependencies = MavenProjectInput.class.getDeclaredMethod("getMutableDependencies");
+        getMutableDependencies.setAccessible(true);
+        SortedMap<String, String> before = (SortedMap<String, String>) getMutableDependencies.invoke(mavenProjectInput);
+        String beforeKey = dependencyChecksum(before);
+
+        Files.writeString(selectedArtifact, "after");
+        SortedMap<String, String> after = (SortedMap<String, String>) getMutableDependencies.invoke(mavenProjectInput);
+        String afterKey = dependencyChecksum(after);
+
+        assertTrue(before.containsKey("com.example:reactor-pom:pom|com.example:shared:jar"));
+        assertTrue(before.containsKey("com.example:shared:jar"));
+        assertNotEquals(before.get("com.example:shared:jar"), after.get("com.example:shared:jar"));
+        assertNotEquals(beforeKey, afterKey, "The Resolver-selected SNAPSHOT must invalidate the cache key");
+    }
+
+    private static String dependencyChecksum(SortedMap<String, String> hashes) {
+        HashChecksum checksum = HashFactory.SHA1.createChecksum(hashes.size());
+        hashes.forEach((key, hash) -> DigestUtils.dependency(checksum, key, hash));
+        return checksum.digest();
     }
 
     @Test
