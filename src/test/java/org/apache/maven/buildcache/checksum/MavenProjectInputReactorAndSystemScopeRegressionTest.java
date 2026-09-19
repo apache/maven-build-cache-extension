@@ -43,6 +43,7 @@ import org.apache.maven.model.Dependency;
 import org.apache.maven.project.MavenProject;
 import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.RepositorySystemSession;
+import org.eclipse.aether.artifact.ArtifactProperties;
 import org.eclipse.aether.artifact.DefaultArtifact;
 import org.eclipse.aether.collection.CollectRequest;
 import org.eclipse.aether.collection.CollectResult;
@@ -63,6 +64,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -430,13 +432,20 @@ class MavenProjectInputReactorAndSystemScopeRegressionTest {
                 .thenReturn(collectResult);
 
         Path selectedArtifact = tempDir.resolve("shared-2.0-SNAPSHOT.jar");
+        Path selectedDescriptor = tempDir.resolve("shared-2.0-SNAPSHOT.pom");
         Files.writeString(selectedArtifact, "before");
+        Files.writeString(selectedDescriptor, "<project/>");
         LocalRepositoryManager localRepositoryManager = mock(LocalRepositoryManager.class);
         when(repositorySystemSession.getLocalRepositoryManager()).thenReturn(localRepositoryManager);
         when(localRepositoryManager.find(any(RepositorySystemSession.class), any(LocalArtifactRequest.class)))
-                .thenAnswer(invocation -> new LocalArtifactResult(invocation.getArgument(1))
-                        .setFile(selectedArtifact.toFile())
-                        .setAvailable(true));
+                .thenAnswer(invocation -> {
+                    LocalArtifactRequest request = invocation.getArgument(1);
+                    Path file =
+                            "pom".equals(request.getArtifact().getExtension()) ? selectedDescriptor : selectedArtifact;
+                    return new LocalArtifactResult(request)
+                            .setFile(file.toFile())
+                            .setAvailable(true);
+                });
 
         Method getMutableDependencies = MavenProjectInput.class.getDeclaredMethod("getMutableDependencies");
         getMutableDependencies.setAccessible(true);
@@ -451,6 +460,110 @@ class MavenProjectInputReactorAndSystemScopeRegressionTest {
         assertTrue(before.containsKey("com.example:shared:jar"));
         assertNotEquals(before.get("com.example:shared:jar"), after.get("com.example:shared:jar"));
         assertNotEquals(beforeKey, afterKey, "The Resolver-selected SNAPSHOT must invalidate the cache key");
+    }
+
+    @Test
+    void snapshotDescriptorChangeInvalidatesKeyWhenJarIsUnchanged() throws Exception {
+        Dependency releaseRoot = new Dependency();
+        releaseRoot.setGroupId("com.example");
+        releaseRoot.setArtifactId("release-root");
+        releaseRoot.setVersion("1.0");
+        releaseRoot.setType("jar");
+        when(project.getDependencies()).thenReturn(Collections.singletonList(releaseRoot));
+        when(project.getRemoteProjectRepositories()).thenReturn(Collections.emptyList());
+
+        DefaultArtifact bridge = new DefaultArtifact("com.example", "bridge", "jar", "1.0-SNAPSHOT");
+        CollectResult beforeGraph = dependencyGraph(
+                new DefaultArtifact("com.example", "release-root", "jar", "1.0"),
+                bridge,
+                new DefaultArtifact("com.example", "leaf-before", "jar", "1.0"));
+        CollectResult afterGraph = dependencyGraph(
+                new DefaultArtifact("com.example", "release-root", "jar", "1.0"),
+                bridge,
+                new DefaultArtifact("com.example", "leaf-after", "jar", "1.0"));
+        when(repoSystem.collectDependencies(any(RepositorySystemSession.class), any(CollectRequest.class)))
+                .thenReturn(beforeGraph, afterGraph);
+
+        Path bridgeJar = tempDir.resolve("bridge-1.0-SNAPSHOT.jar");
+        Path bridgePom = tempDir.resolve("bridge-1.0-SNAPSHOT.pom");
+        Files.writeString(bridgeJar, "unchanged-jar");
+        Files.writeString(bridgePom, "<dependency>leaf-before:1.0</dependency>");
+        LocalRepositoryManager localRepositoryManager = mock(LocalRepositoryManager.class);
+        when(repositorySystemSession.getLocalRepositoryManager()).thenReturn(localRepositoryManager);
+        when(localRepositoryManager.find(any(RepositorySystemSession.class), any(LocalArtifactRequest.class)))
+                .thenAnswer(invocation -> {
+                    LocalArtifactRequest request = invocation.getArgument(1);
+                    Path file = "pom".equals(request.getArtifact().getExtension()) ? bridgePom : bridgeJar;
+                    return new LocalArtifactResult(request)
+                            .setFile(file.toFile())
+                            .setAvailable(true);
+                });
+
+        Method getMutableDependencies = MavenProjectInput.class.getDeclaredMethod("getMutableDependencies");
+        getMutableDependencies.setAccessible(true);
+        SortedMap<String, String> before = (SortedMap<String, String>) getMutableDependencies.invoke(mavenProjectInput);
+        String artifactKey = "com.example:bridge:jar";
+        String descriptorKey = MavenProjectInput.SNAPSHOT_DESCRIPTOR_KEY_PREFIX + artifactKey;
+        assertFalse(before.containsKey(MavenProjectInput.INCOMPLETE_DEPENDENCY_GRAPH_MARKER));
+
+        Files.writeString(bridgePom, "<dependency>leaf-after:1.0</dependency>");
+        SortedMap<String, String> after = (SortedMap<String, String>) getMutableDependencies.invoke(mavenProjectInput);
+
+        assertEquals(before.get(artifactKey), after.get(artifactKey), "The SNAPSHOT JAR is unchanged");
+        assertNotEquals(before.get(descriptorKey), after.get(descriptorKey));
+        assertNotEquals(
+                dependencyChecksum(before),
+                dependencyChecksum(after),
+                "Changing only a SNAPSHOT POM's selected release dependency must invalidate the cache key");
+    }
+
+    @Test
+    void missingSnapshotDescriptorMarksGraphIncomplete() throws Exception {
+        Dependency releaseRoot = new Dependency();
+        releaseRoot.setGroupId("com.example");
+        releaseRoot.setArtifactId("release-root");
+        releaseRoot.setVersion("1.0");
+        releaseRoot.setType("jar");
+        when(project.getDependencies()).thenReturn(Collections.singletonList(releaseRoot));
+        when(project.getRemoteProjectRepositories()).thenReturn(Collections.emptyList());
+
+        DefaultArtifact bridge = new DefaultArtifact("com.example", "bridge", "jar", "1.0-SNAPSHOT");
+        when(repoSystem.collectDependencies(any(RepositorySystemSession.class), any(CollectRequest.class)))
+                .thenReturn(dependencyGraph(new DefaultArtifact("com.example", "release-root", "jar", "1.0"), bridge));
+
+        Path bridgeJar = tempDir.resolve("bridge-1.0-SNAPSHOT.jar");
+        Files.writeString(bridgeJar, "available-jar");
+        LocalRepositoryManager localRepositoryManager = mock(LocalRepositoryManager.class);
+        when(repositorySystemSession.getLocalRepositoryManager()).thenReturn(localRepositoryManager);
+        when(localRepositoryManager.find(any(RepositorySystemSession.class), any(LocalArtifactRequest.class)))
+                .thenAnswer(invocation -> {
+                    LocalArtifactRequest request = invocation.getArgument(1);
+                    boolean descriptor = "pom".equals(request.getArtifact().getExtension());
+                    return new LocalArtifactResult(request)
+                            .setFile(descriptor ? null : bridgeJar.toFile())
+                            .setAvailable(!descriptor);
+                });
+
+        Method getMutableDependencies = MavenProjectInput.class.getDeclaredMethod("getMutableDependencies");
+        getMutableDependencies.setAccessible(true);
+        SortedMap<String, String> hashes = (SortedMap<String, String>) getMutableDependencies.invoke(mavenProjectInput);
+
+        assertTrue(hashes.containsKey("com.example:bridge:jar"));
+        assertTrue(hashes.containsKey(MavenProjectInput.INCOMPLETE_DEPENDENCY_GRAPH_MARKER));
+    }
+
+    private static CollectResult dependencyGraph(DefaultArtifact... artifacts) {
+        DefaultDependencyNode root = new DefaultDependencyNode((org.eclipse.aether.graph.Dependency) null);
+        DefaultDependencyNode parent = root;
+        for (DefaultArtifact artifact : artifacts) {
+            DefaultDependencyNode child =
+                    new DefaultDependencyNode(new org.eclipse.aether.graph.Dependency(artifact, "compile"));
+            parent.getChildren().add(child);
+            parent = child;
+        }
+        CollectResult result = new CollectResult(new CollectRequest());
+        result.setRoot(root);
+        return result;
     }
 
     private static String dependencyChecksum(SortedMap<String, String> hashes) {
@@ -512,8 +625,14 @@ class MavenProjectInputReactorAndSystemScopeRegressionTest {
         when(project.getDependencies()).thenReturn(Collections.singletonList(releaseRoot));
         when(project.getRemoteProjectRepositories()).thenReturn(Collections.emptyList());
 
-        DefaultArtifact testArtifact =
-                new DefaultArtifact("com.example", "reactor-tests", "tests", "jar", "1.0-SNAPSHOT");
+        DefaultArtifact testArtifact = new DefaultArtifact(
+                "com.example",
+                "reactor-tests",
+                "custom-test-fixture",
+                "jar",
+                "1.0-SNAPSHOT",
+                Collections.singletonMap(ArtifactProperties.TYPE, "test-jar"),
+                (java.io.File) null);
         DefaultDependencyNode rootNode = new DefaultDependencyNode((org.eclipse.aether.graph.Dependency) null);
         rootNode.getChildren()
                 .add(new DefaultDependencyNode(new org.eclipse.aether.graph.Dependency(testArtifact, "compile")));

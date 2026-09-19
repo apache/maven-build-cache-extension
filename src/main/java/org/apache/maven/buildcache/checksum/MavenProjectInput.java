@@ -90,6 +90,7 @@ import org.apache.maven.project.MavenProject;
 import org.eclipse.aether.AbstractForwardingRepositorySystemSession;
 import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.RepositorySystemSession;
+import org.eclipse.aether.artifact.ArtifactProperties;
 import org.eclipse.aether.artifact.DefaultArtifactType;
 import org.eclipse.aether.collection.CollectRequest;
 import org.eclipse.aether.collection.DependencyCollectionException;
@@ -121,6 +122,8 @@ import static org.apache.maven.buildcache.xml.CacheConfigImpl.SKIP_SAVE;
 public class MavenProjectInput {
 
     static final String INCOMPLETE_DEPENDENCY_GRAPH_MARKER = "__maven_build_cache_incomplete_dependency_graph__";
+
+    static final String SNAPSHOT_DESCRIPTOR_KEY_PREFIX = "__maven_build_cache_snapshot_descriptor__|";
 
     /**
      * Version of cache implementation. It is recommended to change to simplify remote cache maintenance
@@ -770,33 +773,24 @@ public class MavenProjectInput {
                     continue;
                 }
                 String key = KeyUtils.getVersionlessArtifactKey(RepositoryUtils.toArtifact(artifact));
-                if (hashes.containsKey(key)) {
-                    continue;
-                }
                 Optional<MavenProject> reactorProject = multiModuleSupport.tryToResolveProject(
                         artifact.getGroupId(), artifact.getArtifactId(), artifact.getBaseVersion());
                 if (reactorProject.isPresent()) {
-                    ProjectsInputInfo reactorInput = projectInputCalculator.calculateInput(
-                            reactorProject.get(), includeTestDependencies || isTestArtifact(artifact.getClassifier()));
-                    hashes.put(key, reactorInput.getChecksum());
-                    if (hasIncompleteDependencyGraph(reactorInput)) {
-                        markIncompleteDependencyGraph(hashes);
+                    if (!hashes.containsKey(key)) {
+                        ProjectsInputInfo reactorInput = projectInputCalculator.calculateInput(
+                                reactorProject.get(), includeTestDependencies || isTestArtifact(artifact));
+                        hashes.put(key, reactorInput.getChecksum());
+                        if (hasIncompleteDependencyGraph(reactorInput)) {
+                            markIncompleteDependencyGraph(hashes);
+                        }
                     }
                 } else {
-                    LocalArtifactResult localArtifact = repositorySession
-                            .getLocalRepositoryManager()
-                            .find(
-                                    localOnlySession,
-                                    new LocalArtifactRequest(artifact, project.getRemoteProjectRepositories(), null));
-                    if (localArtifact.isAvailable() && localArtifact.getFile() != null) {
-                        hashes.put(
-                                key,
-                                config.getHashFactory()
-                                        .createAlgorithm()
-                                        .hash(localArtifact.getFile().toPath()));
-                    } else {
-                        markIncompleteDependencyGraph(hashes);
+                    if (!hashes.containsKey(key)) {
+                        addLocalArtifactHash(hashes, key, artifact, localOnlySession);
                     }
+                    org.eclipse.aether.artifact.Artifact descriptor = new org.eclipse.aether.artifact.DefaultArtifact(
+                            artifact.getGroupId(), artifact.getArtifactId(), "", "pom", artifact.getBaseVersion());
+                    addLocalArtifactHash(hashes, SNAPSHOT_DESCRIPTOR_KEY_PREFIX + key, descriptor, localOnlySession);
                 }
             }
         } catch (DependencyCollectionException e) {
@@ -807,6 +801,31 @@ public class MavenProjectInput {
             markIncompleteDependencyGraph(hashes);
         }
         return hashes;
+    }
+
+    private void addLocalArtifactHash(
+            SortedMap<String, String> hashes,
+            String key,
+            org.eclipse.aether.artifact.Artifact artifact,
+            RepositorySystemSession localOnlySession)
+            throws IOException {
+        if (hashes.containsKey(key)) {
+            return;
+        }
+        LocalArtifactResult localArtifact = session.getRepositorySession()
+                .getLocalRepositoryManager()
+                .find(
+                        localOnlySession,
+                        new LocalArtifactRequest(artifact, project.getRemoteProjectRepositories(), null));
+        if (localArtifact.isAvailable() && localArtifact.getFile() != null) {
+            hashes.put(
+                    key,
+                    config.getHashFactory()
+                            .createAlgorithm()
+                            .hash(localArtifact.getFile().toPath()));
+        } else {
+            markIncompleteDependencyGraph(hashes);
+        }
     }
 
     private boolean isRelevantDependency(Dependency dependency) {
@@ -821,6 +840,11 @@ public class MavenProjectInput {
 
     private static boolean isTestArtifact(Dependency dependency) {
         return "test-jar".equals(dependency.getType()) || isTestArtifact(dependency.getClassifier());
+    }
+
+    private static boolean isTestArtifact(org.eclipse.aether.artifact.Artifact artifact) {
+        return "test-jar".equals(artifact.getProperty(ArtifactProperties.TYPE, null))
+                || isTestArtifact(artifact.getClassifier());
     }
 
     private static boolean isTestArtifact(String classifier) {
