@@ -33,10 +33,14 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -124,6 +128,8 @@ public class MavenProjectInput {
     static final String INCOMPLETE_DEPENDENCY_GRAPH_MARKER = "__maven_build_cache_incomplete_dependency_graph__";
 
     static final String SNAPSHOT_DESCRIPTOR_KEY_PREFIX = "__maven_build_cache_snapshot_descriptor__|";
+
+    static final String RESOLVED_DEPENDENCY_GRAPH_KEY = "__maven_build_cache_resolved_dependency_graph__";
 
     /**
      * Version of cache implementation. It is recommended to change to simplify remote cache maintenance
@@ -758,6 +764,11 @@ public class MavenProjectInput {
         try {
             DependencyNode dependencyGraph =
                     repoSystem.collectDependencies(localOnlySession, request).getRoot();
+            if (dependencyGraph == null) {
+                markIncompleteDependencyGraph(hashes);
+                return hashes;
+            }
+            hashes.put(RESOLVED_DEPENDENCY_GRAPH_KEY, selectedDependencyGraphHash(dependencyGraph));
             PreorderNodeListGenerator nodes = new PreorderNodeListGenerator();
             dependencyGraph.accept(nodes);
             for (DependencyNode node : nodes.getNodes()) {
@@ -801,6 +812,77 @@ public class MavenProjectInput {
             markIncompleteDependencyGraph(hashes);
         }
         return hashes;
+    }
+
+    private String selectedDependencyGraphHash(DependencyNode root) {
+        StringBuilder graph = new StringBuilder("selected-dependency-graph-v1;");
+        Deque<DependencyGraphFrame> stack = new ArrayDeque<>();
+        Set<DependencyNode> activePath = Collections.newSetFromMap(new IdentityHashMap<DependencyNode, Boolean>());
+        activePath.add(root);
+        stack.push(new DependencyGraphFrame(root));
+        while (!stack.isEmpty()) {
+            DependencyGraphFrame frame = stack.peek();
+            if (frame.nextChild >= frame.children.size()) {
+                stack.pop();
+                activePath.remove(frame.node);
+                if (frame.node != root) {
+                    graph.append('E');
+                }
+                continue;
+            }
+
+            DependencyNode child = frame.children.get(frame.nextChild++);
+            if (!isSelectedDependencyNode(child)) {
+                continue;
+            }
+            org.eclipse.aether.graph.Dependency dependency = child.getDependency();
+            org.eclipse.aether.artifact.Artifact artifact = child.getArtifact();
+            graph.append('N');
+            appendGraphField(graph, artifact.getGroupId());
+            appendGraphField(graph, artifact.getArtifactId());
+            appendGraphField(graph, artifact.getExtension());
+            appendGraphField(graph, artifact.getClassifier());
+            appendGraphField(graph, artifact.getVersion());
+            appendGraphField(graph, artifact.getBaseVersion());
+            appendGraphField(graph, artifact.getProperty(ArtifactProperties.TYPE, null));
+            appendGraphField(graph, dependency.getScope());
+            appendGraphField(graph, Boolean.toString(dependency.isOptional()));
+            if (!activePath.add(child)) {
+                graph.append("CE");
+                continue;
+            }
+            stack.push(new DependencyGraphFrame(child));
+        }
+        return config.getHashFactory().createAlgorithm().hash(graph.toString().getBytes(StandardCharsets.UTF_8));
+    }
+
+    private boolean isSelectedDependencyNode(DependencyNode node) {
+        return node != null
+                && node.getDependency() != null
+                && node.getArtifact() != null
+                && (includeTestDependencies
+                        || !Artifact.SCOPE_TEST.equals(node.getDependency().getScope()))
+                && node.getData().get(ConflictResolver.NODE_DATA_WINNER) == null;
+    }
+
+    private static void appendGraphField(StringBuilder graph, String value) {
+        if (value == null) {
+            graph.append("-1:");
+        } else {
+            graph.append(value.length()).append(':').append(value);
+        }
+        graph.append(';');
+    }
+
+    private static final class DependencyGraphFrame {
+        private final DependencyNode node;
+        private final List<DependencyNode> children;
+        private int nextChild;
+
+        private DependencyGraphFrame(DependencyNode node) {
+            this.node = node;
+            this.children = node.getChildren();
+        }
     }
 
     private void addLocalArtifactHash(

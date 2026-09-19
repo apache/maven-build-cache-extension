@@ -518,6 +518,59 @@ class MavenProjectInputReactorAndSystemScopeRegressionTest {
     }
 
     @Test
+    void snapshotParentOrBomManagementChangeInvalidatesSelectedReleaseGraph() throws Exception {
+        Dependency releaseRoot = new Dependency();
+        releaseRoot.setGroupId("com.example");
+        releaseRoot.setArtifactId("release-root");
+        releaseRoot.setVersion("1.0");
+        releaseRoot.setType("jar");
+        when(project.getDependencies()).thenReturn(Collections.singletonList(releaseRoot));
+        when(project.getRemoteProjectRepositories()).thenReturn(Collections.emptyList());
+
+        DefaultArtifact bridge = new DefaultArtifact("com.example", "bridge", "jar", "1.0-SNAPSHOT");
+        CollectResult beforeGraph = dependencyGraph(
+                new DefaultArtifact("com.example", "release-root", "jar", "1.0"),
+                bridge,
+                new DefaultArtifact("com.example", "managed-leaf", "jar", "1.0"));
+        CollectResult afterGraph = dependencyGraph(
+                new DefaultArtifact("com.example", "release-root", "jar", "1.0"),
+                bridge,
+                new DefaultArtifact("com.example", "managed-leaf", "jar", "2.0"));
+        when(repoSystem.collectDependencies(any(RepositorySystemSession.class), any(CollectRequest.class)))
+                .thenReturn(beforeGraph, afterGraph);
+
+        Path bridgeJar = tempDir.resolve("bridge-1.0-SNAPSHOT.jar");
+        Path bridgePom = tempDir.resolve("bridge-1.0-SNAPSHOT.pom");
+        Files.writeString(bridgeJar, "unchanged-jar");
+        Files.writeString(bridgePom, "<project><parent>unchanged-snapshot-parent</parent></project>");
+        LocalRepositoryManager localRepositoryManager = mock(LocalRepositoryManager.class);
+        when(repositorySystemSession.getLocalRepositoryManager()).thenReturn(localRepositoryManager);
+        when(localRepositoryManager.find(any(RepositorySystemSession.class), any(LocalArtifactRequest.class)))
+                .thenAnswer(invocation -> {
+                    LocalArtifactRequest request = invocation.getArgument(1);
+                    Path file = "pom".equals(request.getArtifact().getExtension()) ? bridgePom : bridgeJar;
+                    return new LocalArtifactResult(request)
+                            .setFile(file.toFile())
+                            .setAvailable(true);
+                });
+
+        Method getMutableDependencies = MavenProjectInput.class.getDeclaredMethod("getMutableDependencies");
+        getMutableDependencies.setAccessible(true);
+        SortedMap<String, String> before = (SortedMap<String, String>) getMutableDependencies.invoke(mavenProjectInput);
+        SortedMap<String, String> after = (SortedMap<String, String>) getMutableDependencies.invoke(mavenProjectInput);
+
+        String artifactKey = "com.example:bridge:jar";
+        String descriptorKey = MavenProjectInput.SNAPSHOT_DESCRIPTOR_KEY_PREFIX + artifactKey;
+        assertEquals(before.get(artifactKey), after.get(artifactKey), "The SNAPSHOT JAR is unchanged");
+        assertEquals(before.get(descriptorKey), after.get(descriptorKey), "The SNAPSHOT child POM is unchanged");
+        assertNotEquals(
+                before.get(MavenProjectInput.RESOLVED_DEPENDENCY_GRAPH_KEY),
+                after.get(MavenProjectInput.RESOLVED_DEPENDENCY_GRAPH_KEY),
+                "A SNAPSHOT parent or BOM can change the selected release version without changing the child POM");
+        assertNotEquals(dependencyChecksum(before), dependencyChecksum(after));
+    }
+
+    @Test
     void missingSnapshotDescriptorMarksGraphIncomplete() throws Exception {
         Dependency releaseRoot = new Dependency();
         releaseRoot.setGroupId("com.example");
