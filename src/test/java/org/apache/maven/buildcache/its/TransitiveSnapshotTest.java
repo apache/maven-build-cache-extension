@@ -33,6 +33,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @IntegrationTest("src/test/projects/transitive-snapshot")
 class TransitiveSnapshotTest {
@@ -40,6 +41,23 @@ class TransitiveSnapshotTest {
     @Test
     void snapshotDependency(Verifier verifier) throws Exception {
         verifyTransitiveChange(verifier, "1.0-SNAPSHOT");
+    }
+
+    @Test
+    void releaseDependency(Verifier verifier) throws Exception {
+        Path base = Paths.get(verifier.getBasedir());
+        CacheITUtils.replaceInFile(
+                base.resolve("libs/bridge/pom.xml"), "<version>1.0-SNAPSHOT</version>", "<version>1.0</version>");
+        // Keep the release bridge's dependency on leaf mutable.
+        CacheITUtils.replaceInFile(
+                base.resolve("libs/bridge/pom.xml"),
+                "<artifactId>leaf</artifactId>\n      <version>1.0</version>",
+                "<artifactId>leaf</artifactId>\n      <version>1.0-SNAPSHOT</version>");
+        CacheITUtils.replaceInFile(
+                base.resolve("app/pom.xml"),
+                "<artifactId>bridge</artifactId>\n      <version>1.0-SNAPSHOT</version>",
+                "<artifactId>bridge</artifactId>\n      <version>1.0</version>");
+        verifyTransitiveChange(verifier, "1.0");
     }
 
     @Test
@@ -100,29 +118,43 @@ class TransitiveSnapshotTest {
     }
 
     @Test
-    void testScopedTransitiveSnapshotDoesNotInvalidateMainOutput(Verifier verifier) throws Exception {
+    void testScopedTransitiveSnapshotOnlyInvalidatesTestLifecycle(Verifier verifier) throws Exception {
         Path base = Paths.get(verifier.getBasedir());
         verifier.setAutoclean(false);
         verifier.addCliOption("-Dmaven.build.cache.location=" + base.resolve("../cache"));
         CacheITUtils.replaceInFile(
                 base.resolve("app/src/main/java/probe/App.java"), "return Leaf.VALUE;", "return \"stable\";");
         CacheITUtils.replaceInFile(base.resolve("app/pom.xml"), "</dependency>", "<scope>test</scope></dependency>");
+        Path testSource = base.resolve("app/src/test/java/probe/TestProbe.java");
+        Files.createDirectories(testSource.getParent());
+        Files.writeString(
+                testSource,
+                "package probe; public final class TestProbe { "
+                        + "public static String value() { return Leaf.VALUE; } }");
 
         build(verifier, "libs-before", "libs", "install");
-        build(verifier, "app-before", "app", "package");
-        build(verifier, "app-unchanged", "app", "package")
+        build(verifier, "app-compile-before", "app", "compile");
+        build(verifier, "app-compile-unchanged", "app", "compile")
                 .verifyTextInLog("Skipping plugin execution (cached): compiler:compile");
+        build(verifier, "app-test-compile-before", "app", "test-compile");
+        assertEquals("before", classValue(base.resolve("app/target/test-classes"), "probe.TestProbe"));
 
         CacheITUtils.replaceInFile(base.resolve("libs/leaf/src/main/java/probe/Leaf.java"), "\"before\"", "\"after\"");
         build(verifier, "libs-after", "libs", "install");
-        build(verifier, "app-after", "app", "package")
+        build(verifier, "app-compile-after", "app", "compile")
                 .verifyTextInLog("Skipping plugin execution (cached): compiler:compile");
+        build(verifier, "app-test-compile-after", "app", "test-compile");
+        assertEquals(
+                "after",
+                classValue(base.resolve("app/target/test-classes"), "probe.TestProbe"),
+                "Test lifecycle outputs must be invalidated by test-scoped transitive snapshots");
     }
 
     @Test
-    void unavailableLocalGraphDoesNotDisableCache(Verifier verifier) throws Exception {
+    void unavailableLocalGraphSkipsLookupAndSave(Verifier verifier) throws Exception {
         Path base = Paths.get(verifier.getBasedir());
-        verifier.addCliOption("-Dmaven.build.cache.location=" + base.resolve("../cache"));
+        Path cache = base.resolve("../cache");
+        verifier.addCliOption("-Dmaven.build.cache.location=" + cache);
         // Warm the extension and clean plugin before testing unavailable dependencies offline.
         build(verifier, "warmup", "app", "org.apache.maven.plugins:maven-clean-plugin:3.2.0:clean");
         CacheITUtils.replaceInFile(
@@ -141,7 +173,16 @@ class TransitiveSnapshotTest {
         Verifier build = build(verifier, "unresolved-validate", "app", "validate");
         String log = Files.readString(
                 Paths.get(build.getBasedir(), build.getLogFileName()).normalize());
-        assertFalse(log.contains("Skipping build cache for"), "Local descriptor misses must not disable caching");
+        assertTrue(
+                log.contains("Skipping build cache lookup") && log.contains("Cannot save project in cache"),
+                "An incomplete local graph must fail closed for lookup and save");
+        if (Files.exists(cache)) {
+            try (java.util.stream.Stream<Path> entries = Files.walk(cache)) {
+                assertFalse(
+                        entries.anyMatch(path -> path.getFileName().toString().equals("buildinfo.xml")),
+                        "An incomplete graph must not produce a cache entry");
+            }
+        }
     }
 
     private void verifyTransitiveChange(Verifier verifier, String bridgeVersion) throws Exception {
@@ -204,6 +245,13 @@ class TransitiveSnapshotTest {
     private String applicationValue(Path jar) throws Exception {
         try (URLClassLoader loader = new URLClassLoader(new URL[] {jar.toUri().toURL()}, null)) {
             return (String) loader.loadClass("probe.App").getMethod("value").invoke(null);
+        }
+    }
+
+    private String classValue(Path classes, String className) throws Exception {
+        try (URLClassLoader loader =
+                new URLClassLoader(new URL[] {classes.toUri().toURL()}, null)) {
+            return (String) loader.loadClass(className).getMethod("value").invoke(null);
         }
     }
 }

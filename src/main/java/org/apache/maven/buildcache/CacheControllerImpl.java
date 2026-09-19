@@ -199,7 +199,11 @@ public class CacheControllerImpl implements CacheController {
 
         String projectName = getVersionlessProjectKey(project);
 
-        ProjectsInputInfo inputInfo = projectInputCalculator.calculateInput(project);
+        // A compile-only cache entry contains only main outputs, so test-scoped dependencies cannot affect it.
+        // Later phases can cache/restore test-classes and execute tests, and therefore need test dependencies in
+        // the key. Keep distinct checksum variants so a compile lookup cannot reuse a package-level decision.
+        boolean includeTestDependencies = lifecyclePhasesHelper.isLaterPhase(highestPhase, "compile");
+        ProjectsInputInfo inputInfo = projectInputCalculator.calculateInput(project, includeTestDependencies);
 
         final CacheContext context = new CacheContext(project, inputInfo, session);
 

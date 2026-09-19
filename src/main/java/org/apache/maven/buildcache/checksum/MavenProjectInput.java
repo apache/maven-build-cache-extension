@@ -50,6 +50,7 @@ import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.Strings;
 import org.apache.maven.RepositoryUtils;
@@ -153,6 +154,7 @@ public class MavenProjectInput {
     private final ProjectInputCalculator projectInputCalculator;
     private final Path baseDirPath;
     private final ArtifactHandlerManager artifactHandlerManager;
+    private final boolean includeTestDependencies;
 
     /**
      * The project glob to use every time there is no override
@@ -175,6 +177,31 @@ public class MavenProjectInput {
             RepositorySystem repoSystem,
             RemoteCacheRepository remoteCache,
             ArtifactHandlerManager artifactHandlerManager) {
+        this(
+                project,
+                normalizedModelProvider,
+                multiModuleSupport,
+                projectInputCalculator,
+                session,
+                config,
+                repoSystem,
+                remoteCache,
+                artifactHandlerManager,
+                true);
+    }
+
+    @SuppressWarnings("checkstyle:parameternumber")
+    public MavenProjectInput(
+            MavenProject project,
+            NormalizedModelProvider normalizedModelProvider,
+            MultiModuleSupport multiModuleSupport,
+            ProjectInputCalculator projectInputCalculator,
+            MavenSession session,
+            CacheConfig config,
+            RepositorySystem repoSystem,
+            RemoteCacheRepository remoteCache,
+            ArtifactHandlerManager artifactHandlerManager,
+            boolean includeTestDependencies) {
         this.project = project;
         this.normalizedModelProvider = normalizedModelProvider;
         this.multiModuleSupport = multiModuleSupport;
@@ -184,6 +211,7 @@ public class MavenProjectInput {
         this.baseDirPath = project.getBasedir().toPath().toAbsolutePath();
         this.repoSystem = repoSystem;
         this.remoteCache = remoteCache;
+        this.includeTestDependencies = includeTestDependencies;
         Properties properties = project.getProperties();
         this.projectGlob = properties.getProperty(CACHE_INPUT_GLOB_NAME, config.getDefaultGlob());
         this.processPlugins =
@@ -689,36 +717,34 @@ public class MavenProjectInput {
     }
 
     private SortedMap<String, String> getMutableDependencies() throws IOException {
-        SortedMap<String, String> hashes = getMutableDependenciesHashes("", project.getDependencies());
+        List<Dependency> relevantDependencies = project.getDependencies().stream()
+                .filter(this::isRelevantDependency)
+                .collect(Collectors.toList());
+        SortedMap<String, String> hashes = getMutableDependenciesHashes("", relevantDependencies);
         if (project.getDependencies().isEmpty()) {
             return hashes;
         }
 
-        // Collect only locally available descriptors rooted at direct external snapshots. Projects without such
-        // roots (the common cache-hit case) do no graph work, and cache lookup never triggers remote transitive
-        // resolution. If the complete graph is not available locally, mark the input as non-cacheable rather than
-        // constructing a partial key. Dependency management and exclusions still come from Resolver's mediated
-        // graph.
+        // Collect locally available descriptors for direct external roots, including immutable roots: a release
+        // can depend on a mutable snapshot. Cache lookup must not trigger remote resolution. If the complete graph
+        // is not available locally, mark the input as non-cacheable rather than constructing a partial key.
+        // Dependency management, exclusions, and scope mediation still come from Resolver's graph.
         RepositorySystemSession repositorySession = session.getRepositorySession();
         RepositorySystemSession localOnlySession = localOnly(repositorySession);
         CollectRequest request = new CollectRequest();
         request.setRepositories(project.getRemoteProjectRepositories());
-        boolean hasExternalSnapshotRoot = false;
-        for (Dependency dependency : project.getDependencies()) {
+        boolean hasExternalRoot = false;
+        for (Dependency dependency : relevantDependencies) {
             if (CacheUtils.isPom(dependency)
-                    || Artifact.SCOPE_TEST.equals(dependency.getScope())
-                    || !isSnapshot(dependency.getVersion())
-                    || multiModuleSupport
-                            .tryToResolveProject(
-                                    dependency.getGroupId(), dependency.getArtifactId(), dependency.getVersion())
-                            .isPresent()) {
+                    || Artifact.SCOPE_SYSTEM.equals(dependency.getScope())
+                    || tryResolveDependencyProject(dependency).isPresent()) {
                 continue;
             }
             request.addDependency(
                     RepositoryUtils.toDependency(dependency, repositorySession.getArtifactTypeRegistry()));
-            hasExternalSnapshotRoot = true;
+            hasExternalRoot = true;
         }
-        if (!hasExternalSnapshotRoot) {
+        if (!hasExternalRoot) {
             return hashes;
         }
         if (project.getDependencyManagement() != null) {
@@ -734,7 +760,9 @@ public class MavenProjectInput {
             dependencyGraph.accept(nodes);
             for (DependencyNode node : nodes.getNodes()) {
                 if (node.getDependency() == null
-                        || Artifact.SCOPE_TEST.equals(node.getDependency().getScope())
+                        || (!includeTestDependencies
+                                && Artifact.SCOPE_TEST.equals(
+                                        node.getDependency().getScope()))
                         || node.getData().get(ConflictResolver.NODE_DATA_WINNER) != null) {
                     continue;
                 }
@@ -752,7 +780,7 @@ public class MavenProjectInput {
                     hashes.put(
                             key,
                             projectInputCalculator
-                                    .calculateInput(reactorProject.get())
+                                    .calculateInput(reactorProject.get(), includeTestDependencies)
                                     .getChecksum());
                 } else {
                     LocalArtifactResult localArtifact = repositorySession
@@ -779,6 +807,10 @@ public class MavenProjectInput {
             markIncompleteDependencyGraph(hashes);
         }
         return hashes;
+    }
+
+    private boolean isRelevantDependency(Dependency dependency) {
+        return includeTestDependencies || !Artifact.SCOPE_TEST.equals(dependency.getScope());
     }
 
     private static void markIncompleteDependencyGraph(SortedMap<String, String> hashes) {
@@ -941,18 +973,8 @@ public class MavenProjectInput {
             final String versionSpec = dependency.getVersion();
 
             // saved to index by the end of dependency build
-            MavenProject dependencyProject = versionSpec == null
-                    ? null
-                    : multiModuleSupport
-                            .tryToResolveProject(dependency.getGroupId(), dependency.getArtifactId(), versionSpec)
-                            .orElse(null);
-
-            // for dynamic versions (LATEST/RELEASE/ranges), reactor artifacts can be part of the build
-            // but cannot be resolved yet from the workspace (not built), so Aether may try remote download.
-            // If a matching reactor module exists, treat it as multi-module dependency and use project checksum.
-            if (dependencyProject == null && isDynamicVersion(versionSpec)) {
-                dependencyProject = tryResolveReactorProjectByGA(dependency).orElse(null);
-            }
+            MavenProject dependencyProject =
+                    tryResolveDependencyProject(dependency).orElse(null);
 
             boolean isSnapshot = isSnapshot(versionSpec);
             if (dependencyProject == null && !isSnapshot) {
@@ -962,8 +984,9 @@ public class MavenProjectInput {
             String projectHash;
             if (dependencyProject != null) // part of multi module
             {
-                projectHash =
-                        projectInputCalculator.calculateInput(dependencyProject).getChecksum();
+                projectHash = projectInputCalculator
+                        .calculateInput(dependencyProject, includeTestDependencies)
+                        .getChecksum();
             } else // this is a snapshot dependency
             {
                 try {
@@ -1046,6 +1069,19 @@ public class MavenProjectInput {
         }
         // Maven version ranges: [1.0,2.0), (1.0,), etc.
         return versionSpec.startsWith("[") || versionSpec.startsWith("(") || versionSpec.contains(",");
+    }
+
+    private Optional<MavenProject> tryResolveDependencyProject(Dependency dependency) {
+        String versionSpec = dependency.getVersion();
+        Optional<MavenProject> projectMatch = versionSpec == null
+                ? Optional.empty()
+                : multiModuleSupport.tryToResolveProject(
+                        dependency.getGroupId(), dependency.getArtifactId(), versionSpec);
+        // For dynamic versions (LATEST/RELEASE/ranges), reactor artifacts can be part of the build but cannot be
+        // resolved yet from the workspace (not built), so Aether may try remote download. Match the reactor by GA.
+        return projectMatch.isPresent() || !isDynamicVersion(versionSpec)
+                ? projectMatch
+                : tryResolveReactorProjectByGA(dependency);
     }
 
     private Optional<MavenProject> tryResolveReactorProjectByGA(Dependency dependency) {

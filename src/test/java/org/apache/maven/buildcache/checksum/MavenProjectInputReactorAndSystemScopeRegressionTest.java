@@ -201,7 +201,7 @@ class MavenProjectInputReactorAndSystemScopeRegressionTest {
 
         ProjectsInputInfo projectInfo = mock(ProjectsInputInfo.class);
         when(projectInfo.getChecksum()).thenReturn("reactorChecksum");
-        when(projectInputCalculator.calculateInput(reactorProject)).thenReturn(projectInfo);
+        when(projectInputCalculator.calculateInput(reactorProject, true)).thenReturn(projectInfo);
 
         Method getMutableDependenciesHashes =
                 MavenProjectInput.class.getDeclaredMethod("getMutableDependenciesHashes", String.class, List.class);
@@ -214,7 +214,7 @@ class MavenProjectInputReactorAndSystemScopeRegressionTest {
 
         verify(repoSystem, never())
                 .resolveArtifact(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
-        verify(projectInputCalculator).calculateInput(reactorProject);
+        verify(projectInputCalculator).calculateInput(reactorProject, true);
     }
 
     @Test
@@ -256,5 +256,39 @@ class MavenProjectInputReactorAndSystemScopeRegressionTest {
         verify(repoSystem, never())
                 .resolveDependencies(
                         any(RepositorySystemSession.class), any(org.eclipse.aether.resolution.DependencyRequest.class));
+    }
+
+    @Test
+    void releaseRootIsCollectedOfflineToDiscoverTransitiveSnapshots() throws Exception {
+        Dependency dependency = new Dependency();
+        dependency.setGroupId("com.example");
+        dependency.setArtifactId("release-bridge");
+        dependency.setVersion("1.0");
+        dependency.setType("jar");
+        when(project.getDependencies()).thenReturn(Collections.singletonList(dependency));
+        when(project.getRemoteProjectRepositories()).thenReturn(Collections.emptyList());
+
+        CollectRequest failedRequest = new CollectRequest();
+        doThrow(new DependencyCollectionException(new CollectResult(failedRequest), "not available locally"))
+                .when(repoSystem)
+                .collectDependencies(any(RepositorySystemSession.class), any(CollectRequest.class));
+
+        Method getMutableDependencies = MavenProjectInput.class.getDeclaredMethod("getMutableDependencies");
+        getMutableDependencies.setAccessible(true);
+        SortedMap<String, String> hashes = (SortedMap<String, String>) getMutableDependencies.invoke(mavenProjectInput);
+
+        assertEquals(1, hashes.size());
+        assertTrue(hashes.containsKey(MavenProjectInput.INCOMPLETE_DEPENDENCY_GRAPH_MARKER));
+        org.mockito.ArgumentCaptor<RepositorySystemSession> sessionCaptor =
+                org.mockito.ArgumentCaptor.forClass(RepositorySystemSession.class);
+        org.mockito.ArgumentCaptor<CollectRequest> requestCaptor =
+                org.mockito.ArgumentCaptor.forClass(CollectRequest.class);
+        verify(repoSystem).collectDependencies(sessionCaptor.capture(), requestCaptor.capture());
+        assertTrue(sessionCaptor.getValue().isOffline(), "Release-root collection must remain local-only");
+        assertEquals(1, requestCaptor.getValue().getDependencies().size());
+        assertEquals(
+                "1.0",
+                requestCaptor.getValue().getDependencies().get(0).getArtifact().getVersion());
+        verify(repoSystem, never()).resolveArtifact(any(RepositorySystemSession.class), any(ArtifactRequest.class));
     }
 }
