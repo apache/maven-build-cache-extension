@@ -735,8 +735,7 @@ public class MavenProjectInput {
         request.setRepositories(project.getRemoteProjectRepositories());
         boolean hasExternalRoot = false;
         for (Dependency dependency : relevantDependencies) {
-            if (CacheUtils.isPom(dependency)
-                    || Artifact.SCOPE_SYSTEM.equals(dependency.getScope())
+            if (Artifact.SCOPE_SYSTEM.equals(dependency.getScope())
                     || tryResolveDependencyProject(dependency).isPresent()) {
                 continue;
             }
@@ -777,11 +776,12 @@ public class MavenProjectInput {
                 Optional<MavenProject> reactorProject = multiModuleSupport.tryToResolveProject(
                         artifact.getGroupId(), artifact.getArtifactId(), artifact.getBaseVersion());
                 if (reactorProject.isPresent()) {
-                    hashes.put(
-                            key,
-                            projectInputCalculator
-                                    .calculateInput(reactorProject.get(), includeTestDependencies)
-                                    .getChecksum());
+                    ProjectsInputInfo reactorInput = projectInputCalculator.calculateInput(
+                            reactorProject.get(), includeTestDependencies || isTestArtifact(artifact.getClassifier()));
+                    hashes.put(key, reactorInput.getChecksum());
+                    if (hasIncompleteDependencyGraph(reactorInput)) {
+                        markIncompleteDependencyGraph(hashes);
+                    }
                 } else {
                     LocalArtifactResult localArtifact = repositorySession
                             .getLocalRepositoryManager()
@@ -817,6 +817,14 @@ public class MavenProjectInput {
         // A random value is defense in depth for callers that do not honor hasIncompleteDependencyGraph(): an
         // incomplete key cannot match an entry written by another Maven session.
         hashes.putIfAbsent(INCOMPLETE_DEPENDENCY_GRAPH_MARKER, UUID.randomUUID().toString());
+    }
+
+    private static boolean isTestArtifact(Dependency dependency) {
+        return "test-jar".equals(dependency.getType()) || isTestArtifact(dependency.getClassifier());
+    }
+
+    private static boolean isTestArtifact(String classifier) {
+        return "tests".equals(classifier);
     }
 
     private static RepositorySystemSession localOnly(final RepositorySystemSession session) {
@@ -963,10 +971,22 @@ public class MavenProjectInput {
         for (Dependency dependency : dependencies) {
 
             if (CacheUtils.isPom(dependency)) {
-                // POM dependency will be resolved by maven system to actual dependencies
-                // and will contribute to effective pom.
-                // Effective result will be recorded by #getNormalizedPom
-                // so pom dependencies must be skipped as meaningless by themselves
+                // The POM artifact itself does not contribute classpath bytes, but its transitive mutable
+                // dependencies do. External POM roots are traversed by Resolver below; for reactor POMs copy
+                // their dependency inputs without adding a meaningless hash for the POM artifact itself.
+                Optional<MavenProject> reactorPom = tryResolveDependencyProject(dependency);
+                if (reactorPom.isPresent()) {
+                    ProjectsInputInfo reactorInput = projectInputCalculator.calculateInput(
+                            reactorPom.get(), includeTestDependencies || isTestArtifact(dependency));
+                    for (DigestItem item : reactorInput.getItems()) {
+                        if ("dependency".equals(item.getType())) {
+                            result.put(keyPrefix + item.getValue(), item.getHash());
+                        }
+                    }
+                    if (hasIncompleteDependencyGraph(reactorInput)) {
+                        markIncompleteDependencyGraph(result);
+                    }
+                }
                 continue;
             }
 
@@ -984,9 +1004,12 @@ public class MavenProjectInput {
             String projectHash;
             if (dependencyProject != null) // part of multi module
             {
-                projectHash = projectInputCalculator
-                        .calculateInput(dependencyProject, includeTestDependencies)
-                        .getChecksum();
+                ProjectsInputInfo reactorInput = projectInputCalculator.calculateInput(
+                        dependencyProject, includeTestDependencies || isTestArtifact(dependency));
+                projectHash = reactorInput.getChecksum();
+                if (hasIncompleteDependencyGraph(reactorInput)) {
+                    markIncompleteDependencyGraph(result);
+                }
             } else // this is a snapshot dependency
             {
                 try {

@@ -46,6 +46,7 @@ import org.eclipse.aether.artifact.DefaultArtifact;
 import org.eclipse.aether.collection.CollectRequest;
 import org.eclipse.aether.collection.CollectResult;
 import org.eclipse.aether.collection.DependencyCollectionException;
+import org.eclipse.aether.graph.DefaultDependencyNode;
 import org.eclipse.aether.resolution.ArtifactRequest;
 import org.eclipse.aether.resolution.ArtifactResult;
 import org.junit.jupiter.api.BeforeEach;
@@ -290,5 +291,156 @@ class MavenProjectInputReactorAndSystemScopeRegressionTest {
                 "1.0",
                 requestCaptor.getValue().getDependencies().get(0).getArtifact().getVersion());
         verify(repoSystem, never()).resolveArtifact(any(RepositorySystemSession.class), any(ArtifactRequest.class));
+    }
+
+    @Test
+    void externalPomRootIsCollectedToDiscoverTransitiveSnapshots() throws Exception {
+        Dependency dependency = new Dependency();
+        dependency.setGroupId("com.example");
+        dependency.setArtifactId("dependency-bom");
+        dependency.setVersion("1.0");
+        dependency.setType("pom");
+        when(project.getDependencies()).thenReturn(Collections.singletonList(dependency));
+        when(project.getRemoteProjectRepositories()).thenReturn(Collections.emptyList());
+
+        doThrow(new DependencyCollectionException(new CollectResult(new CollectRequest()), "not available locally"))
+                .when(repoSystem)
+                .collectDependencies(any(RepositorySystemSession.class), any(CollectRequest.class));
+
+        Method getMutableDependencies = MavenProjectInput.class.getDeclaredMethod("getMutableDependencies");
+        getMutableDependencies.setAccessible(true);
+        SortedMap<String, String> hashes = (SortedMap<String, String>) getMutableDependencies.invoke(mavenProjectInput);
+
+        assertTrue(hashes.containsKey(MavenProjectInput.INCOMPLETE_DEPENDENCY_GRAPH_MARKER));
+        org.mockito.ArgumentCaptor<CollectRequest> requestCaptor =
+                org.mockito.ArgumentCaptor.forClass(CollectRequest.class);
+        verify(repoSystem).collectDependencies(any(RepositorySystemSession.class), requestCaptor.capture());
+        assertEquals(
+                "dependency-bom",
+                requestCaptor.getValue().getDependencies().get(0).getArtifact().getArtifactId());
+    }
+
+    @Test
+    void reactorPomRootContributesTransitiveDependencyHashesButNotItsOwnArtifact() throws Exception {
+        Dependency dependency = new Dependency();
+        dependency.setGroupId("com.example");
+        dependency.setArtifactId("reactor-pom");
+        dependency.setVersion("1.0-SNAPSHOT");
+        dependency.setType("pom");
+
+        MavenProject reactorProject = mock(MavenProject.class);
+        when(multiModuleSupport.tryToResolveProject("com.example", "reactor-pom", "1.0-SNAPSHOT"))
+                .thenReturn(java.util.Optional.of(reactorProject));
+        ProjectsInputInfo projectInfo = new ProjectsInputInfo();
+        projectInfo.setChecksum("pom-project-checksum");
+        DigestItem transitive = new DigestItem();
+        transitive.setType("dependency");
+        transitive.setValue("com.example:mutable-child:jar");
+        transitive.setHash("child-checksum");
+        projectInfo.getItems().add(transitive);
+        when(projectInputCalculator.calculateInput(reactorProject, true)).thenReturn(projectInfo);
+
+        Method getMutableDependenciesHashes =
+                MavenProjectInput.class.getDeclaredMethod("getMutableDependenciesHashes", String.class, List.class);
+        getMutableDependenciesHashes.setAccessible(true);
+        SortedMap<String, String> hashes = (SortedMap<String, String>)
+                getMutableDependenciesHashes.invoke(mavenProjectInput, "", Collections.singletonList(dependency));
+
+        assertEquals(Collections.singleton("com.example:mutable-child:jar"), hashes.keySet());
+        assertEquals("child-checksum", hashes.get("com.example:mutable-child:jar"));
+    }
+
+    @Test
+    void compileScopedReactorTestJarIncludesProducerTestInputsAndPropagatesIncompleteGraph() throws Exception {
+        Dependency dependency = new Dependency();
+        dependency.setGroupId("com.example");
+        dependency.setArtifactId("reactor-tests");
+        dependency.setVersion("1.0-SNAPSHOT");
+        dependency.setType("test-jar");
+        dependency.setScope("compile");
+
+        MavenProject reactorProject = mock(MavenProject.class);
+        when(multiModuleSupport.tryToResolveProject("com.example", "reactor-tests", "1.0-SNAPSHOT"))
+                .thenReturn(java.util.Optional.of(reactorProject));
+        ProjectsInputInfo projectInfo = new ProjectsInputInfo();
+        projectInfo.setChecksum("reactor-test-checksum");
+        DigestItem incomplete = new DigestItem();
+        incomplete.setType("dependency");
+        incomplete.setValue(MavenProjectInput.INCOMPLETE_DEPENDENCY_GRAPH_MARKER);
+        incomplete.setHash("session-marker");
+        projectInfo.getItems().add(incomplete);
+        when(projectInputCalculator.calculateInput(reactorProject, true)).thenReturn(projectInfo);
+
+        MavenProjectInput compileOnlyInput = new MavenProjectInput(
+                project,
+                normalizedModelProvider,
+                multiModuleSupport,
+                projectInputCalculator,
+                session,
+                config,
+                repoSystem,
+                remoteCache,
+                artifactHandlerManager,
+                false);
+        Method getMutableDependenciesHashes =
+                MavenProjectInput.class.getDeclaredMethod("getMutableDependenciesHashes", String.class, List.class);
+        getMutableDependenciesHashes.setAccessible(true);
+        SortedMap<String, String> hashes = (SortedMap<String, String>)
+                getMutableDependenciesHashes.invoke(compileOnlyInput, "", Collections.singletonList(dependency));
+
+        assertEquals("reactor-test-checksum", hashes.get("com.example:reactor-tests:test-jar"));
+        assertTrue(hashes.containsKey(MavenProjectInput.INCOMPLETE_DEPENDENCY_GRAPH_MARKER));
+        verify(projectInputCalculator).calculateInput(reactorProject, true);
+    }
+
+    @Test
+    void transitiveReactorTestArtifactIncludesProducerTestInputsAndPropagatesIncompleteGraph() throws Exception {
+        Dependency releaseRoot = new Dependency();
+        releaseRoot.setGroupId("com.example");
+        releaseRoot.setArtifactId("release-root");
+        releaseRoot.setVersion("1.0");
+        releaseRoot.setType("jar");
+        when(project.getDependencies()).thenReturn(Collections.singletonList(releaseRoot));
+        when(project.getRemoteProjectRepositories()).thenReturn(Collections.emptyList());
+
+        DefaultArtifact testArtifact =
+                new DefaultArtifact("com.example", "reactor-tests", "tests", "jar", "1.0-SNAPSHOT");
+        DefaultDependencyNode rootNode = new DefaultDependencyNode((org.eclipse.aether.graph.Dependency) null);
+        rootNode.getChildren()
+                .add(new DefaultDependencyNode(new org.eclipse.aether.graph.Dependency(testArtifact, "compile")));
+        CollectResult collectResult = new CollectResult(new CollectRequest());
+        collectResult.setRoot(rootNode);
+        when(repoSystem.collectDependencies(any(RepositorySystemSession.class), any(CollectRequest.class)))
+                .thenReturn(collectResult);
+
+        MavenProject reactorProject = mock(MavenProject.class);
+        when(multiModuleSupport.tryToResolveProject("com.example", "reactor-tests", "1.0-SNAPSHOT"))
+                .thenReturn(java.util.Optional.of(reactorProject));
+        ProjectsInputInfo projectInfo = new ProjectsInputInfo();
+        projectInfo.setChecksum("reactor-test-checksum");
+        DigestItem incomplete = new DigestItem();
+        incomplete.setType("dependency");
+        incomplete.setValue(MavenProjectInput.INCOMPLETE_DEPENDENCY_GRAPH_MARKER);
+        incomplete.setHash("session-marker");
+        projectInfo.getItems().add(incomplete);
+        when(projectInputCalculator.calculateInput(reactorProject, true)).thenReturn(projectInfo);
+
+        MavenProjectInput compileOnlyInput = new MavenProjectInput(
+                project,
+                normalizedModelProvider,
+                multiModuleSupport,
+                projectInputCalculator,
+                session,
+                config,
+                repoSystem,
+                remoteCache,
+                artifactHandlerManager,
+                false);
+        Method getMutableDependencies = MavenProjectInput.class.getDeclaredMethod("getMutableDependencies");
+        getMutableDependencies.setAccessible(true);
+        SortedMap<String, String> hashes = (SortedMap<String, String>) getMutableDependencies.invoke(compileOnlyInput);
+
+        assertTrue(hashes.containsKey(MavenProjectInput.INCOMPLETE_DEPENDENCY_GRAPH_MARKER));
+        verify(projectInputCalculator).calculateInput(reactorProject, true);
     }
 }

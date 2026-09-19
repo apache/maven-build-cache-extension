@@ -61,6 +61,33 @@ class TransitiveSnapshotTest {
     }
 
     @Test
+    void pomDependencyCarriesTransitiveSnapshot(Verifier verifier) throws Exception {
+        Path base = Paths.get(verifier.getBasedir());
+        verifier.setAutoclean(false);
+        verifier.addCliOption("-Dmaven.build.cache.location=" + base.resolve("../cache"));
+        CacheITUtils.replaceInFile(
+                base.resolve("libs/bridge/pom.xml"),
+                "<artifactId>bridge</artifactId>\n  <version>1.0-SNAPSHOT</version>",
+                "<artifactId>bridge</artifactId>\n  <version>1.0-SNAPSHOT</version>\n  <packaging>pom</packaging>");
+        CacheITUtils.replaceInFile(
+                base.resolve("app/pom.xml"),
+                "<artifactId>bridge</artifactId>\n      <version>1.0-SNAPSHOT</version>",
+                "<artifactId>bridge</artifactId>\n      <version>1.0-SNAPSHOT</version>\n      <type>pom</type>");
+        Path app = base.resolve("app/target/app-1.0-SNAPSHOT.jar");
+
+        build(verifier, "pom-libs-before", "libs", "install");
+        build(verifier, "pom-app-before", "app", "package");
+        assertEquals("before", applicationValue(app));
+        build(verifier, "pom-app-unchanged", "app", "package")
+                .verifyTextInLog("Skipping plugin execution (cached): compiler:compile");
+
+        CacheITUtils.replaceInFile(base.resolve("libs/leaf/src/main/java/probe/Leaf.java"), "\"before\"", "\"after\"");
+        build(verifier, "pom-libs-after", "libs", "install");
+        build(verifier, "pom-app-after", "app", "package");
+        assertEquals("after", applicationValue(app), "A POM root must retain its transitive SNAPSHOT inputs");
+    }
+
+    @Test
     void excludedSnapshot(Verifier verifier) throws Exception {
         Path base = Paths.get(verifier.getBasedir());
         CacheITUtils.replaceInFile(
