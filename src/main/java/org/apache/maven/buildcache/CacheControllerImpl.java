@@ -203,6 +203,15 @@ public class CacheControllerImpl implements CacheController {
 
         final CacheContext context = new CacheContext(project, inputInfo, session);
 
+        if (MavenProjectInput.hasIncompleteDependencyGraph(inputInfo)) {
+            LOGGER.warn(
+                    "Skipping build cache lookup for {} because the transitive snapshot graph is not locally complete",
+                    projectName);
+            CacheResult result = empty(context);
+            cacheResults.put(getVersionlessProjectKey(project), result);
+            return result;
+        }
+
         CacheResult result = empty(context);
         if (!skipCache) {
 
@@ -683,6 +692,11 @@ public class CacheControllerImpl implements CacheController {
 
         if (context == null || context.getInputInfo() == null) {
             LOGGER.info("Cannot save project in cache, skipping");
+            return;
+        }
+
+        if (MavenProjectInput.hasIncompleteDependencyGraph(context.getInputInfo())) {
+            LOGGER.warn("Cannot save project in cache: the transitive snapshot graph is not locally complete");
             return;
         }
 

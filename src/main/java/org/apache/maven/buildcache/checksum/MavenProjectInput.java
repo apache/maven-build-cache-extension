@@ -47,6 +47,7 @@ import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 
@@ -117,6 +118,8 @@ import static org.apache.maven.buildcache.xml.CacheConfigImpl.SKIP_SAVE;
  * MavenProjectInput
  */
 public class MavenProjectInput {
+
+    static final String INCOMPLETE_DEPENDENCY_GRAPH_MARKER = "__maven_build_cache_incomplete_dependency_graph__";
 
     /**
      * Version of cache implementation. It is recommended to change to simplify remote cache maintenance
@@ -293,6 +296,17 @@ public class MavenProjectInput {
                 projectsInputInfoType.getChecksum(),
                 t2 - t1);
         return projectsInputInfoType;
+    }
+
+    /**
+     * Returns whether local-only dependency collection could not produce a complete mutable dependency graph.
+     * Such inputs must not be used for cache lookup or save because their checksum intentionally contains only a
+     * per-session marker instead of pretending that the partial graph is complete.
+     */
+    public static boolean hasIncompleteDependencyGraph(ProjectsInputInfo inputInfo) {
+        return inputInfo.getItems().stream()
+                .anyMatch(item -> "dependency".equals(item.getType())
+                        && INCOMPLETE_DEPENDENCY_GRAPH_MARKER.equals(item.getValue()));
     }
 
     private void checkEffectivePomMatch(ProjectsInputInfo baselineBuild, DigestItem effectivePomChecksum) {
@@ -682,9 +696,9 @@ public class MavenProjectInput {
 
         // Collect only locally available descriptors rooted at direct external snapshots. Projects without such
         // roots (the common cache-hit case) do no graph work, and cache lookup never triggers remote transitive
-        // resolution. A missing local descriptor simply leaves that transitive snapshot unavailable as an input;
-        // Maven will resolve it normally if the build runs. Dependency management and exclusions still come from
-        // Resolver's mediated graph.
+        // resolution. If the complete graph is not available locally, mark the input as non-cacheable rather than
+        // constructing a partial key. Dependency management and exclusions still come from Resolver's mediated
+        // graph.
         RepositorySystemSession repositorySession = session.getRepositorySession();
         RepositorySystemSession localOnlySession = localOnly(repositorySession);
         CollectRequest request = new CollectRequest();
@@ -752,16 +766,25 @@ public class MavenProjectInput {
                                 config.getHashFactory()
                                         .createAlgorithm()
                                         .hash(localArtifact.getFile().toPath()));
+                    } else {
+                        markIncompleteDependencyGraph(hashes);
                     }
                 }
             }
         } catch (DependencyCollectionException e) {
             LOGGER.debug(
-                    "Skipping locally unavailable transitive snapshot inputs for {}: {}",
+                    "Disabling cache for {} because the transitive snapshot graph is not locally available: {}",
                     project.getId(),
                     e.getMessage());
+            markIncompleteDependencyGraph(hashes);
         }
         return hashes;
+    }
+
+    private static void markIncompleteDependencyGraph(SortedMap<String, String> hashes) {
+        // A random value is defense in depth for callers that do not honor hasIncompleteDependencyGraph(): an
+        // incomplete key cannot match an entry written by another Maven session.
+        hashes.putIfAbsent(INCOMPLETE_DEPENDENCY_GRAPH_MARKER, UUID.randomUUID().toString());
     }
 
     private static RepositorySystemSession localOnly(final RepositorySystemSession session) {

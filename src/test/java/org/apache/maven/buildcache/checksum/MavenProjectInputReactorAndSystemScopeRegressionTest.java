@@ -218,7 +218,7 @@ class MavenProjectInputReactorAndSystemScopeRegressionTest {
     }
 
     @Test
-    void unavailableLocalTransitiveGraphKeepsDirectSnapshotInput() throws Exception {
+    void unavailableLocalTransitiveGraphMarksInputAsNonCacheable() throws Exception {
         Path artifactFile = tempDir.resolve("direct-snapshot.jar");
         Files.write(artifactFile, "direct".getBytes(StandardCharsets.UTF_8));
 
@@ -246,8 +246,9 @@ class MavenProjectInputReactorAndSystemScopeRegressionTest {
         getMutableDependencies.setAccessible(true);
         SortedMap<String, String> hashes = (SortedMap<String, String>) getMutableDependencies.invoke(mavenProjectInput);
 
-        assertEquals(1, hashes.size());
+        assertEquals(2, hashes.size());
         assertTrue(hashes.containsKey("com.example:direct-snapshot:jar"));
+        assertTrue(hashes.containsKey(MavenProjectInput.INCOMPLETE_DEPENDENCY_GRAPH_MARKER));
         org.mockito.ArgumentCaptor<RepositorySystemSession> sessionCaptor =
                 org.mockito.ArgumentCaptor.forClass(RepositorySystemSession.class);
         verify(repoSystem).collectDependencies(sessionCaptor.capture(), any(CollectRequest.class));
