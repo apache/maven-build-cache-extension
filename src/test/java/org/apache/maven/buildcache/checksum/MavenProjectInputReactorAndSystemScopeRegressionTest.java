@@ -326,7 +326,7 @@ class MavenProjectInputReactorAndSystemScopeRegressionTest {
     }
 
     @Test
-    void reactorPomRootContributesTransitiveDependencyHashesButNotItsOwnArtifact() throws Exception {
+    void reactorPomRootContributesProjectChecksumAndTransitiveDependencyHashes() throws Exception {
         Dependency dependency = new Dependency();
         dependency.setGroupId("com.example");
         dependency.setArtifactId("reactor-pom");
@@ -351,9 +351,41 @@ class MavenProjectInputReactorAndSystemScopeRegressionTest {
         SortedMap<String, String> hashes = (SortedMap<String, String>)
                 getMutableDependenciesHashes.invoke(mavenProjectInput, "", Collections.singletonList(dependency));
 
-        assertEquals(
-                Collections.singleton("com.example:reactor-pom:pom|com.example:mutable-child:jar"), hashes.keySet());
+        assertEquals(2, hashes.size());
+        assertEquals("pom-project-checksum", hashes.get("com.example:reactor-pom:pom|project"));
         assertEquals("child-checksum", hashes.get("com.example:reactor-pom:pom|com.example:mutable-child:jar"));
+    }
+
+    @Test
+    void reactorPomEffectiveModelChangeInvalidatesConsumerKeyWithoutMutableChildren() throws Exception {
+        Dependency dependency = new Dependency();
+        dependency.setGroupId("com.example");
+        dependency.setArtifactId("reactor-pom");
+        dependency.setVersion("1.0-SNAPSHOT");
+        dependency.setType("pom");
+
+        MavenProject reactorProject = mock(MavenProject.class);
+        when(multiModuleSupport.tryToResolveProject("com.example", "reactor-pom", "1.0-SNAPSHOT"))
+                .thenReturn(java.util.Optional.of(reactorProject));
+        ProjectsInputInfo beforeReactorInput = new ProjectsInputInfo();
+        beforeReactorInput.setChecksum("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+        ProjectsInputInfo afterReactorInput = new ProjectsInputInfo();
+        afterReactorInput.setChecksum("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+        when(projectInputCalculator.calculateInput(reactorProject, true))
+                .thenReturn(beforeReactorInput, afterReactorInput);
+
+        Method getMutableDependenciesHashes =
+                MavenProjectInput.class.getDeclaredMethod("getMutableDependenciesHashes", String.class, List.class);
+        getMutableDependenciesHashes.setAccessible(true);
+        SortedMap<String, String> before = (SortedMap<String, String>)
+                getMutableDependenciesHashes.invoke(mavenProjectInput, "", Collections.singletonList(dependency));
+        SortedMap<String, String> after = (SortedMap<String, String>)
+                getMutableDependenciesHashes.invoke(mavenProjectInput, "", Collections.singletonList(dependency));
+
+        assertNotEquals(
+                dependencyChecksum(before),
+                dependencyChecksum(after),
+                "Changing only release dependencies in a reactor POM must invalidate the consumer cache key");
     }
 
     @Test

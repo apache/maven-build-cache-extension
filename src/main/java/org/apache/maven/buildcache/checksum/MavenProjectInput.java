@@ -980,6 +980,10 @@ public class MavenProjectInput {
                             reactorPom.get(), includeTestDependencies || isTestArtifact(dependency));
                     String reactorPomPrefix =
                             keyPrefix + KeyUtils.getVersionlessArtifactKey(createDependencyArtifact(dependency)) + "|";
+                    // A reactor POM can change the consumer's resolved graph without contributing mutable child
+                    // artifacts (for example, by replacing one release dependency with another). Keep its complete
+                    // project checksum so those effective-model changes cannot reuse a stale consumer cache entry.
+                    result.put(reactorPomPrefix + "project", reactorInput.getChecksum());
                     for (DigestItem item : reactorInput.getItems()) {
                         if ("dependency".equals(item.getType())) {
                             // Keep these fallback inputs distinct from artifacts selected by the
