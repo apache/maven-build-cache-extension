@@ -33,7 +33,6 @@ import org.apache.maven.buildcache.xml.CacheConfig;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.project.MavenProject;
-import org.apache.maven.project.ProjectDependenciesResolver;
 import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.RepositorySystemSession;
 import org.eclipse.aether.artifact.DefaultArtifact;
@@ -102,9 +101,6 @@ class MavenProjectInputSnapshotResolutionTest {
     @TempDir
     Path tempDir;
 
-    @Mock
-    private ProjectDependenciesResolver dependenciesResolver;
-
     private MavenProjectInput mavenProjectInput;
 
     @BeforeEach
@@ -148,8 +144,7 @@ class MavenProjectInputSnapshotResolutionTest {
                 config,
                 repoSystem,
                 remoteCache,
-                artifactHandlerManager,
-                dependenciesResolver);
+                artifactHandlerManager);
     }
 
     @Test

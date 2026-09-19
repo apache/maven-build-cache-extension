@@ -40,9 +40,14 @@ import org.apache.maven.buildcache.xml.build.ProjectsInputInfo;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.project.MavenProject;
-import org.apache.maven.project.ProjectDependenciesResolver;
 import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.RepositorySystemSession;
+import org.eclipse.aether.artifact.DefaultArtifact;
+import org.eclipse.aether.collection.CollectRequest;
+import org.eclipse.aether.collection.CollectResult;
+import org.eclipse.aether.collection.DependencyCollectionException;
+import org.eclipse.aether.resolution.ArtifactRequest;
+import org.eclipse.aether.resolution.ArtifactResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -53,6 +58,10 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -100,9 +109,6 @@ class MavenProjectInputReactorAndSystemScopeRegressionTest {
     @TempDir
     Path tempDir;
 
-    @Mock
-    private ProjectDependenciesResolver dependenciesResolver;
-
     private MavenProjectInput mavenProjectInput;
 
     @BeforeEach
@@ -136,6 +142,8 @@ class MavenProjectInputReactorAndSystemScopeRegressionTest {
         when(handler.getExtension()).thenReturn("jar");
         when(artifactHandlerManager.getArtifactHandler(org.mockito.ArgumentMatchers.anyString()))
                 .thenReturn(handler);
+        when(repositorySystemSession.getArtifactTypeRegistry())
+                .thenReturn(org.apache.maven.RepositoryUtils.newArtifactTypeRegistry(artifactHandlerManager));
 
         mavenProjectInput = new MavenProjectInput(
                 project,
@@ -146,8 +154,7 @@ class MavenProjectInputReactorAndSystemScopeRegressionTest {
                 config,
                 repoSystem,
                 remoteCache,
-                artifactHandlerManager,
-                dependenciesResolver);
+                artifactHandlerManager);
     }
 
     @Test
@@ -208,5 +215,45 @@ class MavenProjectInputReactorAndSystemScopeRegressionTest {
         verify(repoSystem, never())
                 .resolveArtifact(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
         verify(projectInputCalculator).calculateInput(reactorProject);
+    }
+
+    @Test
+    void unavailableLocalTransitiveGraphKeepsDirectSnapshotInput() throws Exception {
+        Path artifactFile = tempDir.resolve("direct-snapshot.jar");
+        Files.write(artifactFile, "direct".getBytes(StandardCharsets.UTF_8));
+
+        Dependency dependency = new Dependency();
+        dependency.setGroupId("com.example");
+        dependency.setArtifactId("direct-snapshot");
+        dependency.setVersion("1.0-SNAPSHOT");
+        dependency.setType("jar");
+        when(project.getDependencies()).thenReturn(Collections.singletonList(dependency));
+        when(project.getRemoteProjectRepositories()).thenReturn(Collections.emptyList());
+
+        ArtifactRequest artifactRequest = new ArtifactRequest();
+        ArtifactResult artifactResult = new ArtifactResult(artifactRequest);
+        artifactResult.setArtifact(new DefaultArtifact("com.example", "direct-snapshot", "jar", "1.0-SNAPSHOT")
+                .setFile(artifactFile.toFile()));
+        when(repoSystem.resolveArtifact(eq(repositorySystemSession), any(ArtifactRequest.class)))
+                .thenReturn(artifactResult);
+
+        CollectRequest collectRequest = new CollectRequest();
+        doThrow(new DependencyCollectionException(new CollectResult(collectRequest), "not available locally"))
+                .when(repoSystem)
+                .collectDependencies(any(RepositorySystemSession.class), any(CollectRequest.class));
+
+        Method getMutableDependencies = MavenProjectInput.class.getDeclaredMethod("getMutableDependencies");
+        getMutableDependencies.setAccessible(true);
+        SortedMap<String, String> hashes = (SortedMap<String, String>) getMutableDependencies.invoke(mavenProjectInput);
+
+        assertEquals(1, hashes.size());
+        assertTrue(hashes.containsKey("com.example:direct-snapshot:jar"));
+        org.mockito.ArgumentCaptor<RepositorySystemSession> sessionCaptor =
+                org.mockito.ArgumentCaptor.forClass(RepositorySystemSession.class);
+        verify(repoSystem).collectDependencies(sessionCaptor.capture(), any(CollectRequest.class));
+        assertTrue(sessionCaptor.getValue().isOffline(), "Transitive collection must not use remote repositories");
+        verify(repoSystem, never())
+                .resolveDependencies(
+                        any(RepositorySystemSession.class), any(org.eclipse.aether.resolution.DependencyRequest.class));
     }
 }

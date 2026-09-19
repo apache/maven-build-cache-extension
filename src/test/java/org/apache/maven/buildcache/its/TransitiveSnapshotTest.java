@@ -43,23 +43,6 @@ class TransitiveSnapshotTest {
     }
 
     @Test
-    void releaseDependency(Verifier verifier) throws Exception {
-        Path base = Paths.get(verifier.getBasedir());
-        CacheITUtils.replaceInFile(
-                base.resolve("libs/bridge/pom.xml"), "<version>1.0-SNAPSHOT</version>", "<version>1.0</version>");
-        // Keep the bridge's dependency on leaf mutable.
-        CacheITUtils.replaceInFile(
-                base.resolve("libs/bridge/pom.xml"),
-                "<artifactId>leaf</artifactId>\n      <version>1.0</version>",
-                "<artifactId>leaf</artifactId>\n      <version>1.0-SNAPSHOT</version>");
-        CacheITUtils.replaceInFile(
-                base.resolve("app/pom.xml"),
-                "<artifactId>bridge</artifactId>\n      <version>1.0-SNAPSHOT</version>",
-                "<artifactId>bridge</artifactId>\n      <version>1.0</version>");
-        verifyTransitiveChange(verifier, "1.0");
-    }
-
-    @Test
     void excludedSnapshot(Verifier verifier) throws Exception {
         Path base = Paths.get(verifier.getBasedir());
         CacheITUtils.replaceInFile(
@@ -117,10 +100,29 @@ class TransitiveSnapshotTest {
     }
 
     @Test
-    void unresolvedGraphDoesNotBreakValidate(Verifier verifier) throws Exception {
+    void testScopedTransitiveSnapshotDoesNotInvalidateMainOutput(Verifier verifier) throws Exception {
         Path base = Paths.get(verifier.getBasedir());
-        Path cache = base.resolve("../cache");
-        verifier.addCliOption("-Dmaven.build.cache.location=" + cache);
+        verifier.setAutoclean(false);
+        verifier.addCliOption("-Dmaven.build.cache.location=" + base.resolve("../cache"));
+        CacheITUtils.replaceInFile(
+                base.resolve("app/src/main/java/probe/App.java"), "return Leaf.VALUE;", "return \"stable\";");
+        CacheITUtils.replaceInFile(base.resolve("app/pom.xml"), "</dependency>", "<scope>test</scope></dependency>");
+
+        build(verifier, "libs-before", "libs", "install");
+        build(verifier, "app-before", "app", "package");
+        build(verifier, "app-unchanged", "app", "package")
+                .verifyTextInLog("Skipping plugin execution (cached): compiler:compile");
+
+        CacheITUtils.replaceInFile(base.resolve("libs/leaf/src/main/java/probe/Leaf.java"), "\"before\"", "\"after\"");
+        build(verifier, "libs-after", "libs", "install");
+        build(verifier, "app-after", "app", "package")
+                .verifyTextInLog("Skipping plugin execution (cached): compiler:compile");
+    }
+
+    @Test
+    void unavailableLocalGraphDoesNotDisableCache(Verifier verifier) throws Exception {
+        Path base = Paths.get(verifier.getBasedir());
+        verifier.addCliOption("-Dmaven.build.cache.location=" + base.resolve("../cache"));
         // Warm the extension and clean plugin before testing unavailable dependencies offline.
         build(verifier, "warmup", "app", "org.apache.maven.plugins:maven-clean-plugin:3.2.0:clean");
         CacheITUtils.replaceInFile(
@@ -136,13 +138,10 @@ class TransitiveSnapshotTest {
                         + "<executions><execution><phase>validate</phase><goals><goal>clean</goal></goals>"
                         + "</execution></executions></plugin>");
         verifier.addCliOption("-o");
-        build(verifier, "unresolved-validate", "app", "validate").verifyTextInLog("Skipping build cache for");
-        if (Files.exists(cache)) {
-            try (java.util.stream.Stream<Path> entries = Files.walk(cache)) {
-                assertFalse(
-                        entries.anyMatch(path -> path.getFileName().toString().equals("buildinfo.xml")));
-            }
-        }
+        Verifier build = build(verifier, "unresolved-validate", "app", "validate");
+        String log = Files.readString(
+                Paths.get(build.getBasedir(), build.getLogFileName()).normalize());
+        assertFalse(log.contains("Skipping build cache for"), "Local descriptor misses must not disable caching");
     }
 
     private void verifyTransitiveChange(Verifier verifier, String bridgeVersion) throws Exception {

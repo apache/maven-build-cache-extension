@@ -29,14 +29,12 @@ import java.util.concurrent.ConcurrentMap;
 
 import org.apache.maven.SessionScoped;
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
-import org.apache.maven.buildcache.checksum.DependencyGraphResolutionException;
 import org.apache.maven.buildcache.checksum.MavenProjectInput;
 import org.apache.maven.buildcache.xml.CacheConfig;
 import org.apache.maven.buildcache.xml.build.ProjectsInputInfo;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.lifecycle.internal.builder.BuilderCommon;
 import org.apache.maven.project.MavenProject;
-import org.apache.maven.project.ProjectDependenciesResolver;
 import org.eclipse.aether.RepositorySystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,7 +52,6 @@ public class DefaultProjectInputCalculator implements ProjectInputCalculator {
     private final NormalizedModelProvider normalizedModelProvider;
     private final MultiModuleSupport multiModuleSupport;
     private final ArtifactHandlerManager artifactHandlerManager;
-    private final ProjectDependenciesResolver dependenciesResolver;
 
     private final ConcurrentMap<String, ProjectsInputInfo> checkSumMap = new ConcurrentHashMap<>();
 
@@ -69,8 +66,7 @@ public class DefaultProjectInputCalculator implements ProjectInputCalculator {
             RepositorySystem repoSystem,
             NormalizedModelProvider rawModelProvider,
             MultiModuleSupport multiModuleSupport,
-            ArtifactHandlerManager artifactHandlerManager,
-            ProjectDependenciesResolver dependenciesResolver) {
+            ArtifactHandlerManager artifactHandlerManager) {
         this.providerSession = providerSession;
         this.remoteCache = remoteCache;
         this.cacheConfig = cacheConfig;
@@ -78,7 +74,6 @@ public class DefaultProjectInputCalculator implements ProjectInputCalculator {
         this.normalizedModelProvider = rawModelProvider;
         this.multiModuleSupport = multiModuleSupport;
         this.artifactHandlerManager = artifactHandlerManager;
-        this.dependenciesResolver = dependenciesResolver;
     }
 
     @Override
@@ -121,11 +116,8 @@ public class DefaultProjectInputCalculator implements ProjectInputCalculator {
                     cacheConfig,
                     repoSystem,
                     remoteCache,
-                    artifactHandlerManager,
-                    dependenciesResolver);
+                    artifactHandlerManager);
             return input.calculateChecksum();
-        } catch (DependencyGraphResolutionException e) {
-            throw e;
         } catch (Exception e) {
             throw new RuntimeException("Failed to calculate checksums for " + project.getArtifactId(), e);
         } finally {

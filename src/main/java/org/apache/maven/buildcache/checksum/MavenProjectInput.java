@@ -84,14 +84,16 @@ import org.apache.maven.model.Plugin;
 import org.apache.maven.model.PluginExecution;
 import org.apache.maven.model.Resource;
 import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
-import org.apache.maven.project.DefaultDependencyResolutionRequest;
-import org.apache.maven.project.DependencyResolutionException;
-import org.apache.maven.project.DependencyResolutionResult;
 import org.apache.maven.project.MavenProject;
-import org.apache.maven.project.ProjectDependenciesResolver;
+import org.eclipse.aether.AbstractForwardingRepositorySystemSession;
 import org.eclipse.aether.RepositorySystem;
+import org.eclipse.aether.RepositorySystemSession;
 import org.eclipse.aether.artifact.DefaultArtifactType;
+import org.eclipse.aether.collection.CollectRequest;
+import org.eclipse.aether.collection.DependencyCollectionException;
 import org.eclipse.aether.graph.DependencyNode;
+import org.eclipse.aether.repository.LocalArtifactRequest;
+import org.eclipse.aether.repository.LocalArtifactResult;
 import org.eclipse.aether.resolution.ArtifactRequest;
 import org.eclipse.aether.resolution.ArtifactResolutionException;
 import org.eclipse.aether.resolution.ArtifactResult;
@@ -148,7 +150,6 @@ public class MavenProjectInput {
     private final ProjectInputCalculator projectInputCalculator;
     private final Path baseDirPath;
     private final ArtifactHandlerManager artifactHandlerManager;
-    private final ProjectDependenciesResolver dependenciesResolver;
 
     /**
      * The project glob to use every time there is no override
@@ -170,8 +171,7 @@ public class MavenProjectInput {
             CacheConfig config,
             RepositorySystem repoSystem,
             RemoteCacheRepository remoteCache,
-            ArtifactHandlerManager artifactHandlerManager,
-            ProjectDependenciesResolver dependenciesResolver) {
+            ArtifactHandlerManager artifactHandlerManager) {
         this.project = project;
         this.normalizedModelProvider = normalizedModelProvider;
         this.multiModuleSupport = multiModuleSupport;
@@ -191,7 +191,6 @@ public class MavenProjectInput {
 
         this.fileComparator = new PathIgnoringCaseComparator();
         this.artifactHandlerManager = artifactHandlerManager;
-        this.dependenciesResolver = dependenciesResolver;
     }
 
     public ProjectsInputInfo calculateChecksum() throws IOException {
@@ -681,30 +680,54 @@ public class MavenProjectInput {
             return hashes;
         }
 
-        // Collect through Maven so dependency management, exclusions and scope mediation match the build.
-        // Resolve only additional external snapshots; reactor dependencies use project checksums.
-        DefaultDependencyResolutionRequest request =
-                new DefaultDependencyResolutionRequest(project, session.getRepositorySession());
-        request.setResolutionFilter((node, parents) -> {
-            org.eclipse.aether.artifact.Artifact artifact = node.getArtifact();
-            return artifact != null
-                    && artifact.isSnapshot()
-                    && node.getData().get(ConflictResolver.NODE_DATA_WINNER) == null
-                    && !hashes.containsKey(KeyUtils.getVersionlessArtifactKey(RepositoryUtils.toArtifact(artifact)))
-                    && !multiModuleSupport
+        // Collect only locally available descriptors rooted at direct external snapshots. Projects without such
+        // roots (the common cache-hit case) do no graph work, and cache lookup never triggers remote transitive
+        // resolution. A missing local descriptor simply leaves that transitive snapshot unavailable as an input;
+        // Maven will resolve it normally if the build runs. Dependency management and exclusions still come from
+        // Resolver's mediated graph.
+        RepositorySystemSession repositorySession = session.getRepositorySession();
+        RepositorySystemSession localOnlySession = localOnly(repositorySession);
+        CollectRequest request = new CollectRequest();
+        request.setRepositories(project.getRemoteProjectRepositories());
+        boolean hasExternalSnapshotRoot = false;
+        for (Dependency dependency : project.getDependencies()) {
+            if (CacheUtils.isPom(dependency)
+                    || Artifact.SCOPE_TEST.equals(dependency.getScope())
+                    || !isSnapshot(dependency.getVersion())
+                    || multiModuleSupport
                             .tryToResolveProject(
-                                    artifact.getGroupId(), artifact.getArtifactId(), artifact.getBaseVersion())
-                            .isPresent();
-        });
+                                    dependency.getGroupId(), dependency.getArtifactId(), dependency.getVersion())
+                            .isPresent()) {
+                continue;
+            }
+            request.addDependency(
+                    RepositoryUtils.toDependency(dependency, repositorySession.getArtifactTypeRegistry()));
+            hasExternalSnapshotRoot = true;
+        }
+        if (!hasExternalSnapshotRoot) {
+            return hashes;
+        }
+        if (project.getDependencyManagement() != null) {
+            for (Dependency dependency : project.getDependencyManagement().getDependencies()) {
+                request.addManagedDependency(
+                        RepositoryUtils.toDependency(dependency, repositorySession.getArtifactTypeRegistry()));
+            }
+        }
         try {
-            DependencyResolutionResult result = dependenciesResolver.resolve(request);
+            DependencyNode dependencyGraph =
+                    repoSystem.collectDependencies(localOnlySession, request).getRoot();
             PreorderNodeListGenerator nodes = new PreorderNodeListGenerator();
-            result.getDependencyGraph().accept(nodes);
+            dependencyGraph.accept(nodes);
             for (DependencyNode node : nodes.getNodes()) {
-                if (node.getDependency() == null || node.getData().get(ConflictResolver.NODE_DATA_WINNER) != null) {
+                if (node.getDependency() == null
+                        || Artifact.SCOPE_TEST.equals(node.getDependency().getScope())
+                        || node.getData().get(ConflictResolver.NODE_DATA_WINNER) != null) {
                     continue;
                 }
                 org.eclipse.aether.artifact.Artifact artifact = node.getArtifact();
+                if (artifact == null || !artifact.isSnapshot()) {
+                    continue;
+                }
                 String key = KeyUtils.getVersionlessArtifactKey(RepositoryUtils.toArtifact(artifact));
                 if (hashes.containsKey(key)) {
                     continue;
@@ -717,18 +740,42 @@ public class MavenProjectInput {
                             projectInputCalculator
                                     .calculateInput(reactorProject.get())
                                     .getChecksum());
-                } else if (artifact.isSnapshot()) {
-                    hashes.put(
-                            key,
-                            config.getHashFactory()
-                                    .createAlgorithm()
-                                    .hash(artifact.getFile().toPath()));
+                } else {
+                    LocalArtifactResult localArtifact = repositorySession
+                            .getLocalRepositoryManager()
+                            .find(
+                                    localOnlySession,
+                                    new LocalArtifactRequest(artifact, project.getRemoteProjectRepositories(), null));
+                    if (localArtifact.isAvailable() && localArtifact.getFile() != null) {
+                        hashes.put(
+                                key,
+                                config.getHashFactory()
+                                        .createAlgorithm()
+                                        .hash(localArtifact.getFile().toPath()));
+                    }
                 }
             }
-        } catch (DependencyResolutionException e) {
-            throw new DependencyGraphResolutionException("Cannot resolve snapshot inputs for " + project.getId(), e);
+        } catch (DependencyCollectionException e) {
+            LOGGER.debug(
+                    "Skipping locally unavailable transitive snapshot inputs for {}: {}",
+                    project.getId(),
+                    e.getMessage());
         }
         return hashes;
+    }
+
+    private static RepositorySystemSession localOnly(final RepositorySystemSession session) {
+        return new AbstractForwardingRepositorySystemSession() {
+            @Override
+            protected RepositorySystemSession getSession() {
+                return session;
+            }
+
+            @Override
+            public boolean isOffline() {
+                return true;
+            }
+        };
     }
 
     private SortedMap<String, String> getMutablePluginDependencies() throws IOException {
