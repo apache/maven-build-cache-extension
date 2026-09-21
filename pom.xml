@@ -289,17 +289,11 @@ under the License.
       </exclusions>
     </dependency>
 
-    <!-- To be removed (replace with maven-executor) -->
     <dependency>
-      <groupId>org.apache.maven.shared</groupId>
-      <artifactId>maven-verifier</artifactId>
-      <version>1.8.0</version>
-      <exclusions>
-        <exclusion>
-          <groupId>junit</groupId>
-          <artifactId>junit</artifactId>
-        </exclusion>
-      </exclusions>
+      <groupId>org.apache.maven.executor</groupId>
+      <artifactId>maven-executor</artifactId>
+      <version>1.0.0</version>
+      <scope>test</scope>
     </dependency>
 
     <dependency>
