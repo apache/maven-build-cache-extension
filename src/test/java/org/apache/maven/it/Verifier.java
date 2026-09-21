@@ -156,10 +156,8 @@ public class Verifier {
         String log;
         ExecutorResult result;
         try (ForkedMavenExecutor executor = new ForkedMavenExecutor(Paths.get(mavenHome))) {
-            ExecutorRequest.Builder requestBuilder = ExecutorRequest.mavenBuilder()
-                    .cwd(cwd)
-                    .arguments(arguments)
-                    .grabOutputAsString(true);
+            ExecutorRequest.Builder requestBuilder =
+                    ExecutorRequest.mavenBuilder().cwd(cwd).arguments(arguments).grabOutputAsString(true);
             if (envVars != null && !envVars.isEmpty()) {
                 requestBuilder.environmentVariables(envVars);
             }
@@ -181,7 +179,8 @@ public class Verifier {
 
         if (!result.success()) {
             throw new VerificationException("Exit code was non-zero: "
-                    + result.exitCode().orElse(-1) + "; command line and log = \n" + "mvn " + String.join(" ", arguments)
+                    + result.exitCode().orElse(-1) + "; command line and log = \n" + "mvn "
+                    + String.join(" ", arguments)
                     + "\n" + tail(log));
         }
     }
