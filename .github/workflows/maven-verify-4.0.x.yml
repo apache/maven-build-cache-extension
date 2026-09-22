@@ -1,0 +1,35 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+name: Verify 4.0
+
+# Maven 4 is not verified on every push: let's focus on Resolver 2 first. Start this workflow by
+# hand from the Actions tab when a Maven 4 run is wanted. Commenting the trigger out instead makes
+# the file invalid, which GitHub reports as a failed run on every push and pull request.
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Verify
+    uses: apache/maven-gh-actions-shared/.github/workflows/maven-verify.yml@v5
+    with:
+      maven4-enabled: false
+      matrix-exclude: '[ {"jdk": "8"} ]'
+      ff-goal: '-P run-its,maven4.0 verify javadoc:jar'
+      verify-goal: '-P run-its,maven4.0 verify javadoc:jar'
+

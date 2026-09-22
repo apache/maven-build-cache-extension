@@ -20,7 +20,7 @@ package org.apache.maven.buildcache;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+import java.io.InputStream;
 import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -30,29 +30,39 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
+import java.nio.file.attribute.PosixFilePermission;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.function.Supplier;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
-import java.util.zip.ZipOutputStream;
+import java.util.Set;
+import java.util.stream.Stream;
 
+import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
+import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
+import org.apache.commons.compress.archivers.zip.ZipFile;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.handler.ArtifactHandler;
+import org.apache.maven.buildcache.xml.build.CompletedExecution;
+import org.apache.maven.buildcache.xml.build.PropertyValue;
 import org.apache.maven.buildcache.xml.build.Scm;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.plugin.MojoExecution;
+import org.apache.maven.plugin.PluginParameterExpressionEvaluator;
 import org.apache.maven.project.MavenProject;
-import org.eclipse.aether.SessionData;
+import org.codehaus.plexus.component.configurator.expression.ExpressionEvaluationException;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import static org.apache.commons.lang3.StringUtils.removeStart;
-import static org.apache.commons.lang3.StringUtils.trim;
 import static org.apache.maven.artifact.Artifact.LATEST_VERSION;
 import static org.apache.maven.artifact.Artifact.SNAPSHOT_VERSION;
 
@@ -60,6 +70,7 @@ import static org.apache.maven.artifact.Artifact.SNAPSHOT_VERSION;
  * Cache Utils
  */
 public class CacheUtils {
+    private static final Logger LOGGER = LoggerFactory.getLogger(CacheUtils.class);
 
     public static boolean isPom(MavenProject project) {
         return project.getPackaging().equals("pom");
@@ -70,7 +81,7 @@ public class CacheUtils {
     }
 
     public static boolean isSnapshot(String version) {
-        return version.endsWith(SNAPSHOT_VERSION) || version.endsWith(LATEST_VERSION);
+        return version != null && (version.endsWith(SNAPSHOT_VERSION) || version.endsWith(LATEST_VERSION));
     }
 
     public static String normalizedName(Artifact artifact) {
@@ -92,14 +103,14 @@ public class CacheUtils {
     }
 
     public static String mojoExecutionKey(MojoExecution mojo) {
-        return StringUtils.join(
+        return String.join(
+                ":",
                 Arrays.asList(
                         StringUtils.defaultIfEmpty(mojo.getExecutionId(), "emptyExecId"),
                         StringUtils.defaultIfEmpty(mojo.getGoal(), "emptyGoal"),
                         StringUtils.defaultIfEmpty(mojo.getLifecyclePhase(), "emptyLifecyclePhase"),
                         StringUtils.defaultIfEmpty(mojo.getArtifactId(), "emptyArtifactId"),
-                        StringUtils.defaultIfEmpty(mojo.getGroupId(), "emptyGroupId")),
-                ":");
+                        StringUtils.defaultIfEmpty(mojo.getGroupId(), "emptyGroupId")));
     }
 
     public static Path getMultimoduleRoot(MavenSession session) {
@@ -114,12 +125,12 @@ public class CacheUtils {
             if (Files.exists(headFile)) {
                 String headRef = readFirstLine(headFile, "<missing branch>");
                 if (headRef.startsWith("ref: ")) {
-                    String branch = trim(removeStart(headRef, "ref: "));
+                    String branch = Strings.CS.removeStart(headRef, "ref: ").trim();
                     scmCandidate.setSourceBranch(branch);
                     final Path refPath = gitDir.resolve(branch);
                     if (Files.exists(refPath)) {
                         String revision = readFirstLine(refPath, "<missing revision>");
-                        scmCandidate.setRevision(trim(revision));
+                        scmCandidate.setRevision(revision.trim());
                     }
                 } else {
                     scmCandidate.setSourceBranch(headRef);
@@ -131,7 +142,9 @@ public class CacheUtils {
     }
 
     private static String readFirstLine(Path path, String defaultValue) throws IOException {
-        return Files.lines(path, StandardCharsets.UTF_8).findFirst().orElse(defaultValue);
+        try (Stream<String> lines = Files.lines(path)) {
+            return lines.findFirst().orElse(defaultValue);
+        }
     }
 
     public static <T> T getLast(List<T> list) {
@@ -142,26 +155,17 @@ public class CacheUtils {
         throw new NoSuchElementException();
     }
 
-    public static <T> T getOrCreate(MavenSession session, Object key, Supplier<T> supplier) {
-        SessionData data = session.getRepositorySession().getData();
-        while (true) {
-            T t = (T) data.get(key);
-            if (t == null) {
-                t = supplier.get();
-                if (data.set(key, null, t)) {
-                    continue;
-                }
-            }
-            return t;
-        }
-    }
-
     public static boolean isArchive(File file) {
         String fileName = file.getName();
         if (!file.isFile() || file.isHidden()) {
             return false;
         }
-        return StringUtils.endsWithAny(fileName, ".jar", ".zip", ".war", ".ear");
+        return Strings.CS.endsWithAny(fileName, ".jar", ".zip", ".war", ".ear");
+    }
+
+    public static boolean zip(final Path dir, final Path zip, final String glob, boolean preservePermissions)
+            throws IOException {
+        return zip(dir, zip, glob, preservePermissions, false);
     }
 
     /**
@@ -169,28 +173,94 @@ public class CacheUtils {
      * @param dir directory to zip
      * @param zip zip to populate
      * @param glob glob to apply to filenames
+     * @param preservePermissions whether to preserve Unix file permissions in the zip.
+     *                           <p><b>Important:</b> When {@code true}, permissions are stored in ZIP entry headers,
+     *                           which means they become part of the ZIP file's binary content. As a result, hashing
+     *                           the ZIP file (e.g., for cache keys) will include permission information, ensuring
+     *                           cache invalidation when file permissions change. This behavior is similar to how Git
+     *                           includes file mode in tree hashes.</p>
+     * @param preserveTimestamps whether to preserve file and directory timestamps in the zip
      * @return true if at least one file has been included in the zip.
      * @throws IOException
      */
-    public static boolean zip(final Path dir, final Path zip, final String glob) throws IOException {
+    public static boolean zip(
+            final Path dir, final Path zip, final String glob, boolean preservePermissions, boolean preserveTimestamps)
+            throws IOException {
         final MutableBoolean hasFiles = new MutableBoolean();
-        try (ZipOutputStream zipOutputStream = new ZipOutputStream(Files.newOutputStream(zip))) {
+        // Check once if filesystem supports POSIX permissions instead of catching exceptions for every file
+        final boolean supportsPosix = preservePermissions
+                && dir.getFileSystem().supportedFileAttributeViews().contains("posix");
+
+        try (ZipArchiveOutputStream zipOutputStream = new ZipArchiveOutputStream(Files.newOutputStream(zip))) {
 
             PathMatcher matcher =
                     "*".equals(glob) ? null : FileSystems.getDefault().getPathMatcher("glob:" + glob);
+            final Map<Path, FileTime> directoryTimestamps = new HashMap<>();
+            final Set<Path> directoriesWithMatchingFiles = new HashSet<>();
+            if (preserveTimestamps) {
+                ZipArchiveEntry zipEntry = new ZipArchiveEntry("./");
+                zipEntry.setTime(Files.getLastModifiedTime(dir).toMillis());
+                zipOutputStream.putArchiveEntry(zipEntry);
+                zipOutputStream.closeArchiveEntry();
+            }
             Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
+
+                @Override
+                public FileVisitResult preVisitDirectory(Path path, BasicFileAttributes attrs) {
+                    if (preserveTimestamps) {
+                        directoryTimestamps.put(path, attrs.lastModifiedTime());
+                    }
+                    return FileVisitResult.CONTINUE;
+                }
 
                 @Override
                 public FileVisitResult visitFile(Path path, BasicFileAttributes basicFileAttributes)
                         throws IOException {
 
                     if (matcher == null || matcher.matches(path.getFileName())) {
-                        final ZipEntry zipEntry =
-                                new ZipEntry(dir.relativize(path).toString());
-                        zipOutputStream.putNextEntry(zipEntry);
+                        if (preserveTimestamps) {
+                            Path parent = path.getParent();
+                            while (parent != null && !parent.equals(dir)) {
+                                directoriesWithMatchingFiles.add(parent);
+                                parent = parent.getParent();
+                            }
+                        }
+
+                        final ZipArchiveEntry zipEntry =
+                                new ZipArchiveEntry(dir.relativize(path).toString());
+
+                        if (preserveTimestamps) {
+                            zipEntry.setTime(
+                                    basicFileAttributes.lastModifiedTime().toMillis());
+                        }
+
+                        // Preserve Unix permissions if requested and filesystem supports it
+                        if (supportsPosix) {
+                            Set<PosixFilePermission> permissions = Files.getPosixFilePermissions(path);
+                            zipEntry.setUnixMode(permissionsToMode(permissions));
+                        }
+
+                        zipOutputStream.putArchiveEntry(zipEntry);
                         Files.copy(path, zipOutputStream);
                         hasFiles.setTrue();
-                        zipOutputStream.closeEntry();
+                        zipOutputStream.closeArchiveEntry();
+                    }
+                    return FileVisitResult.CONTINUE;
+                }
+
+                @Override
+                public FileVisitResult postVisitDirectory(Path path, IOException exc) throws IOException {
+                    if (exc != null) {
+                        throw exc;
+                    }
+                    if (preserveTimestamps
+                            && !path.equals(dir)
+                            && (matcher == null || directoriesWithMatchingFiles.contains(path))) {
+                        ZipArchiveEntry zipEntry =
+                                new ZipArchiveEntry(dir.relativize(path).toString() + "/");
+                        zipEntry.setTime(directoryTimestamps.get(path).toMillis());
+                        zipOutputStream.putArchiveEntry(zipEntry);
+                        zipOutputStream.closeArchiveEntry();
                     }
                     return FileVisitResult.CONTINUE;
                 }
@@ -199,23 +269,64 @@ public class CacheUtils {
         return hasFiles.booleanValue();
     }
 
-    public static void unzip(Path zip, Path out) throws IOException {
-        try (ZipInputStream zis = new ZipInputStream(Files.newInputStream(zip))) {
-            ZipEntry entry = zis.getNextEntry();
-            while (entry != null) {
+    public static void unzip(Path zip, Path out, boolean preservePermissions) throws IOException {
+        unzip(zip, out, preservePermissions, true);
+    }
+
+    public static void unzip(Path zip, Path out, boolean preservePermissions, boolean preserveTimestamps)
+            throws IOException {
+        // Check once if filesystem supports POSIX permissions instead of catching exceptions for every file
+        final boolean supportsPosix = preservePermissions
+                && out.getFileSystem().supportedFileAttributeViews().contains("posix");
+
+        final Map<Path, Long> directoryTimestamps = new HashMap<>();
+        try (ZipFile zipFile = ZipFile.builder().setFile(zip.toFile()).get()) {
+            Enumeration<ZipArchiveEntry> entries = zipFile.getEntries();
+            while (entries.hasMoreElements()) {
+                ZipArchiveEntry entry = entries.nextElement();
                 Path file = out.resolve(entry.getName());
                 if (!file.normalize().startsWith(out.normalize())) {
                     throw new RuntimeException("Bad zip entry");
                 }
                 if (entry.isDirectory()) {
-                    Files.createDirectory(file);
+                    Files.createDirectories(file);
+                    if (preserveTimestamps) {
+                        directoryTimestamps.put(file, entry.getTime());
+                    }
                 } else {
                     Path parent = file.getParent();
-                    Files.createDirectories(parent);
-                    Files.copy(zis, file, StandardCopyOption.REPLACE_EXISTING);
+                    if (parent != null) {
+                        Files.createDirectories(parent);
+                    }
+                    try (InputStream is = zipFile.getInputStream(entry)) {
+                        Files.copy(is, file, StandardCopyOption.REPLACE_EXISTING);
+                    }
+                    if (preserveTimestamps) {
+                        try {
+                            Files.setLastModifiedTime(file, FileTime.fromMillis(entry.getTime()));
+                        } catch (IOException e) {
+                            LOGGER.debug("Could not preserve timestamp for {}", file, e);
+                        }
+                    }
                 }
-                Files.setLastModifiedTime(file, FileTime.fromMillis(entry.getTime()));
-                entry = zis.getNextEntry();
+
+                // Restore Unix permissions if requested and filesystem supports it
+                if (supportsPosix) {
+                    int unixMode = entry.getUnixMode();
+                    if (unixMode != 0) {
+                        Set<PosixFilePermission> permissions = modeToPermissions(unixMode);
+                        Files.setPosixFilePermissions(file, permissions);
+                    }
+                }
+            }
+        }
+        if (preserveTimestamps) {
+            for (Map.Entry<Path, Long> entry : directoryTimestamps.entrySet()) {
+                try {
+                    Files.setLastModifiedTime(entry.getKey(), FileTime.fromMillis(entry.getValue()));
+                } catch (IOException e) {
+                    LOGGER.debug("Could not preserve timestamp for {}", entry.getKey(), e);
+                }
             }
         }
     }
@@ -231,5 +342,126 @@ public class CacheUtils {
                 logger.debug("{} {} of {} : {}", elementCaption, i, size, value);
             }
         }
+    }
+
+    /**
+     * Convert POSIX file permissions to Unix mode integer, following Git's approach of only
+     * preserving the owner executable bit.
+     *
+     * <p>Git stores file permissions as either {@code 100644} (non-executable) or {@code 100755}
+     * (executable). This simplified approach focuses on the functional aspect (executability)
+     * while ignoring platform-specific permission details that are generally irrelevant for
+     * cross-platform builds.</p>
+     *
+     * @param permissions POSIX file permissions
+     * @return Unix mode: {@code 0100755} if owner-executable, {@code 0100644} otherwise
+     */
+    private static int permissionsToMode(Set<PosixFilePermission> permissions) {
+        // Following Git's approach: preserve only the owner executable bit
+        // Git uses 100644 (rw-r--r--) for regular files and 100755 (rwxr-xr-x) for executables
+        if (permissions.contains(PosixFilePermission.OWNER_EXECUTE)) {
+            return 0100755; // Regular file, executable
+        } else {
+            return 0100644; // Regular file, non-executable
+        }
+    }
+
+    /**
+     * Convert Unix mode integer to POSIX file permissions, following Git's simplified approach.
+     *
+     * <p>This method interprets the two Git-standard modes:</p>
+     * <ul>
+     *   <li>{@code 0100755} - Executable file: sets owner+group+others read/execute, owner write</li>
+     *   <li>{@code 0100644} - Regular file: sets owner+group+others read, owner write</li>
+     * </ul>
+     *
+     * <p>The key distinction is the presence of the execute bit. Other permission variations
+     * are normalized to these two standard patterns for portability.</p>
+     *
+     * @param mode Unix mode (should be either {@code 0100755} or {@code 0100644})
+     * @return Set of POSIX file permissions
+     */
+    private static Set<PosixFilePermission> modeToPermissions(int mode) {
+        Set<PosixFilePermission> permissions = new HashSet<>();
+
+        // Check owner executable bit (following Git's approach)
+        if ((mode & 0100) != 0) {
+            // Mode 100755: rwxr-xr-x (executable file)
+            permissions.add(PosixFilePermission.OWNER_READ);
+            permissions.add(PosixFilePermission.OWNER_WRITE);
+            permissions.add(PosixFilePermission.OWNER_EXECUTE);
+            permissions.add(PosixFilePermission.GROUP_READ);
+            permissions.add(PosixFilePermission.GROUP_EXECUTE);
+            permissions.add(PosixFilePermission.OTHERS_READ);
+            permissions.add(PosixFilePermission.OTHERS_EXECUTE);
+        } else {
+            // Mode 100644: rw-r--r-- (regular file)
+            permissions.add(PosixFilePermission.OWNER_READ);
+            permissions.add(PosixFilePermission.OWNER_WRITE);
+            permissions.add(PosixFilePermission.GROUP_READ);
+            permissions.add(PosixFilePermission.OTHERS_READ);
+        }
+        return permissions;
+    }
+
+    static Object interpolateExpression(String expression, MavenSession session, MojoExecution execution) {
+        try {
+            PluginParameterExpressionEvaluator evaluator = new PluginParameterExpressionEvaluator(session, execution);
+            return evaluator.evaluate(expression);
+        } catch (ExpressionEvaluationException e) {
+            LOGGER.warn("Cannot interpolate expression '{}': {}", expression, e.getMessage(), e);
+            return expression; // return the expression as is when interpolation fails
+        }
+    }
+
+    static String normalizeValue(Object value, Path baseDirPath) {
+        if (value instanceof File) {
+            Path path = ((File) value).toPath();
+            return normalizedPath(path, baseDirPath);
+        } else if (value instanceof Path) {
+            return normalizedPath(((Path) value), baseDirPath);
+        } else if (value != null && value.getClass().isArray()) {
+            return ArrayUtils.toString(value);
+        } else {
+            return String.valueOf(value);
+        }
+    }
+
+    /*
+     Best effort to normalize paths from Mojo fields.
+     - all absolute paths under project root are relativized for portability
+     - redundant '..' and '.' are removed to have consistent views on all paths
+     - all relative paths are considered portable and are not be touched
+     - absolute paths outside of project directory cannot be deterministically
+       relativized and are not touched
+    */
+    private static String normalizedPath(Path path, Path baseDirPath) {
+        boolean isProjectSubdir = path.isAbsolute() && path.startsWith(baseDirPath);
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug(
+                    "normalizedPath isProjectSubdir {} path '{}' - baseDirPath '{}', path.isAbsolute() {},"
+                            + " path.startsWith(baseDirPath) {}",
+                    isProjectSubdir,
+                    path,
+                    baseDirPath,
+                    path.isAbsolute(),
+                    path.startsWith(baseDirPath));
+        }
+        Path preparedPath = isProjectSubdir ? baseDirPath.relativize(path) : path;
+        String normalizedPath = preparedPath.normalize().toString();
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("normalizedPath '{}' - {} return {}", path, baseDirPath, normalizedPath);
+        }
+        return normalizedPath;
+    }
+
+    static void addProperty(
+            CompletedExecution execution, String propertyName, Object value, Path baseDirPath, boolean tracked) {
+        final PropertyValue valueType = new PropertyValue();
+        valueType.setName(propertyName);
+        final String valueText = normalizeValue(value, baseDirPath);
+        valueType.setValue(valueText);
+        valueType.setTracked(tracked);
+        execution.addProperty(valueType);
     }
 }

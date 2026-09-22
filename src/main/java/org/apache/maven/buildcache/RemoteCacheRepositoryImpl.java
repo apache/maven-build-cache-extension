@@ -25,16 +25,15 @@ import javax.inject.Named;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.http.HttpStatus;
-import org.apache.http.client.HttpResponseException;
 import org.apache.maven.SessionScoped;
 import org.apache.maven.buildcache.checksum.MavenProjectInput;
 import org.apache.maven.buildcache.xml.Build;
@@ -46,7 +45,7 @@ import org.apache.maven.buildcache.xml.report.CacheReport;
 import org.apache.maven.buildcache.xml.report.ProjectReport;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.project.MavenProject;
-import org.apache.maven.wagon.ResourceDoesNotExistException;
+import org.eclipse.aether.AbstractForwardingRepositorySystemSession;
 import org.eclipse.aether.RepositorySystemSession;
 import org.eclipse.aether.repository.Authentication;
 import org.eclipse.aether.repository.Proxy;
@@ -67,6 +66,15 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RemoteCacheRepositoryImpl.class);
 
+    /**
+     * Resolver names this configuration property differently across the majors Maven ships: resolver 1.9.x
+     * (Maven 3.9.x) uses the "connector" prefix, resolver 2.x (Maven 3.10.x and 4.x) the "transport" one. The
+     * extension compiles against resolver 1.9.x but runs on whichever Maven provides, so both are set.
+     */
+    private static final String SUPPORT_WEBDAV_RESOLVER_1 = "aether.connector.http.supportWebDav";
+
+    private static final String SUPPORT_WEBDAV_RESOLVER_2 = "aether.transport.http.supportWebDav";
+
     private final XmlService xmlService;
     private final CacheConfig cacheConfig;
     private final Transporter transporter;
@@ -82,8 +90,9 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
         this.cacheConfig = cacheConfig;
         if (cacheConfig.isRemoteCacheEnabled()) {
             RepositorySystemSession session = mavenSession.getRepositorySession();
-            RemoteRepository repo =
-                    new RemoteRepository.Builder(cacheConfig.getId(), "cache", cacheConfig.getUrl()).build();
+            RemoteRepository repo = new RemoteRepository.Builder(
+                            cacheConfig.getId(), "cache", stripDavScheme(cacheConfig.getUrl()))
+                    .build();
             RemoteRepository mirror = session.getMirrorSelector().getMirror(repo);
             RemoteRepository repoOrMirror = mirror != null ? mirror : repo;
             Proxy proxy = session.getProxySelector().getProxy(repoOrMirror);
@@ -92,10 +101,59 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
                     .setProxy(proxy)
                     .setAuthentication(auth)
                     .build();
-            this.transporter = transporterProvider.newTransporter(session, repository);
+            this.transporter = transporterProvider.newTransporter(withWebDav(session, repository.getId()), repository);
         } else {
             this.transporter = null;
         }
+    }
+
+    /**
+     * Rewrites the legacy Wagon {@code dav:} pseudo-scheme to the plain HTTP scheme underneath it. The cache only
+     * ever does GET and PUT, and the one thing the WebDAV provider added -- creating parent collections before a
+     * PUT -- the resolver HTTP transport does itself once {@code supportWebDav} is on. Keeping the rewrite means
+     * existing {@code dav:} configurations keep working without the wagon-webdav-jackrabbit provider on the
+     * classpath.
+     */
+    static String stripDavScheme(String url) {
+        if (url == null) {
+            return null;
+        }
+        if (url.startsWith("dav:")) {
+            return url.substring("dav:".length());
+        }
+        if (url.startsWith("dav+http://") || url.startsWith("dav+https://")) {
+            return url.substring("dav+".length());
+        }
+        if (url.startsWith("davs://")) {
+            return "https://" + url.substring("davs://".length());
+        }
+        if (url.startsWith("dav://")) {
+            return "http://" + url.substring("dav://".length());
+        }
+        return url;
+    }
+
+    /**
+     * Turns on the resolver HTTP transport's WebDAV handling for the cache repository only, so that a PUT into a
+     * collection that does not exist yet is preceded by the MKCOL requests that create it. The flag is scoped to
+     * this repository id and applied to a forwarding view of the session, so nothing else in the build sees it.
+     */
+    private static RepositorySystemSession withWebDav(RepositorySystemSession session, String repositoryId) {
+        return new AbstractForwardingRepositorySystemSession() {
+
+            @Override
+            protected RepositorySystemSession getSession() {
+                return session;
+            }
+
+            @Override
+            public Map<String, Object> getConfigProperties() {
+                Map<String, Object> properties = new HashMap<>(session.getConfigProperties());
+                properties.put(SUPPORT_WEBDAV_RESOLVER_1 + "." + repositoryId, Boolean.TRUE);
+                properties.put(SUPPORT_WEBDAV_RESOLVER_2 + "." + repositoryId, Boolean.TRUE);
+                return properties;
+            }
+        };
     }
 
     @Override
@@ -155,15 +213,10 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
             GetTask task = new GetTask(new URI(url));
             transporter.get(task);
             return Optional.of(task.getDataBytes());
-        } catch (ResourceDoesNotExistException e) {
-            logNotFound(fullUrl, e);
-            return Optional.empty();
         } catch (Exception e) {
-            // this can be wagon used so the exception may be different
-            // we want wagon users not flooded with logs when not found
-            if ((e instanceof HttpResponseException
-                            || e.getClass().getName().equals(HttpResponseException.class.getName()))
-                    && getStatusCode(e) == HttpStatus.SC_NOT_FOUND) {
+            // the transport in use (native HTTP, Wagon, ...) decides how a missing resource is signalled,
+            // so let it classify the failure instead of matching on transport specific exception types
+            if (isNotFound(e)) {
                 logNotFound(fullUrl, e);
                 return Optional.empty();
             }
@@ -177,20 +230,15 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
         }
     }
 
-    private int getStatusCode(Exception ex) {
-        // just to avoid this when using wagon provide
-        // java.lang.ClassCastException: class org.apache.http.client.HttpResponseException cannot be cast to class
-        // org.apache.http.client.HttpResponseException
-        // (org.apache.http.client.HttpResponseException is in unnamed module of loader
-        // org.codehaus.plexus.classworlds.realm.ClassRealm @23cd4ff2;
-        //
-        try {
-            Method method = ex.getClass().getMethod("getStatusCode");
-            return (int) method.invoke(ex);
-        } catch (Throwable t) {
-            LOGGER.debug(t.getMessage(), t);
-            return 0;
-        }
+    /**
+     * Asks the transport whether the failure means "the resource is not there", so that a cache miss is not
+     * reported as an error. Every {@link Transporter} implementation knows its own not-found signal: the native
+     * HTTP transports map a 404/410 response, the Wagon transport maps
+     * {@code org.apache.maven.wagon.ResourceDoesNotExistException}. Delegating also avoids comparing exception
+     * types across class realms, which never matches when the transport is loaded by another realm.
+     */
+    private boolean isNotFound(Exception e) {
+        return transporter != null && transporter.classify(e) == Transporter.ERROR_NOT_FOUND;
     }
 
     private void logNotFound(String fullUrl, Exception e) {

@@ -26,14 +26,16 @@ import org.apache.maven.buildcache.its.junit.IntegrationTest;
 import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import static org.apache.maven.buildcache.util.LogFileUtils.findFirstLineContainingTextsInLogs;
 import static org.apache.maven.buildcache.xml.CacheConfigImpl.CACHE_LOCATION_PROPERTY_NAME;
 import static org.apache.maven.buildcache.xml.CacheConfigImpl.SKIP_SAVE;
 
+@Tag("smoke")
 @IntegrationTest("src/test/projects/build-extension")
-public class BuildExtensionTest {
+class BuildExtensionTest {
 
     private static final String PROJECT_NAME = "org.apache.maven.caching.test.simple:simple";
 
@@ -58,6 +60,7 @@ public class BuildExtensionTest {
         verifier.getCliOptions().clear();
         verifier.addCliOption("-D" + CACHE_LOCATION_PROPERTY_NAME + "=" + tempDirectory.toAbsolutePath());
         verifier.addCliOption("-D" + SKIP_SAVE + "=true");
+        verifier.addCliOption("-X");
 
         verifier.setLogFileName("../log-1.txt");
         verifier.executeGoal("verify");

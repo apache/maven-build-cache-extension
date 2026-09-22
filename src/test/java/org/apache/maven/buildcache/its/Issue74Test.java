@@ -39,14 +39,14 @@ import org.slf4j.LoggerFactory;
  * which don't contain a package phase.
  */
 @IntegrationTest("src/test/projects/mbuildcache-74-clean-cache-any-artifact")
-public class Issue74Test {
+class Issue74Test {
 
-    private static final Logger logger = LoggerFactory.getLogger(Issue74Test.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(Issue74Test.class);
 
     @Test
     void simple(Verifier verifier) throws VerificationException, IOException {
         verifier.setAutoclean(false);
-        verifier.setMavenDebug(true);
+        verifier.addCliOption("-X");
 
         // first run - uncached
         verifier.setLogFileName("../log-1.txt");
@@ -79,7 +79,7 @@ public class Issue74Test {
         // buildinfo.xml -> local -> hash -> project
         Path projectPathInCache = buildInfoXmlPath.getParent().getParent().getParent();
 
-        logger.info("Checking '{}' for cached builds ...", projectPathInCache);
+        LOGGER.info("Checking '{}' for cached builds ...", projectPathInCache);
 
         if (!Files.exists(projectPathInCache)) {
             throw new VerificationException(
@@ -87,7 +87,7 @@ public class Issue74Test {
         }
 
         List<Path> entries =
-                Files.list(projectPathInCache).filter(p -> Files.isDirectory(p)).collect(Collectors.toList());
+                Files.list(projectPathInCache).filter(Files::isDirectory).collect(Collectors.toList());
 
         Assertions.assertEquals(
                 expectedBuilds,

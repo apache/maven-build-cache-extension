@@ -19,8 +19,8 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-<project xmlns="http://maven.apache.org/DECORATION/1.8.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/DECORATION/1.8.0 http://maven.apache.org/xsd/decoration-1.8.0.xsd">
+<site xmlns="http://maven.apache.org/SITE/2.1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/SITE/2.1.0 https://maven.apache.org/xsd/site-2.1.0.xsd">
 
   <edit>${project.scm.url}</edit>
 
@@ -31,23 +31,22 @@ under the License.
     </breadcrumbs>
 
     <menu name="Overview">
-      <item name="Introduction" href="index.html"/>
-      <item name="JavaDocs" href="apidocs/index.html"/>
-      <item name="Source Xref" href="xref/index.html"/>
-      <!--item name="FAQ" href="faq.html"/-->
+      <item name="Getting Started" href="index.html"/>
     </menu>
 
     <menu name="Documentation">
-      <item name="Getting Started" href="getting-started.html"/>
       <item name="Usage" href="usage.html"/>
       <item name="Remote Cache Setup" href="remote-cache.html"/>
       <item name="Howto" href="how-to.html"/>
       <item name="Performance" href="performance.html"/>
       <item name="Cache Parameters" href="parameters.html"/>
+      <item name="Concepts" href="concepts.html"/>
     </menu>
 
     <menu name="Reference">
       <item name="maven-build-cache-config.xml" href="build-cache-config.html"/>
+      <item name="JavaDocs" href="apidocs/index.html"/>
+      <item name="Source Xref" href="xref/index.html"/>
     </menu>
 
     <menu name="Cache Internals">
@@ -58,4 +57,4 @@ under the License.
 
     <menu ref="reports"/>
   </body>
-</project>
+</site>
