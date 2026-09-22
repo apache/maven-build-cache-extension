@@ -37,7 +37,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mockito;
 
-public class InputExclusionTest {
+class InputExclusionTest {
 
     @TempDir
     private Path testFolder;
@@ -47,7 +47,7 @@ public class InputExclusionTest {
      * @throws IOException
      */
     @Test
-    public void exclusionByFolder() throws IOException {
+    void exclusionByFolder() throws IOException {
         FsTree fsTree = createFsTree();
 
         // Exclude folder 1 + everything inside based on the starting path
@@ -85,7 +85,7 @@ public class InputExclusionTest {
      * @throws IOException
      */
     @Test
-    public void exclusionByFileExtension() throws IOException {
+    void exclusionByFileExtension() throws IOException {
         FsTree fsTree = createFsTree();
 
         // Excludes all json files
@@ -117,7 +117,7 @@ public class InputExclusionTest {
      * @throws IOException
      */
     @Test
-    public void exclusionOfOneSpecificFile() throws IOException {
+    void exclusionOfOneSpecificFile() throws IOException {
         FsTree fsTree = createFsTree();
 
         // Exclude the json file in subfolder 1
@@ -174,7 +174,7 @@ public class InputExclusionTest {
      * @throws IOException
      */
     @Test
-    public void exclusionOfOneSpecificFileWindowsStyle() throws IOException {
+    void exclusionOfOneSpecificFileWindowsStyle() throws IOException {
         FsTree fsTree = createFsTree();
 
         // Exclude the json file in subfolder 1
@@ -232,7 +232,7 @@ public class InputExclusionTest {
      * @throws IOException
      */
     @Test
-    public void exclusionByPatternInFilename() throws IOException {
+    void exclusionByPatternInFilename() throws IOException {
         FsTree fsTree = createFsTree();
 
         // Excludes all files containing the string "my-f" in their filename
@@ -275,7 +275,7 @@ public class InputExclusionTest {
      * @throws IOException
      */
     @Test
-    public void exclusionViaProjectProperties() throws IOException {
+    void exclusionViaProjectProperties() throws IOException {
         FsTree fsTree = createFsTree();
 
         MavenProject mavenProject = Mockito.mock(MavenProject.class);
@@ -348,8 +348,7 @@ public class InputExclusionTest {
 
         CacheConfig cacheConfig = Mockito.mock(CacheConfig.class);
         Mockito.when(cacheConfig.getGlobalExcludePaths()).thenReturn(new ArrayList<>());
-        ExclusionResolver resolver = new ExclusionResolver(mavenProject, cacheConfig);
-        return resolver;
+        return new ExclusionResolver(mavenProject, cacheConfig);
     }
 
     private ExclusionResolver createExclusionResolver(
@@ -375,8 +374,7 @@ public class InputExclusionTest {
 
         CacheConfig cacheConfig = Mockito.mock(CacheConfig.class);
         Mockito.when(cacheConfig.getGlobalExcludePaths()).thenReturn(Arrays.asList(exclude));
-        ExclusionResolver resolver = new ExclusionResolver(mavenProject, cacheConfig);
-        return resolver;
+        return new ExclusionResolver(mavenProject, cacheConfig);
     }
 
     /**
@@ -400,20 +398,20 @@ public class InputExclusionTest {
      *     - other-file.json
      */
     private class FsTree {
-        public Path txtFileRootFolder;
-        public Path javaFileRootFolder;
-        public Path jsonFileRootFolder;
-        public Path folder1;
-        public Path txtFileFolder1;
-        public Path javaFileFolder1;
-        public Path jsonFileFolder1;
-        public Path subFolder1;
-        public Path txtFileSubFolder1;
-        public Path javaFileSubFolder1;
-        public Path jsonFileSubFolder1;
-        public Path folder2;
-        public Path txtFileFolder2;
-        public Path javaFileFolder2;
-        public Path jsonFileFolder2;
+        private Path txtFileRootFolder;
+        private Path javaFileRootFolder;
+        private Path jsonFileRootFolder;
+        private Path folder1;
+        private Path txtFileFolder1;
+        private Path javaFileFolder1;
+        private Path jsonFileFolder1;
+        private Path subFolder1;
+        private Path txtFileSubFolder1;
+        private Path javaFileSubFolder1;
+        private Path jsonFileSubFolder1;
+        private Path folder2;
+        private Path txtFileFolder2;
+        private Path javaFileFolder2;
+        private Path jsonFileFolder2;
     }
 }

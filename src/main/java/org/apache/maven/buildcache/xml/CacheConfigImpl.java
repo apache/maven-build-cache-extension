@@ -22,6 +22,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Named;
+import javax.inject.Provider;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -33,6 +34,7 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.apache.maven.SessionScoped;
 import org.apache.maven.buildcache.DefaultPluginScanConfig;
 import org.apache.maven.buildcache.PluginScanConfig;
@@ -83,6 +85,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     public static final String CONFIG_PATH_PROPERTY_NAME = "maven.build.cache.configPath";
     public static final String CACHE_ENABLED_PROPERTY_NAME = "maven.build.cache.enabled";
     public static final String CACHE_LOCATION_PROPERTY_NAME = "maven.build.cache.location";
+    public static final String MAX_LOCAL_BUILDS_CACHED_PROPERTY_NAME = "maven.build.cache.maxLocalBuildsCached";
     public static final String REMOTE_ENABLED_PROPERTY_NAME = "maven.build.cache.remote.enabled";
     public static final String REMOTE_URL_PROPERTY_NAME = "maven.build.cache.remote.url";
     public static final String REMOTE_SERVER_ID_PROPERTY_NAME = "maven.build.cache.remote.server.id";
@@ -97,6 +100,10 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     public static final String MANDATORY_CLEAN = "maven.build.cache.mandatoryClean";
     public static final String INCREMENTAL_RECONCILIATION_ON_PARAMETER_MISMATCH =
             "maven.build.cache.incrementalReconciliationOnParameterMismatch";
+    public static final String CACHE_COMPILE = "maven.build.cache.cacheCompile";
+    public static final String CACHE_SINGLE_GOAL = "maven.build.cache.cacheSingleGoal";
+    public static final String RESTORE_FORKED_EXECUTIONS = "maven.build.cache.restoreForkedExecutions";
+    public static final String SAVE_FORKED_EXECUTIONS = "maven.build.cache.saveForkedExecutions";
 
     /**
      * Flag to control if we should skip lookup for cached artifacts globally or for a particular project even if
@@ -116,7 +123,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     private static final Logger LOGGER = LoggerFactory.getLogger(CacheConfigImpl.class);
 
     private final XmlService xmlService;
-    private final MavenSession session;
+    private final Provider<MavenSession> providerSession;
     private final RuntimeInformation rtInfo;
 
     private volatile CacheState state;
@@ -125,9 +132,9 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     private List<Pattern> excludePatterns;
 
     @Inject
-    public CacheConfigImpl(XmlService xmlService, MavenSession session, RuntimeInformation rtInfo) {
+    public CacheConfigImpl(XmlService xmlService, Provider<MavenSession> providerSession, RuntimeInformation rtInfo) {
         this.xmlService = xmlService;
-        this.session = session;
+        this.providerSession = providerSession;
         this.rtInfo = rtInfo;
     }
 
@@ -154,6 +161,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
                         if (StringUtils.isNotBlank(configPathText)) {
                             configPath = Paths.get(configPathText);
                         } else {
+                            final MavenSession session = providerSession.get();
                             configPath =
                                     getMultimoduleRoot(session).resolve(".mvn").resolve("maven-build-cache-config.xml");
                         }
@@ -263,7 +271,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
             final String goal = mojoExecution.getGoal();
 
             if (isPluginMatch(mojoExecution.getPlugin(), goalReconciliationConfig)
-                    && StringUtils.equals(goal, goalReconciliationConfig.getGoal())) {
+                    && Strings.CS.equals(goal, goalReconciliationConfig.getGoal())) {
                 return goalReconciliationConfig;
             }
         }
@@ -341,9 +349,9 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     }
 
     private boolean isPluginMatch(Plugin plugin, CoordinatesBase pluginConfig) {
-        return StringUtils.equals(pluginConfig.getArtifactId(), plugin.getArtifactId())
+        return Strings.CS.equals(pluginConfig.getArtifactId(), plugin.getArtifactId())
                 && (pluginConfig.getGroupId() == null
-                        || StringUtils.equals(pluginConfig.getGroupId(), plugin.getGroupId()));
+                        || Strings.CS.equals(pluginConfig.getGroupId(), plugin.getGroupId()));
     }
 
     @Nonnull
@@ -548,6 +556,26 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     }
 
     @Override
+    public boolean isCacheCompile() {
+        return getProperty(CACHE_COMPILE, true);
+    }
+
+    @Override
+    public boolean isCacheSingleGoal() {
+        return getProperty(CACHE_SINGLE_GOAL, true);
+    }
+
+    @Override
+    public boolean isRestoreForkedExecutions() {
+        return getProperty(RESTORE_FORKED_EXECUTIONS, true);
+    }
+
+    @Override
+    public boolean isSaveForkedExecutions() {
+        return getProperty(SAVE_FORKED_EXECUTIONS, true);
+    }
+
+    @Override
     public String getId() {
         checkInitializedState();
         return getProperty(REMOTE_SERVER_ID_PROPERTY_NAME, getRemote().getId());
@@ -568,7 +596,12 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     @Override
     public int getMaxLocalBuildsCached() {
         checkInitializedState();
-        return getLocal().getMaxBuildsCached();
+        int maxLocalBuildsCached =
+                getProperty(MAX_LOCAL_BUILDS_CACHED_PROPERTY_NAME, getLocal().getMaxBuildsCached());
+        if (maxLocalBuildsCached <= 0) {
+            throw new IllegalArgumentException("maxLocalBuildsCached must be greater than 0");
+        }
+        return maxLocalBuildsCached;
     }
 
     @Override
@@ -582,6 +615,20 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
         checkInitializedState();
         final AttachedOutputs attachedOutputs = getConfiguration().getAttachedOutputs();
         return attachedOutputs == null ? Collections.emptyList() : attachedOutputs.getDirNames();
+    }
+
+    @Override
+    public boolean isPreservePermissions() {
+        checkInitializedState();
+        final AttachedOutputs attachedOutputs = getConfiguration().getAttachedOutputs();
+        return attachedOutputs == null || attachedOutputs.isPreservePermissions();
+    }
+
+    @Override
+    public boolean isPreserveTimestamps() {
+        checkInitializedState();
+        final AttachedOutputs attachedOutputs = getConfiguration().getAttachedOutputs();
+        return attachedOutputs == null || attachedOutputs.isPreserveTimestamps();
     }
 
     @Override
@@ -643,6 +690,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     }
 
     private String getProperty(String key, String defaultValue) {
+        MavenSession session = providerSession.get();
         String value = session.getUserProperties().getProperty(key);
         if (value == null) {
             value = session.getSystemProperties().getProperty(key);
@@ -653,7 +701,17 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
         return value;
     }
 
+    private int getProperty(String key, int defaultValue) {
+        String property = getProperty(key, String.valueOf(defaultValue));
+        try {
+            return Integer.parseInt(property);
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
+    }
+
     private boolean getProperty(String key, boolean defaultValue) {
+        MavenSession session = providerSession.get();
         String value = session.getUserProperties().getProperty(key);
         if (value == null) {
             value = session.getSystemProperties().getProperty(key);

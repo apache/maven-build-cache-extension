@@ -47,7 +47,7 @@ import static org.apache.maven.buildcache.hash.HashFactory.XX;
 import static org.apache.maven.buildcache.hash.HashFactory.XXMM;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class XXHashTest {
+class XXHashTest {
 
     private static final byte[] HELLO_ARRAY = "hello".getBytes(StandardCharsets.UTF_8);
     private static final byte[] WORLD_ARRAY = "world".getBytes(StandardCharsets.UTF_8);
@@ -63,14 +63,14 @@ public class XXHashTest {
     private static final HashAlgorithm ALGORITHM = XX.createAlgorithm();
 
     @Test
-    public void testEmptyArray() {
+    void testEmptyArray() {
         byte[] emptyArray = new byte[0];
         String hash = ALGORITHM.hash(emptyArray);
         assertEquals(EMPTY_HASH, hash);
     }
 
     @Test
-    public void testSimpleHash() {
+    void testSimpleHash() {
         String helloHash = ALGORITHM.hash(HELLO_ARRAY);
         assertEquals(HELLO_HASH, helloHash);
 
@@ -79,7 +79,7 @@ public class XXHashTest {
     }
 
     @Test
-    public void testSimpleChecksum() {
+    void testSimpleChecksum() {
         String helloChecksum = ALGORITHM.hash(longToBytes(1, HELLO_LONG));
         assertEquals(HELLO_CHECKSUM, helloChecksum);
 
@@ -91,31 +91,31 @@ public class XXHashTest {
     }
 
     @Test
-    public void testEmptyBuffer() {
+    void testEmptyBuffer() {
         assertEmptyBuffer(XX.createChecksum(0));
         assertEmptyBuffer(XXMM.createChecksum(0));
     }
 
     @Test
-    public void testSingleHash() {
+    void testSingleHash() {
         assertSingleHash(XX.createChecksum(1));
         assertSingleHash(XXMM.createChecksum(1));
     }
 
     @Test
-    public void testSingleChecksum() {
+    void testSingleChecksum() {
         assertSingleChecksum(XX.createChecksum(1));
         assertSingleChecksum(XXMM.createChecksum(1));
     }
 
     @Test
-    public void testNotFullChecksum() {
+    void testNotFullChecksum() {
         assertSingleChecksum(XX.createChecksum(2));
         assertSingleChecksum(XXMM.createChecksum(2));
     }
 
     @Test
-    public void testFullChecksum() {
+    void testFullChecksum() {
         assertFullChecksum(XX.createChecksum(2));
         assertFullChecksum(XXMM.createChecksum(2));
     }

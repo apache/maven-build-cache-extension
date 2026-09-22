@@ -21,8 +21,8 @@ package org.apache.maven.buildcache.its;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 
-import com.google.common.collect.Lists;
 import org.apache.commons.io.FileUtils;
 import org.apache.maven.buildcache.its.junit.IntegrationTest;
 import org.apache.maven.it.VerificationException;
@@ -39,7 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * The test checks that extensions receives expected events for forked executions and completes build successfully
  */
 @IntegrationTest("src/test/projects/forked-executions-core-extension")
-public class ForkedExecutionCoreExtensionTest {
+class ForkedExecutionCoreExtensionTest {
 
     private static final String PROJECT_NAME = "org.apache.maven.caching.test.simple:forked-executions-core-extension";
     private Path tempDirectory;
@@ -59,9 +59,8 @@ public class ForkedExecutionCoreExtensionTest {
         verifier.setAutoclean(false);
 
         verifier.setLogFileName("../log-1.txt");
-        verifier.setMavenDebug(true);
         verifier.setCliOptions(
-                Lists.newArrayList("-D" + CACHE_LOCATION_PROPERTY_NAME + "=" + tempDirectory.toAbsolutePath()));
+                Arrays.asList("-X", "-D" + CACHE_LOCATION_PROPERTY_NAME + "=" + tempDirectory.toAbsolutePath()));
         verifier.executeGoal("verify");
         verifier.verifyTextInLog("Started forked project");
         // forked execution actually runs
@@ -77,6 +76,8 @@ public class ForkedExecutionCoreExtensionTest {
         verifier.verifyTextInLog("[INFO] BUILD SUCCESS");
 
         verifier.setLogFileName("../log-2.txt");
+        verifier.setCliOptions(
+                Arrays.asList("-X", "-D" + CACHE_LOCATION_PROPERTY_NAME + "=" + tempDirectory.toAbsolutePath()));
         verifier.executeGoal("verify");
         verifier.verifyErrorFreeLog();
         verifier.verifyTextInLog("Found cached build, restoring " + PROJECT_NAME + " from cache");

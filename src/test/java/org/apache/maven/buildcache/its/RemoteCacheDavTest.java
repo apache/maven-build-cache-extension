@@ -18,28 +18,15 @@
  */
 package org.apache.maven.buildcache.its;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.attribute.FileTime;
-import java.nio.file.attribute.PosixFilePermission;
-import java.nio.file.attribute.PosixFilePermissions;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
-import java.util.EnumSet;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.TreeMap;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -50,7 +37,6 @@ import org.apache.maven.buildcache.its.junit.IntegrationTest;
 import org.apache.maven.buildcache.its.junit.IntegrationTestExtension;
 import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
-import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -67,9 +53,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @IntegrationTest("src/test/projects/remote-cache-dav")
 @Testcontainers(disabledWithoutDocker = true)
-public class RemoteCacheDavTest {
+class RemoteCacheDavTest {
 
-    public static final String DAV_DOCKER_IMAGE =
+    private static final String DAV_DOCKER_IMAGE =
             "xama/nginx-webdav@sha256:84171a7e67d7e98eeaa67de58e3ce141ec1d0ee9c37004e7096698c8379fd9cf";
     private static final String DAV_USERNAME = "admin";
     private static final String DAV_PASSWORD = "admin";
@@ -121,21 +107,20 @@ public class RemoteCacheDavTest {
     }
 
     @AfterEach
-    public void cleanup() throws Exception {
+    void cleanup() throws Exception {
         dav.execInContainer("rm", "-rf", "/var/webdav");
         cleanDirs(localCache);
         dav.close();
     }
 
-    public static Stream<Arguments> transports() {
-        return Stream.of(Arguments.of("wagon"), Arguments.of("http"));
+    public static Stream<Arguments> urlSchemes() {
+        return Stream.of(Arguments.of("http://"), Arguments.of("dav:http://"));
     }
 
     @ParameterizedTest
-    @MethodSource("transports")
-    public void doTestRemoteCache(String transport) throws VerificationException, IOException {
-        String url =
-                ("wagon".equals(transport) ? "dav:" : "") + "http://localhost:" + dav.getFirstMappedPort() + "/mbce";
+    @MethodSource("urlSchemes")
+    void doTestRemoteCache(String scheme) throws VerificationException, IOException {
+        String url = scheme + "localhost:" + dav.getFirstMappedPort() + "/mbce";
         substitute(
                 basedir.resolve(".mvn/maven-build-cache-config.xml"),
                 "url",
@@ -153,8 +138,8 @@ public class RemoteCacheDavTest {
 
         verifier.getCliOptions().clear();
         verifier.addCliOption("--settings=" + settings);
-        verifier.addCliOption("-D" + HTTP_TRANSPORT_PRIORITY + "=" + ("wagon".equals(transport) ? "0" : "10"));
-        verifier.addCliOption("-D" + WAGON_TRANSPORT_PRIORITY + "=" + ("wagon".equals(transport) ? "10" : "0"));
+        verifier.addCliOption("-D" + HTTP_TRANSPORT_PRIORITY + "=10");
+        verifier.addCliOption("-D" + WAGON_TRANSPORT_PRIORITY + "=0");
         verifier.addCliOption("-D" + MAVEN_BUILD_CACHE_REMOTE_SAVE_ENABLED + "=false");
         verifier.setLogFileName("../log-1.txt");
         verifier.executeGoals(Arrays.asList("clean", "install"));
@@ -167,11 +152,8 @@ public class RemoteCacheDavTest {
 
         verifier.getCliOptions().clear();
         verifier.addCliOption("--settings=" + settings);
-        if (!"wagon".equals(transport)) {
-            verifier.setSystemProperty("aether.connector.http.supportWebDav", "true");
-        }
-        verifier.addCliOption("-D" + HTTP_TRANSPORT_PRIORITY + "=" + ("wagon".equals(transport) ? "0" : "10"));
-        verifier.addCliOption("-D" + WAGON_TRANSPORT_PRIORITY + "=" + ("wagon".equals(transport) ? "10" : "0"));
+        verifier.addCliOption("-D" + HTTP_TRANSPORT_PRIORITY + "=10");
+        verifier.addCliOption("-D" + WAGON_TRANSPORT_PRIORITY + "=0");
         verifier.addCliOption("-D" + MAVEN_BUILD_CACHE_REMOTE_SAVE_ENABLED + "=true");
         verifier.setLogFileName("../log-2.txt");
         verifier.executeGoals(Arrays.asList("clean", "install"));
@@ -184,11 +166,8 @@ public class RemoteCacheDavTest {
 
         verifier.getCliOptions().clear();
         verifier.addCliOption("--settings=" + settings);
-        if (!"wagon".equals(transport)) {
-            verifier.setSystemProperty("aether.connector.http.supportWebDav", "true");
-        }
-        verifier.addCliOption("-D" + HTTP_TRANSPORT_PRIORITY + "=" + ("wagon".equals(transport) ? "0" : "10"));
-        verifier.addCliOption("-D" + WAGON_TRANSPORT_PRIORITY + "=" + ("wagon".equals(transport) ? "10" : "0"));
+        verifier.addCliOption("-D" + HTTP_TRANSPORT_PRIORITY + "=10");
+        verifier.addCliOption("-D" + WAGON_TRANSPORT_PRIORITY + "=0");
         verifier.addCliOption("-D" + MAVEN_BUILD_CACHE_REMOTE_SAVE_ENABLED + "=false");
         verifier.setLogFileName("../log-3.txt");
         verifier.executeGoals(Arrays.asList("clean", "install"));
@@ -219,8 +198,8 @@ public class RemoteCacheDavTest {
         verifier.getCliOptions().clear();
         verifier.addCliOption("--settings=" + settings);
         verifier.addCliOption("-X");
-        verifier.addCliOption("-D" + HTTP_TRANSPORT_PRIORITY + "=" + ("wagon".equals(transport) ? "0" : "10"));
-        verifier.addCliOption("-D" + WAGON_TRANSPORT_PRIORITY + "=" + ("wagon".equals(transport) ? "10" : "0"));
+        verifier.addCliOption("-D" + HTTP_TRANSPORT_PRIORITY + "=10");
+        verifier.addCliOption("-D" + WAGON_TRANSPORT_PRIORITY + "=0");
         verifier.addCliOption("-D" + MAVEN_BUILD_CACHE_REMOTE_SAVE_ENABLED + "=true");
         verifier.setSystemProperty(REMOTE_URL_PROPERTY_NAME, url);
         verifier.setSystemProperty(REMOTE_SERVER_ID_PROPERTY_NAME, REPO_ID);
@@ -236,7 +215,6 @@ public class RemoteCacheDavTest {
         return Files.walk(cache).anyMatch(isBuildInfoXml());
     }
 
-    @NotNull
     private Predicate<Path> isBuildInfoXml() {
         return p -> p.getFileName().toString().equals("buildinfo.xml");
     }
@@ -249,10 +227,16 @@ public class RemoteCacheDavTest {
         }
     }
 
+    /**
+     * Substitutes {@code ${name}} placeholders in a file. The replacement goes through
+     * {@link Matcher#quoteReplacement} because one of the values is a filesystem path: on Windows its backslashes
+     * would otherwise be read as escapes and silently dropped.
+     */
     private static void substitute(Path path, String... strings) throws IOException {
         String str = new String(Files.readAllBytes(path), StandardCharsets.UTF_8);
         for (int i = 0; i < strings.length / 2; i++) {
-            str = str.replaceAll(Pattern.quote("${" + strings[i * 2] + "}"), strings[i * 2 + 1]);
+            str = str.replaceAll(
+                    Pattern.quote("${" + strings[i * 2] + "}"), Matcher.quoteReplacement(strings[i * 2 + 1]));
         }
         Files.deleteIfExists(path);
         Files.write(path, str.getBytes(StandardCharsets.UTF_8));
@@ -285,191 +269,10 @@ public class RemoteCacheDavTest {
     }
 
     private static void ls(Path currentDir, Consumer<String> out) throws IOException {
-        class PathEntry implements Comparable<PathEntry> {
-
-            final Path abs;
-            final Path path;
-            final Map<String, Object> attributes;
-
-            public PathEntry(Path abs, Path root) {
-                this.abs = abs;
-                this.path = abs.startsWith(root) ? root.relativize(abs) : abs;
-                this.attributes = readAttributes(abs);
-            }
-
-            @Override
-            public int compareTo(PathEntry o) {
-                return path.toString().compareTo(o.path.toString());
-            }
-
-            boolean isNotDirectory() {
-                return is("isRegularFile") || is("isSymbolicLink") || is("isOther");
-            }
-
-            boolean isDirectory() {
-                return is("isDirectory");
-            }
-
-            private boolean is(String attr) {
-                Object d = attributes.get(attr);
-                return d instanceof Boolean && (Boolean) d;
-            }
-
-            String display() {
-                String suffix;
-                String link = "";
-                if (is("isSymbolicLink")) {
-                    suffix = "@";
-                    try {
-                        Path l = Files.readSymbolicLink(abs);
-                        link = " -> " + l.toString();
-                    } catch (IOException e) {
-                        // ignore
-                    }
-                } else if (is("isDirectory")) {
-                    suffix = "/";
-                } else if (is("isExecutable")) {
-                    suffix = "*";
-                } else if (is("isOther")) {
-                    suffix = "";
-                } else {
-                    suffix = "";
-                }
-                return path.toString() + suffix + link;
-            }
-
-            String longDisplay() {
-                String username;
-                if (attributes.containsKey("owner")) {
-                    username = Objects.toString(attributes.get("owner"), null);
-                } else {
-                    username = "owner";
-                }
-                if (username.length() > 8) {
-                    username = username.substring(0, 8);
-                } else {
-                    for (int i = username.length(); i < 8; i++) {
-                        username = username + " ";
-                    }
-                }
-                String group;
-                if (attributes.containsKey("group")) {
-                    group = Objects.toString(attributes.get("group"), null);
-                } else {
-                    group = "group";
-                }
-                if (group.length() > 8) {
-                    group = group.substring(0, 8);
-                } else {
-                    for (int i = group.length(); i < 8; i++) {
-                        group = group + " ";
-                    }
-                }
-                Number length = (Number) attributes.get("size");
-                if (length == null) {
-                    length = 0L;
-                }
-                String lengthString;
-                if (true /*opt.isSet("h")*/) {
-                    double l = length.longValue();
-                    String unit = "B";
-                    if (l >= 1000) {
-                        l /= 1024;
-                        unit = "K";
-                        if (l >= 1000) {
-                            l /= 1024;
-                            unit = "M";
-                            if (l >= 1000) {
-                                l /= 1024;
-                                unit = "T";
-                            }
-                        }
-                    }
-                    if (l < 10 && length.longValue() > 1000) {
-                        lengthString = String.format("%.1f", l) + unit;
-                    } else {
-                        lengthString = String.format("%3.0f", l) + unit;
-                    }
-                } else {
-                    lengthString = String.format("%1$8s", length);
-                }
-                @SuppressWarnings("unchecked")
-                Set<PosixFilePermission> perms = (Set<PosixFilePermission>) attributes.get("permissions");
-                if (perms == null) {
-                    perms = EnumSet.noneOf(PosixFilePermission.class);
-                }
-                // TODO: all fields should be padded to align
-                return (is("isDirectory") ? "d" : (is("isSymbolicLink") ? "l" : (is("isOther") ? "o" : "-")))
-                        + PosixFilePermissions.toString(perms) + " "
-                        + String.format(
-                                "%3s",
-                                (attributes.containsKey("nlink")
-                                        ? attributes.get("nlink").toString()
-                                        : "1"))
-                        + " " + username + " " + group + " " + lengthString + " "
-                        + toString((FileTime) attributes.get("lastModifiedTime"))
-                        + " " + display();
-            }
-
-            protected String toString(FileTime time) {
-                long millis = (time != null) ? time.toMillis() : -1L;
-                if (millis < 0L) {
-                    return "------------";
-                }
-                ZonedDateTime dt = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault());
-                // Less than six months
-                if (System.currentTimeMillis() - millis < 183L * 24L * 60L * 60L * 1000L) {
-                    return DateTimeFormatter.ofPattern("MMM ppd HH:mm").format(dt);
-                }
-                // Older than six months
-                else {
-                    return DateTimeFormatter.ofPattern("MMM ppd  yyyy").format(dt);
-                }
-            }
-
-            protected Map<String, Object> readAttributes(Path path) {
-                Map<String, Object> attrs = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-                for (String view : path.getFileSystem().supportedFileAttributeViews()) {
-                    try {
-                        Map<String, Object> ta = Files.readAttributes(path, view + ":*", LinkOption.NOFOLLOW_LINKS);
-                        ta.forEach(attrs::putIfAbsent);
-                    } catch (IOException e) {
-                        // Ignore
-                    }
-                }
-                attrs.computeIfAbsent("isExecutable", s -> Files.isExecutable(path));
-                attrs.computeIfAbsent("permissions", s -> getPermissionsFromFile(path.toFile()));
-                return attrs;
-            }
-        }
-
         Files.walk(currentDir)
                 .map(p -> new PathEntry(p, currentDir))
                 .sorted()
                 .map(PathEntry::longDisplay)
                 .forEach(out);
-    }
-
-    private static Set<PosixFilePermission> getPermissionsFromFile(File f) {
-        Set<PosixFilePermission> perms = EnumSet.noneOf(PosixFilePermission.class);
-        if (f.canRead()) {
-            perms.add(PosixFilePermission.OWNER_READ);
-            perms.add(PosixFilePermission.GROUP_READ);
-            perms.add(PosixFilePermission.OTHERS_READ);
-        }
-
-        if (f.canWrite()) {
-            perms.add(PosixFilePermission.OWNER_WRITE);
-            perms.add(PosixFilePermission.GROUP_WRITE);
-            perms.add(PosixFilePermission.OTHERS_WRITE);
-        }
-
-        if (f.canExecute() /*|| (OSUtils.IS_WINDOWS && isWindowsExecutable(f.getName()))*/) {
-            perms.add(PosixFilePermission.OWNER_EXECUTE);
-            perms.add(PosixFilePermission.GROUP_EXECUTE);
-            perms.add(PosixFilePermission.OTHERS_EXECUTE);
-        }
-
-        return perms;
     }
 }

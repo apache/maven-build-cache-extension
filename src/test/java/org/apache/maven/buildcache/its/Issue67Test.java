@@ -35,15 +35,15 @@ import org.junit.jupiter.api.Test;
  * Check if a restoration error is handled properly = the build should be executed "normally", like if there is no cache.
  */
 @IntegrationTest("src/test/projects/mbuildcache-67")
-public class Issue67Test {
+class Issue67Test {
 
-    public static final String SAVED_BUILD_TO_LOCAL_FILE = "Saved Build to local file: ";
-    public static final String GENERATED_JAR = "target/mbuildcache-67-0.0.1-SNAPSHOT.jar";
+    private static final String SAVED_BUILD_TO_LOCAL_FILE = "Saved Build to local file: ";
+    private static final String GENERATED_JAR = "target/mbuildcache-67-0.0.1-SNAPSHOT.jar";
 
     @Test
     void simple(Verifier verifier) throws VerificationException, IOException {
         verifier.setAutoclean(false);
-        verifier.setMavenDebug(true);
+        verifier.addCliOption("-X");
 
         // First build, nothing in cache
         verifier.setLogFileName("../log.txt");
@@ -62,7 +62,6 @@ public class Issue67Test {
                 Files.deleteIfExists(Paths.get(jarCachePath)), "mbuildcache-67.jar was expected in the local cache");
 
         // Second build, with a corrupted cache
-        verifier.setMavenDebug(false);
         verifier.setLogFileName("../log-2.txt");
         verifier.executeGoal("clean");
         verifier.verifyFileNotPresent(GENERATED_JAR);
@@ -88,10 +87,9 @@ public class Issue67Test {
     private static String findFirstLineContainingTextsInLogs(final Verifier verifier, final String... texts)
             throws VerificationException {
         List<String> lines = verifier.loadFile(verifier.getBasedir(), verifier.getLogFileName(), false);
-        Iterator it = lines.iterator();
 
-        while (it.hasNext()) {
-            String line = verifier.stripAnsi((String) it.next());
+        for (String s : lines) {
+            String line = Verifier.stripAnsi(s);
             boolean matches = true;
             Iterator<String> toMatchIterator = Arrays.stream(texts).iterator();
             while (matches && toMatchIterator.hasNext()) {

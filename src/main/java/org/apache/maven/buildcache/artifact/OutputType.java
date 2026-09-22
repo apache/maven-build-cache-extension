@@ -26,7 +26,7 @@ public enum OutputType {
     // any unclassified output added by configuration
     EXTRA_OUTPUT("mvn-cache-ext-extra-output-");
 
-    private String classifierPrefix;
+    private final String classifierPrefix;
 
     OutputType(String getClassifierPrefix) {
         this.classifierPrefix = getClassifierPrefix;
