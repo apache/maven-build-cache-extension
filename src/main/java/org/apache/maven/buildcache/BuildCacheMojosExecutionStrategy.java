@@ -24,6 +24,7 @@ import javax.inject.Named;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -262,6 +263,11 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
         if (forkedExecution && !forkedSaveEligible) {
             return;
         }
+        List<Zone> zonesToSave = selectZonesToSave(results, bestResult, restored);
+        if (zonesToSave.isEmpty()) {
+            LOGGER.debug("Every output zone already holds this build, nothing to save.");
+            return;
+        }
         boolean skipSave = cacheConfig.isSkipSave() || MavenProjectInput.isSkipSave(project);
         if (skipSave) {
             LOGGER.debug("Cache saving is disabled.");
@@ -276,17 +282,28 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                     getVersionlessProjectKey(project));
         } else {
             final Map<String, MojoExecutionEvent> executionEvents = mojoListener.getProjectExecutions(project);
-            for (Zone outputZone : cacheConfig.getOutputZones()) {
-                CacheResult zoneResult = results.get(outputZone);
-                if (bestResult.isSuccess()
-                        && restored
-                        && (bestResult.getInputZone().equals(outputZone)
-                                || zoneResult != null && zoneResult.isSuccess())) {
-                    continue;
-                }
+            for (Zone outputZone : zonesToSave) {
                 cacheController.save(bestResult, mojoExecutions, executionEvents, outputZone);
             }
         }
+    }
+
+    /**
+     * An output zone needs no save when the build was fully restored from a zone that already holds this
+     * result: the input zone itself, or an output zone whose own lookup succeeded.
+     */
+    private List<Zone> selectZonesToSave(Map<Zone, CacheResult> results, CacheResult bestResult, boolean restored) {
+        List<Zone> zonesToSave = new ArrayList<>();
+        for (Zone outputZone : cacheConfig.getOutputZones()) {
+            CacheResult zoneResult = results.get(outputZone);
+            if (bestResult.isSuccess()
+                    && restored
+                    && (bestResult.getInputZone().equals(outputZone) || zoneResult != null && zoneResult.isSuccess())) {
+                continue;
+            }
+            zonesToSave.add(outputZone);
+        }
+        return zonesToSave;
     }
 
     /**
