@@ -23,6 +23,10 @@ import org.apache.commons.lang3.StringUtils;
 import static java.util.Objects.requireNonNull;
 
 /**
+ * A named partition of the cache for one project checksum. A build reads its input zones in order and
+ * restores from the first hit, then saves its result into every output zone that lacks a usable entry,
+ * so several final states (e.g. one per CI test group) can coexist under the same checksum.
+ *
  * @author Réda Housni Alaoui
  */
 public class Zone {
