@@ -406,7 +406,7 @@ public class CacheControllerImpl implements CacheController {
     }
 
     @Override
-    public ArtifactRestorationReport restoreProjectArtifacts(CacheResult cacheResult) {
+    public ArtifactRestorationReport restoreProjectArtifacts(CacheResult cacheResult, boolean setProjectArtifact) {
 
         LOGGER.debug("Restore project artifacts");
         final Build build = cacheResult.getBuildInfo();
@@ -481,7 +481,9 @@ public class CacheControllerImpl implements CacheController {
             // Also, only restore the project artifact, if it was an actually fully build JAR,
             // and not the cached compile results.
             if (restoredProjectArtifact != null && !restoredProjectArtifactIsDirectory) {
-                project.setArtifact(restoredProjectArtifact);
+                if (setProjectArtifact) {
+                    project.setArtifact(restoredProjectArtifact);
+                }
                 // need to include package lifecycle to save build info for incremental builds
                 if (!project.hasLifecyclePhase("package")) {
                     project.addLifecyclePhase("package");

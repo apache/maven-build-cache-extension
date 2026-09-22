@@ -36,7 +36,7 @@ public interface CacheController {
     CacheResult findCachedBuild(
             MavenSession session, MavenProject project, List<MojoExecution> mojoExecutions, boolean skipCache);
 
-    ArtifactRestorationReport restoreProjectArtifacts(CacheResult cacheResult);
+    ArtifactRestorationReport restoreProjectArtifacts(CacheResult cacheResult, boolean setProjectArtifact);
 
     /**
      * Tells whether a cache entry can put back the compiled output a forked lifecycle would otherwise build
