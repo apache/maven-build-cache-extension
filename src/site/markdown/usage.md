@@ -15,9 +15,30 @@
  limitations under the License.
 -->
 
-## Normal usage
+## Usage
 
-Once the extension is activated, the cache automatically kicks in on every `package` or higher phase.
+Once the extension is activated, the cache kicks in automatically. By default, compile-phase builds
+(`mvn compile`, `mvn test-compile`) are cached in addition to `package` and later phases. Set
+`-Dmaven.build.cache.cacheCompile=false` to restrict caching to the `package` phase and above.
+
+### Single goal invocations
+
+Goals invoked directly from the command line (e.g. `mvn compiler:compile`, `mvn resources:resources`) are also
+cached when their default lifecycle phase is a real, post-clean phase — such an invocation behaves like running
+that phase. Goals with no default phase (e.g. `jetty:run`, `exec:java`) and mixed lifecycle+CLI invocations
+(e.g. `mvn package dependency:tree`) are left untouched and simply run. This can be disabled with
+`-Dmaven.build.cache.cacheSingleGoal=false`.
+
+### Forked lifecycle caching
+
+Some goals fork a prerequisite lifecycle before running — for example `jetty:run` and `spring-boot:run` fork
+`test-compile` so the application is compiled before the server starts. When such a goal is invoked directly, the
+forked lifecycle takes part in the cache: it restores previously cached outputs instead of recompiling, and it
+saves what it builds so a later run can restore it. A fork never overwrites a cache entry that already reached a
+later phase, and it does not require compiled output the build would not produce (test compilation skipped, or no
+sources). This is effective with the default `singlethreaded` builder and with `multithreaded` (`-T`); it does
+not apply to the `concurrent` builder. Restore and save can be turned off independently with
+`-Dmaven.build.cache.restoreForkedExecutions=false` and `-Dmaven.build.cache.saveForkedExecutions=false`.
 
 ## Subtree builds
 
@@ -51,9 +72,9 @@ Disable in config:
 ```xml
 
 <cache>
-  <configuration>
-    <enabled>false</enabled>
-  </configuration>
+    <configuration>
+        <enabled>false</enabled>
+    </configuration>
 </cache>
 ```
 
@@ -64,6 +85,7 @@ On the command line:
 ```
 
 When a configuration is disabled by default in the config, it can be enabled via the command line with:
+
 ```
 -Dmaven.build.cache.enabled=true
 ```

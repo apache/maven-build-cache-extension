@@ -34,19 +34,14 @@ import static java.nio.file.StandardOpenOption.READ;
  */
 public class Zah implements Hash.Factory {
 
-    public enum MemoryPolicy {
-        Standard,
-        MemoryMappedBuffers
-    }
-
     private final String name;
     private final LongHashFunction hash;
-    private final MemoryPolicy memoryPolicy;
+    private final Hash.MemoryPolicy memoryPolicy;
 
-    public Zah(String name, LongHashFunction hash, MemoryPolicy memoryPolicy) {
+    public Zah(String name, LongHashFunction hash, Hash.MemoryPolicy memoryPolicy) {
         this.name = name;
         this.hash = hash;
-        this.memoryPolicy = memoryPolicy != null ? memoryPolicy : MemoryPolicy.Standard;
+        this.memoryPolicy = memoryPolicy != null ? memoryPolicy : Hash.MemoryPolicy.Standard;
     }
 
     @Override

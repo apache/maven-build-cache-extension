@@ -20,10 +20,11 @@ package org.apache.maven.buildcache.xml;
 
 import javax.annotation.Nonnull;
 
+import java.nio.file.Path;
 import java.util.List;
 
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.apache.maven.buildcache.CacheUtils;
 import org.apache.maven.buildcache.xml.build.Artifact;
 import org.apache.maven.buildcache.xml.build.CompletedExecution;
@@ -49,7 +50,7 @@ public class DtoUtils {
             return null;
         }
         for (PropertyValue property : properties) {
-            if (StringUtils.equals(propertyName, property.getName())) {
+            if (Strings.CS.equals(propertyName, property.getName())) {
                 return property.getValue();
             }
         }
@@ -108,6 +109,12 @@ public class DtoUtils {
         return dependency;
     }
 
+    /**
+     *
+     * @deprecated Kept for binary compatibility, not used by the codebase anymore.
+     *             Use {@link CacheUtils#addProperty(CompletedExecution, String, Object, Path, boolean)}
+     */
+    @Deprecated
     public static void addProperty(
             CompletedExecution execution, String propertyName, Object value, String baseDirPath, boolean tracked) {
         final PropertyValue valueType = new PropertyValue();
@@ -116,7 +123,7 @@ public class DtoUtils {
             value = ArrayUtils.toString(value);
         }
         final String valueText = String.valueOf(value);
-        valueType.setValue(StringUtils.remove(valueText, baseDirPath));
+        valueType.setValue(Strings.CS.remove(valueText, baseDirPath));
         valueType.setTracked(tracked);
         execution.addProperty(valueType);
     }
@@ -153,7 +160,7 @@ public class DtoUtils {
 
     public static boolean contains(List<PropertyValue> executionProperties, String propertyName) {
         for (PropertyValue executionProperty : executionProperties) {
-            if (StringUtils.equals(executionProperty.getName(), propertyName)) {
+            if (Strings.CS.equals(executionProperty.getName(), propertyName)) {
                 return true;
             }
         }

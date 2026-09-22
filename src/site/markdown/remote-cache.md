@@ -138,20 +138,30 @@ low-level insights. See techniques to configure cache in [How-To](how-to.md) and
 in the section below. Also, it is possible to diff remote and local `buildInfo.xml` files directly using any tool of
 your preference.
 
-If you are using a webdav remote server (which is the most easiest to use to create directories on a remote server), from Maven 3.9.1 and 4.0.0-alpha5, support of webdav has been removed per default.
-You need to use the following extra configuration:
-```bash
--Daether.connector.http.supportWebDav=true
-OR
--Dmaven.resolver.transport=wagon
+If you are using a WebDAV remote server (the easiest way to have directories created on a remote server), no extra
+configuration is needed. The extension turns the resolver HTTP transport's WebDAV handling on for its own cache
+repository, so parent collections are created with MKCOL as required. Configure the remote with a plain HTTP URL:
+
+```xml
+
+<remote enabled="true">
+    <url>http://your-buildcache-url</url>
+</remote>
 ```
 
-Or configure your remote with the following configuration (`dav:url`)
+A legacy `dav:` URL keeps working and behaves identically -- the prefix is stripped and the same HTTP transport is
+used -- so no Wagon WebDAV provider is required on the classpath:
+
 ```xml
+
 <remote enabled="true">
     <url>dav:http://your-buildcache-url</url>
 </remote>
 ```
+
+Earlier versions required `-Daether.transport.http.supportWebDav=true` (Maven 3.10 and later),
+`-Daether.connector.http.supportWebDav=true` (Maven 3.9) or `-Dmaven.resolver.transport=wagon`. None of those are
+needed any more.
 
 ## Common issues
 
@@ -233,11 +243,15 @@ Filter out environment-specific properties from the effective pom model:
     <global>
         ...
     </global>
-    <plugin artifactId="maven-surefire-plugin">
-        <effectivePom>
-            <excludeProperty>argLine</excludeProperty>
-        </effectivePom>
-    </plugin>
+    <plugins>
+        <plugin artifactId="maven-surefire-plugin">
+            <effectivePom>
+                <excludeProperties>
+                    <excludeProperty>argLine</excludeProperty>
+                </excludeProperties>
+            </effectivePom>
+        </plugin>
+    </plugins>
 </input>
 ```
 

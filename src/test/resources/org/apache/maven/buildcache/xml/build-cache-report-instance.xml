@@ -19,9 +19,9 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-<cacheReport xmlns="http://maven.apache.org/BUILD-CACHE-REPORT/1.0.0"
+<cacheReport xmlns="http://maven.apache.org/BUILD-CACHE-REPORT/1.2.0"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-       xsi:schemaLocation="http://maven.apache.org/BUILD-CACHE-REPORT/1.0.0 ../../../../../../../../target/generated-sources/modello/cache-report-1.0.0.xsd">
+       xsi:schemaLocation="http://maven.apache.org/BUILD-CACHE-REPORT/1.2.0 ../../../../../../../../target/generated-resources/modello/build-cache-report-1.2.0.xsd">
 
     <projects>
         <project>

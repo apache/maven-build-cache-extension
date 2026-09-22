@@ -77,10 +77,18 @@ public class CacheResult {
         return new CacheResult(RestoreStatus.FAILURE, null, context, inputZone);
     }
 
-    public static CacheResult rebuilded(CacheResult orig, Build build) {
-        requireNonNull(orig);
+    public static CacheResult rebuilt(CacheResult original, Build build) {
+        requireNonNull(original);
         requireNonNull(build);
-        return new CacheResult(orig.status, build, orig.context, orig.inputZone);
+        return new CacheResult(original.status, build, original.context, original.inputZone);
+    }
+
+    /**
+     * @deprecated Use {@link #rebuilt(CacheResult, Build)} instead.
+     */
+    @Deprecated
+    public static CacheResult rebuilded(CacheResult original, Build build) {
+        return rebuilt(original, build);
     }
 
     public boolean isSuccess() {

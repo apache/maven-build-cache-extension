@@ -24,7 +24,7 @@ import org.apache.maven.it.Verifier;
 import org.junit.jupiter.api.Test;
 
 @IntegrationTest("src/test/projects/mbuildcache-21")
-public class Issue21Test {
+class Issue21Test {
 
     @Test
     void simple(Verifier verifier) throws VerificationException {

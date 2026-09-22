@@ -23,6 +23,7 @@ import javax.annotation.Nonnull;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
@@ -33,12 +34,12 @@ import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
@@ -49,12 +50,13 @@ import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.artifact.handler.ArtifactHandler;
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.artifact.resolver.filter.ExcludesArtifactFilter;
+import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
 import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException;
 import org.apache.maven.artifact.versioning.VersionRange;
 import org.apache.maven.buildcache.CacheUtils;
@@ -83,7 +85,6 @@ import org.apache.maven.model.PluginExecution;
 import org.apache.maven.model.Resource;
 import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
 import org.apache.maven.project.MavenProject;
-import org.codehaus.plexus.util.WriterFactory;
 import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.artifact.DefaultArtifactType;
 import org.eclipse.aether.resolution.ArtifactRequest;
@@ -92,19 +93,16 @@ import org.eclipse.aether.resolution.ArtifactResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.commons.lang3.StringUtils.contains;
 import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
-import static org.apache.commons.lang3.StringUtils.equalsAnyIgnoreCase;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.replaceEachRepeatedly;
-import static org.apache.commons.lang3.StringUtils.startsWithAny;
 import static org.apache.commons.lang3.StringUtils.stripToEmpty;
-import static org.apache.maven.buildcache.CacheUtils.isPom;
 import static org.apache.maven.buildcache.CacheUtils.isSnapshot;
 import static org.apache.maven.buildcache.xml.CacheConfigImpl.CACHE_ENABLED_PROPERTY_NAME;
 import static org.apache.maven.buildcache.xml.CacheConfigImpl.CACHE_SKIP;
 import static org.apache.maven.buildcache.xml.CacheConfigImpl.RESTORE_GENERATED_SOURCES_PROPERTY_NAME;
 import static org.apache.maven.buildcache.xml.CacheConfigImpl.RESTORE_ON_DISK_ARTIFACTS_PROPERTY_NAME;
+import static org.apache.maven.buildcache.xml.CacheConfigImpl.SKIP_SAVE;
 
 /**
  * MavenProjectInput
@@ -190,7 +188,7 @@ public class MavenProjectInput {
         final long t0 = System.currentTimeMillis();
 
         final String effectivePom = getEffectivePom(normalizedModelProvider.normalizedModel(project));
-        final SortedSet<Path> inputFiles = isPom(project) ? Collections.emptySortedSet() : getInputFiles();
+        final SortedSet<Path> inputFiles = getInputFiles();
         final SortedMap<String, String> dependenciesChecksum = getMutableDependencies(zone);
         final SortedMap<String, String> pluginDependenciesChecksum = getMutablePluginDependencies(zone);
 
@@ -208,8 +206,9 @@ public class MavenProjectInput {
 
         Optional<ProjectsInputInfo> baselineHolder = Optional.empty();
         if (config.isBaselineDiffEnabled()) {
-            baselineHolder = remoteCache.findBaselineBuild(project, zone).map(b -> b.getDto()
-                    .getProjectsInputInfo());
+            baselineHolder = remoteCache
+                    .findBaselineBuild(project, zone)
+                    .map(b -> b.getDto().getProjectsInputInfo());
         }
 
         if (config.calculateProjectVersionChecksum()) {
@@ -299,7 +298,7 @@ public class MavenProjectInput {
 
         if (pomHolder.isPresent()) {
             DigestItem pomItem = pomHolder.get();
-            final boolean matches = StringUtils.equals(pomItem.getHash(), effectivePomChecksum.getHash());
+            final boolean matches = Strings.CS.equals(pomItem.getHash(), effectivePomChecksum.getHash());
             if (!matches) {
                 LOGGER.info(
                         "Mismatch in effective poms. Current: {}, remote: {}",
@@ -323,7 +322,7 @@ public class MavenProjectInput {
         boolean matched = false;
         if (baselineFileDigest.isPresent()) {
             String hash = baselineFileDigest.get().getHash();
-            matched = StringUtils.equals(hash, fileDigest.getHash());
+            matched = Strings.CS.equals(hash, fileDigest.getHash());
             if (!matched) {
                 LOGGER.info(
                         "Mismatch in {}: {}. Local hash: {}, remote: {}",
@@ -343,15 +342,19 @@ public class MavenProjectInput {
      */
     private String getEffectivePom(Model prototype) throws IOException {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
-
-        try (Writer writer = WriterFactory.newXmlWriter(output)) {
-            new MavenXpp3Writer().write(writer, prototype);
-
-            // normalize env specifics
-            final String[] searchList = {baseDirPath.toString(), "\\", "windows", "linux"};
-            final String[] replacementList = {"", "/", "os.classifier", "os.classifier"};
-            return replaceEachRepeatedly(output.toString(), searchList, replacementList);
+        try (Writer writer = new OutputStreamWriter(output, StandardCharsets.UTF_8)) {
+            new MavenXpp3Writer().write(output, prototype);
         }
+
+        // normalize env specifics
+        final String[] searchList = {baseDirPath.toString(), "\\", "windows", "linux"};
+        final String[] replacementList = {"", "/", "os.classifier", "os.classifier"};
+
+        String result = output.toString(StandardCharsets.UTF_8.name());
+        result = result.replace("\r\n", "\n");
+        result = result.trim();
+
+        return replaceEachRepeatedly(result, searchList, replacementList);
     }
 
     private SortedSet<Path> getInputFiles() {
@@ -362,21 +365,23 @@ public class MavenProjectInput {
         org.apache.maven.model.Build build = project.getBuild();
 
         final boolean recursive = true;
-        startWalk(Paths.get(build.getSourceDirectory()), projectGlob, recursive, collectedFiles, visitedDirs);
+        startWalk(Paths.get(build.getSourceDirectory()), projectGlob, recursive, false, collectedFiles, visitedDirs);
         for (Resource resource : build.getResources()) {
-            startWalk(Paths.get(resource.getDirectory()), projectGlob, recursive, collectedFiles, visitedDirs);
+            startWalk(Paths.get(resource.getDirectory()), projectGlob, recursive, false, collectedFiles, visitedDirs);
         }
 
-        startWalk(Paths.get(build.getTestSourceDirectory()), projectGlob, recursive, collectedFiles, visitedDirs);
+        startWalk(
+                Paths.get(build.getTestSourceDirectory()), projectGlob, recursive, false, collectedFiles, visitedDirs);
         for (Resource testResource : build.getTestResources()) {
-            startWalk(Paths.get(testResource.getDirectory()), projectGlob, recursive, collectedFiles, visitedDirs);
+            startWalk(
+                    Paths.get(testResource.getDirectory()), projectGlob, recursive, false, collectedFiles, visitedDirs);
         }
 
         Properties properties = project.getProperties();
         for (String name : properties.stringPropertyNames()) {
-            if (name.startsWith(CACHE_INPUT_NAME)) {
+            if (name.startsWith(CACHE_INPUT_NAME) && !CACHE_INPUT_GLOB_NAME.equals(name)) {
                 String path = properties.getProperty(name);
-                startWalk(Paths.get(path), projectGlob, recursive, collectedFiles, visitedDirs);
+                startWalk(Paths.get(path), projectGlob, recursive, false, collectedFiles, visitedDirs);
             }
         }
 
@@ -384,7 +389,13 @@ public class MavenProjectInput {
         for (Include include : includes) {
             final String path = include.getValue();
             final String glob = defaultIfEmpty(include.getGlob(), projectGlob);
-            startWalk(Paths.get(path), glob, include.isRecursive(), collectedFiles, visitedDirs);
+            startWalk(
+                    Paths.get(path),
+                    glob,
+                    include.isRecursive(),
+                    include.isIncludeHidden(),
+                    collectedFiles,
+                    visitedDirs);
         }
 
         long walkKnownPathsFinished = System.currentTimeMillis() - start;
@@ -425,18 +436,26 @@ public class MavenProjectInput {
 
     /**
      * entry point for directory walk
+     *
+     * @param includeHidden if true, hidden files and directories (see {@link #isHidden(Path)}) are not
+     *                       skipped when scanning this candidate path
      */
     private void startWalk(
-            Path candidate, String glob, boolean recursive, List<Path> collectedFiles, Set<WalkKey> visitedDirs) {
+            Path candidate,
+            String glob,
+            boolean recursive,
+            boolean includeHidden,
+            List<Path> collectedFiles,
+            Set<WalkKey> visitedDirs) {
         Path normalized = convertToAbsolutePath(candidate);
-        WalkKey key = new WalkKey(normalized, glob, recursive);
+        WalkKey key = new WalkKey(normalized, glob, recursive, includeHidden);
         if (visitedDirs.contains(key) || !Files.exists(normalized)) {
             return;
         }
 
         if (Files.isDirectory(normalized)) {
             if (baseDirPath.startsWith(normalized)) { // requested to walk parent, can do only non recursive
-                key = new WalkKey(normalized, glob, false);
+                key = new WalkKey(normalized, glob, false, includeHidden);
             }
             try {
                 walkDir(key, collectedFiles, visitedDirs);
@@ -498,9 +517,9 @@ public class MavenProjectInput {
             @Override
             public FileVisitResult preVisitDirectory(Path path, BasicFileAttributes basicFileAttributes)
                     throws IOException {
-                WalkKey currentDirKey =
-                        new WalkKey(path.toAbsolutePath().normalize(), key.getGlob(), key.isRecursive());
-                if (isHidden(path)) {
+                WalkKey currentDirKey = new WalkKey(
+                        path.toAbsolutePath().normalize(), key.getGlob(), key.isRecursive(), key.isIncludeHidden());
+                if (!key.isIncludeHidden() && isHidden(path)) {
                     LOGGER.debug("Skipping subtree (hidden): {}", path);
                     return FileVisitResult.SKIP_SUBTREE;
                 } else if (!isReadable(path)) {
@@ -514,7 +533,8 @@ public class MavenProjectInput {
                     return FileVisitResult.SKIP_SUBTREE;
                 }
 
-                walkDirectoryFiles(path, collectedFiles, key.getGlob(), exclusionResolver::excludesPath);
+                walkDirectoryFiles(
+                        path, collectedFiles, key.getGlob(), key.isIncludeHidden(), exclusionResolver::excludesPath);
 
                 if (!key.isRecursive()) {
                     LOGGER.debug("Skipping subtree (non recursive): {}", path);
@@ -560,15 +580,21 @@ public class MavenProjectInput {
             if ("true".equals(Xpp3DomUtils.getAttribute(configChild, CACHE_INPUT_NAME))) {
                 LOGGER.info(
                         "Found tag marked with {} attribute. Tag: {}, value: {}", CACHE_INPUT_NAME, tagName, tagValue);
-                startWalk(Paths.get(tagValue), glob, propertyConfig.isRecursive(), files, visitedDirs);
+                startWalk(Paths.get(tagValue), glob, propertyConfig.isRecursive(), false, files, visitedDirs);
             } else {
                 final Path candidate = getPathOrNull(tagValue);
                 if (candidate != null) {
-                    startWalk(candidate, glob, propertyConfig.isRecursive(), files, visitedDirs);
+                    startWalk(candidate, glob, propertyConfig.isRecursive(), false, files, visitedDirs);
                     if ("descriptorRef"
                             .equals(tagName)) { // hardcoded logic for assembly plugin which could reference files
                         // omitting .xml suffix
-                        startWalk(Paths.get(tagValue + ".xml"), glob, propertyConfig.isRecursive(), files, visitedDirs);
+                        startWalk(
+                                Paths.get(tagValue + ".xml"),
+                                glob,
+                                propertyConfig.isRecursive(),
+                                false,
+                                files,
+                                visitedDirs);
                     }
                 }
             }
@@ -579,12 +605,12 @@ public class MavenProjectInput {
         // small optimization to not probe not-paths
         if (isBlank(text)) {
             // do not even bother logging about blank/null values
-        } else if (equalsAnyIgnoreCase(text, "true", "false", "utf-8", "null", "\\") // common values
-                || contains(text, "*") // tag value is a glob or regex - unclear how to process
-                || (contains(text, ":") && !contains(text, ":\\")) // artifactId
-                || startsWithAny(text, "com.", "org.", "io.", "java.", "javax.") // java packages
-                || startsWithAny(text, "${env.") // env variables in maven notation
-                || startsWithAny(
+        } else if (Strings.CI.equalsAny(text, "true", "false", "utf-8", "null", "\\") // common values
+                || Strings.CS.contains(text, "*") // tag value is a glob or regex - unclear how to process
+                || (Strings.CS.contains(text, ":") && !Strings.CS.contains(text, ":\\")) // artifactId
+                || Strings.CS.startsWithAny(text, "com.", "org.", "io.", "java.", "javax.") // java packages
+                || Strings.CS.startsWithAny(text, "${env.") // env variables in maven notation
+                || Strings.CS.startsWithAny(
                         text,
                         "http:",
                         "https:",
@@ -596,7 +622,7 @@ public class MavenProjectInput {
                         "classpath:")) // urls identified by common protocols
         {
             LOGGER.debug("Skipping directory (blacklisted literal): {}", text);
-        } else if (startsWithAny(text, tmpDir)) // tmp dir
+        } else if (Strings.CS.startsWithAny(text, tmpDir)) // tmp dir
         {
             LOGGER.debug("Skipping directory (temp dir): {}", text);
         } else {
@@ -609,7 +635,8 @@ public class MavenProjectInput {
         return null;
     }
 
-    static void walkDirectoryFiles(Path dir, List<Path> collectedFiles, String glob, Predicate<Path> mustBeSkipped) {
+    static void walkDirectoryFiles(
+            Path dir, List<Path> collectedFiles, String glob, boolean includeHidden, Predicate<Path> mustBeSkipped) {
         if (!Files.isDirectory(dir)) {
             return;
         }
@@ -621,7 +648,7 @@ public class MavenProjectInput {
                         continue;
                     }
                     File file = entry.toFile();
-                    if (file.isFile() && !isHidden(entry) && isReadable(entry)) {
+                    if (file.isFile() && (includeHidden || !isHidden(entry)) && isReadable(entry)) {
                         collectedFiles.add(entry);
                     }
                 }
@@ -686,7 +713,7 @@ public class MavenProjectInput {
                 null,
                 false);
     }
-
+    // CHECKSTYLE_OFF: ParameterNumber
     private Artifact createArtifact(
             String groupId,
             String artifactId,
@@ -696,6 +723,7 @@ public class MavenProjectInput {
             String scope,
             String inheritedScope,
             boolean optional) {
+        // CHECKSTYLE_OFF: ParameterNumber
         String desiredScope = Artifact.SCOPE_RUNTIME;
 
         if (inheritedScope == null) {
@@ -779,11 +807,23 @@ public class MavenProjectInput {
                 continue;
             }
 
+            final String versionSpec = dependency.getVersion();
+
             // saved to index by the end of dependency build
-            MavenProject dependencyProject = multiModuleSupport
-                    .tryToResolveProject(dependency.getGroupId(), dependency.getArtifactId(), dependency.getVersion())
-                    .orElse(null);
-            boolean isSnapshot = isSnapshot(dependency.getVersion());
+            MavenProject dependencyProject = versionSpec == null
+                    ? null
+                    : multiModuleSupport
+                            .tryToResolveProject(dependency.getGroupId(), dependency.getArtifactId(), versionSpec)
+                            .orElse(null);
+
+            // for dynamic versions (LATEST/RELEASE/ranges), reactor artifacts can be part of the build
+            // but cannot be resolved yet from the workspace (not built), so Aether may try remote download.
+            // If a matching reactor module exists, treat it as multi-module dependency and use project checksum.
+            if (dependencyProject == null && isDynamicVersion(versionSpec)) {
+                dependencyProject = tryResolveReactorProjectByGA(dependency).orElse(null);
+            }
+
+            boolean isSnapshot = isSnapshot(versionSpec);
             if (dependencyProject == null && !isSnapshot) {
                 // external immutable dependency, should skip
                 continue;
@@ -796,13 +836,12 @@ public class MavenProjectInput {
                         .getChecksum();
             } else // this is a snapshot dependency
             {
-                DigestItem resolved = null;
                 try {
-                    resolved = resolveArtifact(dependency);
+                    DigestItem resolved = resolveArtifact(dependency);
+                    projectHash = resolved.getHash();
                 } catch (ArtifactResolutionException | InvalidVersionSpecificationException e) {
                     throw new IOException(e);
                 }
-                projectHash = resolved.getHash();
             }
             result.put(
                     keyPrefix + KeyUtils.getVersionlessArtifactKey(createDependencyArtifact(dependency)), projectHash);
@@ -814,14 +853,32 @@ public class MavenProjectInput {
     private DigestItem resolveArtifact(final Dependency dependency)
             throws IOException, ArtifactResolutionException, InvalidVersionSpecificationException {
 
+        // system-scoped dependencies are local files (systemPath) and must NOT be resolved via Aether.
+        if (Artifact.SCOPE_SYSTEM.equals(dependency.getScope()) && dependency.getSystemPath() != null) {
+            final Path systemPath = Paths.get(dependency.getSystemPath()).normalize();
+            if (!Files.exists(systemPath)) {
+                throw new DependencyNotResolvedException(
+                        "System dependency file does not exist: " + systemPath + " for dependency: " + dependency);
+            }
+            final HashAlgorithm algorithm = config.getHashFactory().createAlgorithm();
+            final String hash = algorithm.hash(systemPath);
+            final Artifact artifact = createDependencyArtifact(dependency);
+            return DtoUtils.createDigestedFile(artifact, hash);
+        }
+
+        // Maven 3.x ArtifactHandlerManager NEVER returns null
+        ArtifactHandler handler = artifactHandlerManager.getArtifactHandler(dependency.getType());
         org.eclipse.aether.artifact.Artifact dependencyArtifact = new org.eclipse.aether.artifact.DefaultArtifact(
                 dependency.getGroupId(),
                 dependency.getArtifactId(),
-                dependency.getClassifier(),
-                null,
+                dependency.getClassifier() == null // dependency wins
+                        ? handler.getClassifier()
+                        : dependency.getClassifier(),
+                handler.getExtension(),
                 dependency.getVersion(),
                 new DefaultArtifactType(dependency.getType()));
         ArtifactRequest artifactRequest = new ArtifactRequest().setArtifact(dependencyArtifact);
+        artifactRequest.setRepositories(project.getRemoteProjectRepositories());
 
         ArtifactResult result = repoSystem.resolveArtifact(session.getRepositorySession(), artifactRequest);
 
@@ -848,6 +905,54 @@ public class MavenProjectInput {
         final HashAlgorithm algorithm = config.getHashFactory().createAlgorithm();
         final String hash = algorithm.hash(resolved.getFile().toPath());
         return DtoUtils.createDigestedFile(artifact, hash);
+    }
+
+    private static boolean isDynamicVersion(String versionSpec) {
+        if (versionSpec == null) {
+            return true;
+        }
+        if ("LATEST".equals(versionSpec) || "RELEASE".equals(versionSpec)) {
+            return true;
+        }
+        // Maven version ranges: [1.0,2.0), (1.0,), etc.
+        return versionSpec.startsWith("[") || versionSpec.startsWith("(") || versionSpec.contains(",");
+    }
+
+    private Optional<MavenProject> tryResolveReactorProjectByGA(Dependency dependency) {
+        final List<MavenProject> projects = session.getAllProjects();
+        if (projects == null || projects.isEmpty()) {
+            return Optional.empty();
+        }
+
+        final String groupId = dependency.getGroupId();
+        final String artifactId = dependency.getArtifactId();
+        final String versionSpec = dependency.getVersion();
+
+        for (MavenProject candidate : projects) {
+            if (!Objects.equals(groupId, candidate.getGroupId())
+                    || !Objects.equals(artifactId, candidate.getArtifactId())) {
+                continue;
+            }
+
+            // For null/LATEST/RELEASE, accept the reactor module directly.
+            if (versionSpec == null || "LATEST".equals(versionSpec) || "RELEASE".equals(versionSpec)) {
+                return Optional.of(candidate);
+            }
+
+            // For ranges, only accept if reactor version fits the range.
+            if (versionSpec.startsWith("[") || versionSpec.startsWith("(") || versionSpec.contains(",")) {
+                try {
+                    VersionRange range = VersionRange.createFromVersionSpec(versionSpec);
+                    if (range.containsVersion(new DefaultArtifactVersion(candidate.getVersion()))) {
+                        return Optional.of(candidate);
+                    }
+                } catch (InvalidVersionSpecificationException e) {
+                    // If the spec is not parseable as range, don't guess.
+                    return Optional.empty();
+                }
+            }
+        }
+        return Optional.empty();
     }
 
     /**
@@ -910,5 +1015,16 @@ public class MavenProjectInput {
      */
     public static boolean isCacheDisabled(MavenProject project) {
         return !Boolean.parseBoolean(project.getProperties().getProperty(CACHE_ENABLED_PROPERTY_NAME, "true"));
+    }
+
+    /**
+     * Skip cache saving on a per-project level via a property.
+     * Defaults to false.
+     * {@code <maven.build.cache.skipSave>true<maven.build.cache.skipSave/>}
+     * @param project current project
+     * @return true if saving should be skipped for this project
+     */
+    public static boolean isSkipSave(MavenProject project) {
+        return Boolean.parseBoolean(project.getProperties().getProperty(SKIP_SAVE, "false"));
     }
 }

@@ -18,6 +18,7 @@
  */
 package org.apache.maven.buildcache;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -41,6 +42,32 @@ public interface CacheController {
 
     ArtifactRestorationReport restoreProjectArtifacts(CacheResult cacheResult);
 
+    /**
+     * Tells whether a cache entry can put back the compiled output a forked lifecycle would otherwise build
+     * (typically {@code target/classes} and {@code target/test-classes}). A forked goal such as
+     * {@code jetty:run} skips compilation on a cache hit, so if the entry only holds the final JAR the project
+     * would be left with no classes. Callers use this to only restore a fork when the classes are actually there.
+     *
+     * @param cacheResult    the cache hit under consideration
+     * @param project        the (forked) project being built
+     * @param mojoExecutions the mojos scheduled for the forked lifecycle (used to see which phases it reaches)
+     * @return true if the entry carries every compiled output directory the fork reaches
+     */
+    boolean canRestoreForkedOutputs(CacheResult cacheResult, MavenProject project, List<MojoExecution> mojoExecutions);
+
+    /**
+     * Tells whether a forked lifecycle may save its build. Entries are keyed by checksum alone, so a fork that
+     * stopped early (e.g. {@code jetty:run} at {@code test-compile}) must not overwrite a fuller entry (e.g.
+     * from {@code mvn install}). True only when nothing is cached yet, or the fork got further than the existing
+     * entry.
+     *
+     * @param cacheResult    the current lookup (its build info is the existing entry, if any)
+     * @param project        the (forked) project being built
+     * @param mojoExecutions the mojos scheduled for the forked lifecycle
+     * @return true if saving would not degrade an existing entry
+     */
+    boolean canSaveForkedBuild(CacheResult cacheResult, MavenProject project, List<MojoExecution> mojoExecutions);
+
     void save(
             CacheResult cacheResult,
             List<MojoExecution> mojoExecutions,
@@ -50,4 +77,23 @@ public interface CacheController {
     boolean isForcedExecution(MavenProject project, MojoExecution execution);
 
     void saveCacheReport(MavenSession session);
+
+    /**
+     * Move pre-existing artifacts to staging directory to prevent caching stale files.
+     * Called before mojos run to ensure save() only sees fresh files.
+     *
+     * @param session the Maven session
+     * @param project the Maven project
+     * @throws IOException if file operations fail
+     */
+    void stagePreExistingArtifacts(MavenSession session, MavenProject project) throws IOException;
+
+    /**
+     * Restore staged artifacts after save() completes.
+     * Files that were rebuilt are discarded; files that weren't rebuilt are restored.
+     *
+     * @param session the Maven session
+     * @param project the Maven project
+     */
+    void restoreStagedArtifacts(MavenSession session, MavenProject project);
 }

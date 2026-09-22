@@ -45,25 +45,44 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class MavenProjectInputTest {
+class MavenProjectInputTest {
 
     private static final String DEFAULT_GLOB = "*";
 
     @Test
-    public void testCollectFilteredFiles() {
+    void testCollectFilteredFiles() {
         List<Path> collectedFiles = new ArrayList<>();
         MavenProjectInput.walkDirectoryFiles(
-                Paths.get("src/test/resources/test-folder"), collectedFiles, DEFAULT_GLOB, it -> it.getFileName()
-                        .toString()
-                        .endsWith("pom.xml"));
+                Paths.get("src/test/resources/test-folder"),
+                collectedFiles,
+                DEFAULT_GLOB,
+                false,
+                it -> it.getFileName().toString().endsWith("pom.xml"));
         assertEquals(0, collectedFiles.size()); // pom is filtered out by the "mustBeSkipped" predicate
     }
 
     @Test
-    public void testCollectNonFilteredFiles() {
+    void testCollectNonFilteredFiles() {
         List<Path> collectedFiles = new ArrayList<>();
         MavenProjectInput.walkDirectoryFiles(
-                Paths.get("src/test/resources/test-folder"), collectedFiles, DEFAULT_GLOB, it -> false);
+                Paths.get("src/test/resources/test-folder"), collectedFiles, DEFAULT_GLOB, false, it -> false);
         assertEquals(1, collectedFiles.size()); // pom is not filtered out by the "mustBeSkipped" predicate
+    }
+
+    @Test
+    void testHiddenFilesSkippedByDefault() {
+        List<Path> collectedFiles = new ArrayList<>();
+        MavenProjectInput.walkDirectoryFiles(
+                Paths.get("src/test/resources/test-folder"), collectedFiles, DEFAULT_GLOB, false, it -> false);
+        assertEquals(1, collectedFiles.size()); // only the non-hidden pom is collected; .hidden-pom.xml is skipped
+        assertEquals("test-pom.xml", collectedFiles.get(0).getFileName().toString());
+    }
+
+    @Test
+    void testHiddenFilesCollectedWhenIncludeHiddenIsTrue() {
+        List<Path> collectedFiles = new ArrayList<>();
+        MavenProjectInput.walkDirectoryFiles(
+                Paths.get("src/test/resources/test-folder"), collectedFiles, DEFAULT_GLOB, true, it -> false);
+        assertEquals(2, collectedFiles.size()); // both the non-hidden and the hidden pom are collected
     }
 }

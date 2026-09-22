@@ -25,19 +25,19 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.SystemUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.maven.buildcache.xml.CacheConfig;
 import org.apache.maven.buildcache.xml.build.CompletedExecution;
 import org.apache.maven.buildcache.xml.build.PropertyValue;
 import org.apache.maven.buildcache.xml.config.TrackedProperty;
+import org.apache.maven.execution.MavenSession;
 import org.apache.maven.execution.scope.internal.MojoExecutionScope;
 import org.apache.maven.plugin.MavenPluginManager;
 import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.project.MavenProject;
-import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.testcontainers.shaded.org.apache.commons.lang3.tuple.Pair;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -54,6 +54,7 @@ class BuildCacheMojosExecutionStrategyTest {
         private MojoExecution executionMock;
         private CompletedExecution cacheRecordMock;
         private CacheConfig cacheConfigMock;
+        private MavenSession sessionMock;
 
         @BeforeEach
         void setUp() {
@@ -69,6 +70,7 @@ class BuildCacheMojosExecutionStrategyTest {
             projectMock = mock(MavenProject.class);
             executionMock = mock(MojoExecution.class);
             cacheRecordMock = mock(CompletedExecution.class);
+            sessionMock = mock(MavenSession.class);
         }
 
         @Test
@@ -103,10 +105,10 @@ class BuildCacheMojosExecutionStrategyTest {
                             ? Paths.get("c:\\a\\b\\c").toFile()
                             : Paths.get("/a/b/c").toFile(),
                     Paths.get(windows ? "..\\d\\e" : "../d/e"),
-                    Arrays.<String>asList("a", "b", "c"),
+                    Arrays.asList("a", "b", "c"),
                     new String[] {"c", "d", "e"});
 
-            assertTrue(strategy.isParamsMatched(projectMock, executionMock, testMojo, cacheRecordMock));
+            assertTrue(strategy.isParamsMatched(projectMock, sessionMock, executionMock, testMojo, cacheRecordMock));
         }
 
         @Test
@@ -133,7 +135,7 @@ class BuildCacheMojosExecutionStrategyTest {
             testMojo.setAnyObject("true");
 
             assertTrue(
-                    strategy.isParamsMatched(projectMock, executionMock, testMojo, cacheRecordMock),
+                    strategy.isParamsMatched(projectMock, sessionMock, executionMock, testMojo, cacheRecordMock),
                     "If property set to 'skipValue' mismatch could be ignored because cached build"
                             + " is more complete than requested build");
         }
@@ -162,7 +164,7 @@ class BuildCacheMojosExecutionStrategyTest {
             testMojo.setAnyObject("defaultValue");
 
             assertTrue(
-                    strategy.isParamsMatched(projectMock, executionMock, testMojo, cacheRecordMock),
+                    strategy.isParamsMatched(projectMock, sessionMock, executionMock, testMojo, cacheRecordMock),
                     "If property has defaultValue it must be matched even if cache record has no this field");
         }
 
@@ -188,10 +190,9 @@ class BuildCacheMojosExecutionStrategyTest {
             TestMojo testMojo = new TestMojo();
             testMojo.setAnyObject("2");
 
-            assertFalse(strategy.isParamsMatched(projectMock, executionMock, testMojo, cacheRecordMock));
+            assertFalse(strategy.isParamsMatched(projectMock, sessionMock, executionMock, testMojo, cacheRecordMock));
         }
 
-        @NotNull
         private Pair<TrackedProperty, PropertyValue> setupProperty(String propertyName, String value) {
             TrackedProperty config = new TrackedProperty();
             config.setPropertyName(propertyName);
