@@ -160,8 +160,8 @@ under the License.
           <xs:element minOccurs="0" name="debugs">
             <xs:annotation>
               <xs:documentation source="version">0.0.0+</xs:documentation>
-              <xs:documentation source="description">FileHash (causes file hash is saved in build metadata) or
-                EffectivePom (causes effective pom info is saved in build metadata)</xs:documentation>
+              <xs:documentation source="description">FileHash (causes file hash to be saved in build metadata) or
+                EffectivePom (causes effective pom info to be saved in build metadata)</xs:documentation>
             </xs:annotation>
             <xs:complexType>
               <xs:sequence>
@@ -238,8 +238,8 @@ under the License.
                         <type>String</type>
                         <multiplicity>*</multiplicity>
                     </association>
-                    <description>FileHash (causes file hash is saved in build metadata) or
-                        EffectivePom (causes effective pom info is saved in build metadata)</description>
+                    <description>FileHash (causes file hash to be saved in build metadata) or
+                        EffectivePom (causes effective pom info to be saved in build metadata)</description>
                 </field>
             </fields>
         </class>
@@ -377,6 +377,18 @@ under the License.
             <description>Section relative to outputs which are not artifacts but need to be saved/restored.</description>
             <fields>
                 <field>
+                    <name>preservePermissions</name>
+                    <type>boolean</type>
+                    <defaultValue>true</defaultValue>
+                    <description>Preserve Unix file permissions when saving/restoring attached outputs. When enabled, permissions are stored in ZIP entry headers and become part of the cache key, ensuring cache invalidation when permissions change. This is similar to how Git includes file mode in tree hashes. Disabling this may improve portability across different systems but will not preserve executable bits.</description>
+                </field>
+                <field>
+                    <name>preserveTimestamps</name>
+                    <type>boolean</type>
+                    <defaultValue>true</defaultValue>
+                    <description>Preserve file and directory timestamps when saving/restoring attached outputs.</description>
+                </field>
+                <field>
                     <name>dirNames</name>
                     <association>
                         <type>DirName</type>
@@ -394,7 +406,7 @@ under the License.
             <ul>
               <li><code>&lt;dirName&gt;classes&lt;/dirName&gt;</code> : files in ${project.basedir}/target/classes</li>
               <li><code>&lt;dirName glob="jacoco.xml"&gt;&lt;/dirName&gt;</code> : jacoco report files in ${project.basedir}/target</li>
-              <li><code>&lt;dirName&gt;../src/main/javagen&lt;/dirName&gt;</code> : files in ${project.basedir}/src/main/javagen (in this exemple, javagen is a folder saved in git but erased on clean) </li>
+              <li><code>&lt;dirName&gt;../src/main/javagen&lt;/dirName&gt;</code> : files in ${project.basedir}/src/main/javagen (in this example, javagen is a folder saved in git but erased on clean) </li>
             </ul>
             <br><br>
 
@@ -436,7 +448,7 @@ under the License.
                     <name>location</name>
                     <type>String</type>
                     <description>The base directory where the local cache is located.
-                        Defaults to {@code $\{localRepository}/../cache}.</description>
+                        Defaults to {@code ~/.m2/build-cache/}.</description>
                 </field>
                 <field>
                     <name>maxBuildsCached</name>
@@ -919,7 +931,7 @@ under the License.
         </class>
         <class>
             <name>Include</name>
-           <description><![CDATA[A <p>file or a directory path to add to checksum computation. Relative path are relative to each module basedir.</p>
+           <description><![CDATA[<p>A file or a directory path to add to checksum computation. Relative paths are relative to each module basedir.</p>
            <p>Include elements can also be added per project with the use of <a href="parameters.html#project-level-properties">maven properties.</a></p>
            ]]></description>
             <fields>
@@ -938,6 +950,15 @@ under the License.
                     <name>glob</name>
                     <type>String</type>
                     <description>Files in a directory are filtered by matching their names against this glob.</description>
+                </field>
+                <field xml.attribute="true">
+                    <name>includeHidden</name>
+                    <type>boolean</type>
+                    <description><![CDATA[By default, hidden files and directories (as determined by
+                        <code>Files.isHidden</code>, or by a name starting with a dot) are always skipped when
+                        scanning for input files, even if they would otherwise match this include. Set to
+                        <code>true</code> to also scan hidden entries under this include.]]></description>
+                    <defaultValue>false</defaultValue>
                 </field>
             </fields>
         </class>
@@ -1305,7 +1326,7 @@ under the License.
                     <xs:element name="execId" type="xs:string" minOccurs="0" maxOccurs="unbounded">
                         <xs:annotation>
                             <xs:documentation>
-                                Executions ids list with plugin identifier
+                                Execution ids list with plugin identifier
                             </xs:documentation>
                         </xs:annotation>
                     </xs:element>
@@ -1325,7 +1346,7 @@ under the License.
                         <type>String</type>
                         <multiplicity>*</multiplicity>
                     </association>
-                    <description>Executions ids list with plugin identifier</description>
+                    <description>Execution ids list with plugin identifier</description>
                 </field>
             </fields>
         </class>
@@ -1435,6 +1456,13 @@ under the License.
                         </xs:documentation>
                     </xs:annotation>
                 </xs:attribute>
+                <xs:attribute name="expression" type="xs:string">
+                    <xs:annotation>
+                        <xs:documentation>
+                            Interpolated expression to use as cached value.
+                        </xs:documentation>
+                    </xs:annotation>
+                </xs:attribute>
             </xs:extension>
         </xs:simpleContent>
     </xs:complexType>
@@ -1458,6 +1486,11 @@ under the License.
                 <field xml.attribute="true">
                     <name>defaultValue</name>
                     <type>String</type>
+                </field>
+                <field xml.attribute="true">
+                    <name>expression</name>
+                    <type>String</type>
+                    <description>Interpolated expression to use as cached value.</description>
                 </field>
             </fields>
         </class>
@@ -1491,3 +1524,4 @@ under the License.
     -->
 
 </model>
+

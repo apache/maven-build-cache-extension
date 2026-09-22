@@ -108,6 +108,12 @@ public interface CacheConfig {
 
     List<DirName> getAttachedOutputs();
 
+    boolean isPreservePermissions();
+
+    default boolean isPreserveTimestamps() {
+        return true;
+    }
+
     boolean adjustMetaInfVersion();
 
     boolean calculateProjectVersionChecksum();
@@ -152,4 +158,52 @@ public interface CacheConfig {
      * Flag to save in cache only if a build went through the clean lifecycle
      */
     boolean isMandatoryClean();
+
+    /**
+     * Flag to cache compile phase outputs (classes, test-classes, generated sources).
+     * When enabled (default), compile-only builds create cache entries that can be restored
+     * by subsequent builds. When disabled, caching only occurs during package phase or later.
+     * <p>
+     * Use: -Dmaven.build.cache.cacheCompile=(true|false)
+     * <p>
+     * Default: true
+     */
+    boolean isCacheCompile();
+
+    /**
+     * Whether to cache goals run straight from the command line (e.g. {@code mvn compiler:compile}).
+     * When on (the default), a goal whose default phase is a real phase after clean is cached just like
+     * running that phase. Goals with no default phase ({@code jetty:run}, {@code exec:java}) and mixed
+     * phase+goal invocations are left alone and simply run.
+     * <p>
+     * Use: -Dmaven.build.cache.cacheSingleGoal=(true|false)
+     * <p>
+     * Default: true
+     */
+    boolean isCacheSingleGoal();
+
+    /**
+     * Whether a forked lifecycle may reuse cached results. Some goals run a lifecycle before themselves via
+     * {@code @Execute(phase=...)} — for example {@code jetty:run} forks {@code test-compile}. When on (the
+     * default), that fork can restore cached output instead of rebuilding it; the fork never saves anything
+     * itself. Works only with the singlethreaded/multithreaded builders (the concurrent builder doesn't fire
+     * the forked-project events this relies on).
+     * <p>
+     * Use: -Dmaven.build.cache.restoreForkedExecutions=(true|false)
+     * <p>
+     * Default: true
+     */
+    boolean isRestoreForkedExecutions();
+
+    /**
+     * Whether a forked lifecycle started from the command line may save what it built, so a later run can
+     * restore it instead of rebuilding. A goal like {@code jetty:run} builds through a fork before it runs; on
+     * by default. A fork never replaces a cache entry that already reached a later phase. Like
+     * {@link #isRestoreForkedExecutions()}, only for the singlethreaded/multithreaded builders.
+     * <p>
+     * Use: -Dmaven.build.cache.saveForkedExecutions=(true|false)
+     * <p>
+     * Default: true
+     */
+    boolean isSaveForkedExecutions();
 }

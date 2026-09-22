@@ -51,7 +51,6 @@ class Issue105Test {
         verifier.setLogFileName("../log-2.txt");
         verifier.executeGoals(Arrays.asList("clean", "verify"));
         verifier.verifyErrorFreeLog();
-        verifier.verifyTextInLog("Cached build doesn't include phase 'package', cannot restore");
         verifier.verifyFilePresent(BUILT_JAR);
 
         Path jarPath = Paths.get(verifier.getBasedir()).resolve(BUILT_JAR);

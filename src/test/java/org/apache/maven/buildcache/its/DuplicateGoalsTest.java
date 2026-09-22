@@ -26,7 +26,7 @@ import org.apache.maven.it.Verifier;
 import org.junit.jupiter.api.Test;
 
 @IntegrationTest("src/test/projects/duplicate-goals")
-public class DuplicateGoalsTest {
+class DuplicateGoalsTest {
 
     private static final String PROJECT_NAME = "org.apache.maven.caching.test.goals:duplicate";
 
@@ -36,7 +36,7 @@ public class DuplicateGoalsTest {
 
         // run with an extra goal
         verifier.setLogFileName("../log-1.txt");
-        verifier.setMavenDebug(true);
+        verifier.addCliOption("-X");
         verifier.executeGoals(Arrays.asList("compile", "test"));
         verifier.verifyErrorFreeLog();
 

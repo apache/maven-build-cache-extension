@@ -26,7 +26,7 @@ import org.apache.maven.it.Verifier;
 import org.junit.jupiter.api.Test;
 
 @IntegrationTest("src/test/projects/mbuildcache-56-mojo-parameter-as-method")
-public class Issue56Test {
+class Issue56Test {
 
     @Test
     void simple(Verifier verifier) throws VerificationException, IOException {

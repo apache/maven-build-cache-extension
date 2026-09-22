@@ -18,6 +18,8 @@
  */
 package org.apache.maven.buildcache.xml;
 
+import javax.inject.Provider;
+
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
@@ -55,9 +57,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -66,7 +69,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 @SuppressWarnings("unchecked")
-public class CacheConfigImplTest {
+class CacheConfigImplTest {
 
     @Mock
     private MavenSession mavenSession;
@@ -110,8 +113,9 @@ public class CacheConfigImplTest {
         testCacheConfig = new XmlService().loadCacheConfig("<cache></cache>".getBytes());
         when(xmlService.loadCacheConfig(rootConfigFile)).thenReturn(testCacheConfig);
 
+        Provider<MavenSession> provider = (() -> mavenSession);
         // test object
-        testObject = new CacheConfigImpl(xmlService, mavenSession, rtInfo);
+        testObject = new CacheConfigImpl(xmlService, provider, rtInfo);
     }
 
     private static void deepMockConfigFile(File mockFile, boolean exists) throws IOException {
@@ -141,9 +145,7 @@ public class CacheConfigImplTest {
                 .findAny();
         if (methodToMock.isPresent()) {
             Class<?>[] paramTypes = methodToMock.get().getParameterTypes();
-            Object[] params = Arrays.stream(paramTypes)
-                    .map(paramType -> Mockito.any(paramType))
-                    .toArray();
+            Object[] params = Arrays.stream(paramTypes).map(Mockito::any).toArray();
             try {
                 Mockito.when(methodToMock.get().invoke(mockProvider, params)).thenReturn(exists);
             } catch (IllegalAccessException | InvocationTargetException e) {
@@ -176,9 +178,9 @@ public class CacheConfigImplTest {
         asserts.put("getExcludePatterns", () -> assertEquals(Collections.emptyList(), testObject.getExcludePatterns()));
         asserts.put(
                 "getExecutionDirScanConfig",
-                () -> assertTrue(
-                        testObject.getExecutionDirScanConfig(mock(Plugin.class), mock(PluginExecution.class))
-                                instanceof DefaultPluginScanConfig));
+                () -> assertInstanceOf(
+                        DefaultPluginScanConfig.class,
+                        testObject.getExecutionDirScanConfig(mock(Plugin.class), mock(PluginExecution.class))));
         asserts.put(
                 "getGlobalExcludePaths",
                 () -> assertEquals(Collections.emptyList(), testObject.getGlobalExcludePaths()));
@@ -198,8 +200,8 @@ public class CacheConfigImplTest {
                 () -> assertEquals(Collections.emptyList(), testObject.getNologProperties(mock(MojoExecution.class))));
         asserts.put(
                 "getPluginDirScanConfig",
-                () -> assertTrue(
-                        testObject.getPluginDirScanConfig(mock(Plugin.class)) instanceof DefaultPluginScanConfig));
+                () -> assertInstanceOf(
+                        DefaultPluginScanConfig.class, testObject.getPluginDirScanConfig(mock(Plugin.class))));
         asserts.put(
                 "getTrackedProperties",
                 () -> assertEquals(

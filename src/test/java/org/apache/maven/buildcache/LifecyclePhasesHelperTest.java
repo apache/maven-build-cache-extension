@@ -29,18 +29,17 @@ import org.apache.maven.lifecycle.DefaultLifecycles;
 import org.apache.maven.lifecycle.Lifecycle;
 import org.apache.maven.lifecycle.internal.stub.LifecyclesTestUtils;
 import org.apache.maven.plugin.MojoExecution;
+import org.apache.maven.plugin.descriptor.MojoDescriptor;
 import org.apache.maven.project.MavenProject;
-import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -158,17 +157,13 @@ class LifecyclePhasesHelperTest {
         assertFalse(lifecyclePhasesHelper.isLaterPhase("test", "site"));
         assertFalse(lifecyclePhasesHelper.isLaterPhase("clean", "site"));
 
-        assertThrows(IllegalArgumentException.class, () -> {
-            lifecyclePhasesHelper.isLaterPhase("install", null);
-        });
+        assertThrows(IllegalArgumentException.class, () -> lifecyclePhasesHelper.isLaterPhase("install", null));
 
-        assertThrows(IllegalArgumentException.class, () -> {
-            lifecyclePhasesHelper.isLaterPhase("install", "unknown phase");
-        });
+        assertThrows(
+                IllegalArgumentException.class, () -> lifecyclePhasesHelper.isLaterPhase("install", "unknown phase"));
 
-        assertThrows(IllegalArgumentException.class, () -> {
-            lifecyclePhasesHelper.isLaterPhase("unknown phase", "install");
-        });
+        assertThrows(
+                IllegalArgumentException.class, () -> lifecyclePhasesHelper.isLaterPhase("unknown phase", "install"));
     }
 
     @Test
@@ -176,7 +171,8 @@ class LifecyclePhasesHelperTest {
         MojoExecution clean = mockedMojoExecution("clean");
         List<MojoExecution> cleanSegment = lifecyclePhasesHelper.getCleanSegment(
                 projectMock, Arrays.asList(clean, mockedMojoExecution("compile"), mockedMojoExecution("install")));
-        assertEquals(singletonList(clean), cleanSegment);
+
+        assertIterableEquals(singletonList(clean), cleanSegment);
     }
 
     /**
@@ -186,7 +182,7 @@ class LifecyclePhasesHelperTest {
     void getEmptyCleanSegment() {
         List<MojoExecution> cleanSegment = lifecyclePhasesHelper.getCleanSegment(
                 projectMock, Arrays.asList(mockedMojoExecution("compile"), mockedMojoExecution("install")));
-        assertEquals(emptyList(), cleanSegment);
+        assertTrue(cleanSegment.isEmpty());
     }
 
     /**
@@ -204,7 +200,7 @@ class LifecyclePhasesHelperTest {
                         // null lifecycle phase is possible in forked executions
                         mockedMojoExecution(null), mockedMojoExecution(null)));
 
-        assertEquals(emptyList(), cleanSegment);
+        assertTrue(cleanSegment.isEmpty());
     }
 
     /**
@@ -221,7 +217,7 @@ class LifecyclePhasesHelperTest {
                         // clean is overridden to "install" phase assuming forked execution
                         mockedMojoExecution("clean")));
 
-        assertEquals(emptyList(), cleanSegment);
+        assertTrue(cleanSegment.isEmpty());
     }
 
     @Test
@@ -235,7 +231,7 @@ class LifecyclePhasesHelperTest {
 
         List<MojoExecution> cachedSegment = lifecyclePhasesHelper.getCachedSegment(projectMock, mojoExecutions, build);
 
-        assertThat(cachedSegment).containsExactly(compile, test);
+        assertIterableEquals(Arrays.asList(compile, test), cachedSegment);
     }
 
     @Test
@@ -250,7 +246,7 @@ class LifecyclePhasesHelperTest {
 
         List<MojoExecution> cachedSegment = lifecyclePhasesHelper.getCachedSegment(projectMock, mojoExecutions, build);
 
-        assertThat(cachedSegment).isEmpty();
+        assertTrue(cachedSegment.isEmpty());
     }
 
     @Test
@@ -268,7 +264,7 @@ class LifecyclePhasesHelperTest {
 
         List<MojoExecution> cachedSegment = lifecyclePhasesHelper.getCachedSegment(projectMock, mojoExecutions, build);
 
-        assertEquals(mojoExecutions, cachedSegment);
+        assertIterableEquals(mojoExecutions, cachedSegment);
     }
 
     @ParameterizedTest
@@ -284,7 +280,7 @@ class LifecyclePhasesHelperTest {
 
         List<MojoExecution> cachedSegment = lifecyclePhasesHelper.getCachedSegment(projectMock, mojoExecutions, build);
 
-        assertEquals(mojoExecutions, cachedSegment);
+        assertIterableEquals(mojoExecutions, cachedSegment);
     }
 
     @Test
@@ -300,7 +296,7 @@ class LifecyclePhasesHelperTest {
         List<MojoExecution> notCachedSegment =
                 lifecyclePhasesHelper.getPostCachedSegment(projectMock, mojoExecutions, build);
 
-        assertThat(notCachedSegment).containsExactly(test, install);
+        assertIterableEquals(Arrays.asList(test, install), notCachedSegment);
     }
 
     @Test
@@ -316,7 +312,7 @@ class LifecyclePhasesHelperTest {
         List<MojoExecution> notCachedSegment =
                 lifecyclePhasesHelper.getPostCachedSegment(projectMock, mojoExecutions, build);
 
-        assertThat(notCachedSegment).isEqualTo(mojoExecutions);
+        assertIterableEquals(mojoExecutions, notCachedSegment);
     }
 
     @Test
@@ -335,7 +331,7 @@ class LifecyclePhasesHelperTest {
         List<MojoExecution> cachedSegment =
                 lifecyclePhasesHelper.getPostCachedSegment(projectMock, mojoExecutions, build);
 
-        assertThat(cachedSegment).isEqualTo(mojoExecutions);
+        assertIterableEquals(mojoExecutions, cachedSegment);
     }
 
     @ParameterizedTest
@@ -352,7 +348,101 @@ class LifecyclePhasesHelperTest {
         List<MojoExecution> notCachedSegment =
                 lifecyclePhasesHelper.getPostCachedSegment(projectMock, mojoExecutions, cachedBuild);
 
-        assertThat(notCachedSegment).isEmpty();
+        assertTrue(notCachedSegment.isEmpty());
+    }
+
+    /**
+     * A goal run from the command line has no phase of its own, so the helper should use the goal's default
+     * phase instead — that's what lets a single goal take part in caching.
+     */
+    @Test
+    void resolveHighestLifecyclePhaseCliGoalUsesDefaultPhase() {
+        String phase = lifecyclePhasesHelper.resolveHighestLifecyclePhase(
+                projectMock, singletonList(mockedCliGoal("compile")));
+        assertEquals("compile", phase);
+    }
+
+    /**
+     * A command-line goal with no default phase (like jetty:run) resolves to null, which keeps it out of caching.
+     */
+    @Test
+    void resolveHighestLifecyclePhaseCliGoalWithoutDefaultPhase() {
+        String phase =
+                lifecyclePhasesHelper.resolveHighestLifecyclePhase(projectMock, singletonList(mockedCliGoal(null)));
+        assertEquals(null, phase);
+    }
+
+    @Test
+    void getCleanSegmentForCliGoalIsEmpty() {
+        // compiler:compile maps to the "compile" phase, which is later than clean -> empty clean segment
+        List<MojoExecution> cleanSegment =
+                lifecyclePhasesHelper.getCleanSegment(projectMock, singletonList(mockedCliGoal("compile")));
+        assertTrue(cleanSegment.isEmpty());
+    }
+
+    @Test
+    void getCoveredPhasesMapsCliGoalToItsPhase() {
+        List<String> covered =
+                lifecyclePhasesHelper.getCoveredPhases(projectMock, singletonList(mockedCliGoal("compile")));
+        assertEquals(singletonList("compile"), covered);
+    }
+
+    @Test
+    void getCoveredPhasesOrdersByLifecycleAndDedups() {
+        List<String> covered = lifecyclePhasesHelper.getCoveredPhases(
+                projectMock,
+                Arrays.asList(
+                        mockedMojoExecution("install"),
+                        mockedMojoExecution("compile"),
+                        mockedMojoExecution("compile"),
+                        mockedMojoExecution("test")));
+        // distinct, ordered earliest -> latest; last element is the highest covered phase
+        assertEquals(Arrays.asList("compile", "test", "install"), covered);
+    }
+
+    @Test
+    void getCoveredPhasesIgnoresUnresolvablePhases() {
+        // a CLI goal with no default phase contributes nothing
+        List<String> covered = lifecyclePhasesHelper.getCoveredPhases(
+                projectMock, Arrays.asList(mockedMojoExecution("compile"), mockedCliGoal(null)));
+        assertEquals(singletonList("compile"), covered);
+    }
+
+    /**
+     * When a fork is started by a command-line goal (like jetty:run), its mojos should keep their own real
+     * phases so the forked lifecycle can be matched against the cache and restored.
+     */
+    @Test
+    void resolveForkedCliOriginatedUsesOwnPhase() {
+        MojoExecution cliOrigin = mockedCliGoal(null); // e.g. jetty:run, no phase
+        publishForkedProjectEvent(cliOrigin);
+
+        String phase = lifecyclePhasesHelper.resolveHighestLifecyclePhase(
+                projectMock, Arrays.asList(mockedMojoExecution("compile"), mockedMojoExecution("test-compile")));
+        assertEquals("test-compile", phase);
+    }
+
+    /**
+     * A goal that forks another goal ({@code @Execute(goal=...)}) has no phase on either side, so the highest
+     * phase must come back null. That's what tells the strategy to let the fork run instead of restoring
+     * artifacts and skipping the goal.
+     */
+    @Test
+    void resolveForkedCliOriginatedGoalOnlyResolvesToNull() {
+        MojoExecution cliOrigin = mockedCliGoal(null); // e.g. a goal that forks via @Execute(goal=...)
+        publishForkedProjectEvent(cliOrigin);
+
+        String phase = lifecyclePhasesHelper.resolveHighestLifecyclePhase(
+                projectMock, singletonList(mockedMojoExecution(null)));
+        assertEquals(null, phase);
+    }
+
+    @Test
+    void getForkOrigin() {
+        assertEquals(null, lifecyclePhasesHelper.getForkOrigin(projectMock));
+        MojoExecution origin = mockedMojoExecution("install");
+        publishForkedProjectEvent(origin);
+        assertEquals(origin, lifecyclePhasesHelper.getForkOrigin(projectMock));
     }
 
     private void publishForkedProjectEvent(MojoExecution origin) {
@@ -366,11 +456,25 @@ class LifecyclePhasesHelperTest {
         lifecyclePhasesHelper.forkedProjectStarted(eventMock);
     }
 
-    @NotNull
     private static MojoExecution mockedMojoExecution(String phase) {
         MojoExecution mojoExecution = mock(MojoExecution.class);
         when(mojoExecution.getLifecyclePhase()).thenReturn(phase);
         when(mojoExecution.toString()).thenReturn(phase);
+        return mojoExecution;
+    }
+
+    /**
+     * Mocks a goal run from the command line: no phase of its own, {@link MojoExecution.Source#CLI} source, and a
+     * descriptor whose default phase is {@code defaultPhase} (pass null for goals like jetty:run that have none).
+     */
+    private static MojoExecution mockedCliGoal(String defaultPhase) {
+        MojoExecution mojoExecution = mock(MojoExecution.class);
+        when(mojoExecution.getLifecyclePhase()).thenReturn(null);
+        when(mojoExecution.getSource()).thenReturn(MojoExecution.Source.CLI);
+        MojoDescriptor descriptor = mock(MojoDescriptor.class);
+        when(descriptor.getPhase()).thenReturn(defaultPhase);
+        when(mojoExecution.getMojoDescriptor()).thenReturn(descriptor);
+        when(mojoExecution.toString()).thenReturn("cli-goal(" + defaultPhase + ")");
         return mojoExecution;
     }
 }
