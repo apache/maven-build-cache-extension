@@ -320,6 +320,22 @@ under the License.
     <pluginManagement>
       <plugins>
         <plugin>
+          <groupId>org.apache.rat</groupId>
+          <artifactId>apache-rat-plugin</artifactId>
+          <configuration>
+            <inputExcludes combine.children="append">
+              <exclude>.mvn/maven.config</exclude>
+              <exclude>.asf.yaml</exclude>
+              <exclude>src/test/resources*/**</exclude>
+              <exclude>src/test/projects/**</exclude>
+              <exclude>src/test/remote-repo/**</exclude>
+              <exclude>src/build/maven-header.txt</exclude>
+              <exclude>.gitmodules</exclude>
+              <exclude>.gitattributes</exclude>
+            </inputExcludes>
+          </configuration>
+        </plugin>
+        <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
           <configuration>
@@ -350,22 +366,6 @@ under the License.
               </configuration>
             </execution>
           </executions>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.rat</groupId>
-          <artifactId>apache-rat-plugin</artifactId>
-          <configuration>
-            <excludes>
-              <exclude>.mvn/maven.config</exclude>
-              <exclude>.asf.yaml</exclude>
-              <exclude>src/test/resources*/**</exclude>
-              <exclude>src/test/projects/**</exclude>
-              <exclude>src/test/remote-repo/**</exclude>
-              <exclude>src/build/maven-header.txt</exclude>
-              <exclude>.gitmodules</exclude>
-              <exclude>.gitattributes</exclude>
-            </excludes>
-          </configuration>
         </plugin>
       </plugins>
     </pluginManagement>
