@@ -272,8 +272,7 @@ class BuildCacheMojosExecutionStrategyTest {
 
         @Test
         void pureCleanSessionIsNotCacheReportEligible() throws Exception {
-            strategy.execute(
-                    Arrays.asList(lifecycleExecution("clean")), sessionMock, runnerMock);
+            strategy.execute(Arrays.asList(lifecycleExecution("clean")), sessionMock, runnerMock);
 
             assertFalse(strategy.isCacheReportEligible(), "A pure 'mvn clean' must not write a cache report");
         }
