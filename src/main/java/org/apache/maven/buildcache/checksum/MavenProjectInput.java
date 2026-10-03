@@ -33,10 +33,14 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -47,10 +51,13 @@ import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.Strings;
+import org.apache.maven.RepositoryUtils;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.artifact.handler.ArtifactHandler;
@@ -84,11 +91,21 @@ import org.apache.maven.model.PluginExecution;
 import org.apache.maven.model.Resource;
 import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
 import org.apache.maven.project.MavenProject;
+import org.eclipse.aether.AbstractForwardingRepositorySystemSession;
 import org.eclipse.aether.RepositorySystem;
+import org.eclipse.aether.RepositorySystemSession;
+import org.eclipse.aether.artifact.ArtifactProperties;
 import org.eclipse.aether.artifact.DefaultArtifactType;
+import org.eclipse.aether.collection.CollectRequest;
+import org.eclipse.aether.collection.DependencyCollectionException;
+import org.eclipse.aether.graph.DependencyNode;
+import org.eclipse.aether.repository.LocalArtifactRequest;
+import org.eclipse.aether.repository.LocalArtifactResult;
 import org.eclipse.aether.resolution.ArtifactRequest;
 import org.eclipse.aether.resolution.ArtifactResolutionException;
 import org.eclipse.aether.resolution.ArtifactResult;
+import org.eclipse.aether.util.graph.transformer.ConflictResolver;
+import org.eclipse.aether.util.graph.visitor.PreorderNodeListGenerator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -107,6 +124,12 @@ import static org.apache.maven.buildcache.xml.CacheConfigImpl.SKIP_SAVE;
  * MavenProjectInput
  */
 public class MavenProjectInput {
+
+    static final String INCOMPLETE_DEPENDENCY_GRAPH_MARKER = "__maven_build_cache_incomplete_dependency_graph__";
+
+    static final String SNAPSHOT_DESCRIPTOR_KEY_PREFIX = "__maven_build_cache_snapshot_descriptor__|";
+
+    static final String RESOLVED_DEPENDENCY_GRAPH_KEY = "__maven_build_cache_resolved_dependency_graph__";
 
     /**
      * Version of cache implementation. It is recommended to change to simplify remote cache maintenance
@@ -140,6 +163,7 @@ public class MavenProjectInput {
     private final ProjectInputCalculator projectInputCalculator;
     private final Path baseDirPath;
     private final ArtifactHandlerManager artifactHandlerManager;
+    private final boolean includeTestDependencies;
 
     /**
      * The project glob to use every time there is no override
@@ -162,6 +186,31 @@ public class MavenProjectInput {
             RepositorySystem repoSystem,
             RemoteCacheRepository remoteCache,
             ArtifactHandlerManager artifactHandlerManager) {
+        this(
+                project,
+                normalizedModelProvider,
+                multiModuleSupport,
+                projectInputCalculator,
+                session,
+                config,
+                repoSystem,
+                remoteCache,
+                artifactHandlerManager,
+                true);
+    }
+
+    @SuppressWarnings("checkstyle:parameternumber")
+    public MavenProjectInput(
+            MavenProject project,
+            NormalizedModelProvider normalizedModelProvider,
+            MultiModuleSupport multiModuleSupport,
+            ProjectInputCalculator projectInputCalculator,
+            MavenSession session,
+            CacheConfig config,
+            RepositorySystem repoSystem,
+            RemoteCacheRepository remoteCache,
+            ArtifactHandlerManager artifactHandlerManager,
+            boolean includeTestDependencies) {
         this.project = project;
         this.normalizedModelProvider = normalizedModelProvider;
         this.multiModuleSupport = multiModuleSupport;
@@ -171,6 +220,7 @@ public class MavenProjectInput {
         this.baseDirPath = project.getBasedir().toPath().toAbsolutePath();
         this.repoSystem = repoSystem;
         this.remoteCache = remoteCache;
+        this.includeTestDependencies = includeTestDependencies;
         Properties properties = project.getProperties();
         this.projectGlob = properties.getProperty(CACHE_INPUT_GLOB_NAME, config.getDefaultGlob());
         this.processPlugins =
@@ -283,6 +333,17 @@ public class MavenProjectInput {
                 projectsInputInfoType.getChecksum(),
                 t2 - t1);
         return projectsInputInfoType;
+    }
+
+    /**
+     * Returns whether local-only dependency collection could not produce a complete mutable dependency graph.
+     * Such inputs must not be used for cache lookup or save because their checksum intentionally contains only a
+     * per-session marker instead of pretending that the partial graph is complete.
+     */
+    public static boolean hasIncompleteDependencyGraph(ProjectsInputInfo inputInfo) {
+        return inputInfo.getItems().stream()
+                .anyMatch(item -> "dependency".equals(item.getType())
+                        && INCOMPLETE_DEPENDENCY_GRAPH_MARKER.equals(item.getValue()));
     }
 
     private void checkEffectivePomMatch(ProjectsInputInfo baselineBuild, DigestItem effectivePomChecksum) {
@@ -665,7 +726,225 @@ public class MavenProjectInput {
     }
 
     private SortedMap<String, String> getMutableDependencies() throws IOException {
-        return getMutableDependenciesHashes("", project.getDependencies());
+        List<Dependency> relevantDependencies = project.getDependencies().stream()
+                .filter(this::isRelevantDependency)
+                .collect(Collectors.toList());
+        SortedMap<String, String> hashes = getMutableDependenciesHashes("", relevantDependencies);
+        if (project.getDependencies().isEmpty()) {
+            return hashes;
+        }
+
+        // Collect locally available descriptors for direct external roots, including immutable roots: a release
+        // can depend on a mutable snapshot. Cache lookup must not trigger remote resolution. If the complete graph
+        // is not available locally, mark the input as non-cacheable rather than constructing a partial key.
+        // Dependency management, exclusions, and scope mediation still come from Resolver's graph.
+        RepositorySystemSession repositorySession = session.getRepositorySession();
+        RepositorySystemSession localOnlySession = localOnly(repositorySession);
+        CollectRequest request = new CollectRequest();
+        request.setRepositories(project.getRemoteProjectRepositories());
+        boolean hasExternalRoot = false;
+        for (Dependency dependency : relevantDependencies) {
+            if (Artifact.SCOPE_SYSTEM.equals(dependency.getScope())
+                    || tryResolveDependencyProject(dependency).isPresent()) {
+                continue;
+            }
+            request.addDependency(
+                    RepositoryUtils.toDependency(dependency, repositorySession.getArtifactTypeRegistry()));
+            hasExternalRoot = true;
+        }
+        if (!hasExternalRoot) {
+            return hashes;
+        }
+        if (project.getDependencyManagement() != null) {
+            for (Dependency dependency : project.getDependencyManagement().getDependencies()) {
+                request.addManagedDependency(
+                        RepositoryUtils.toDependency(dependency, repositorySession.getArtifactTypeRegistry()));
+            }
+        }
+        try {
+            DependencyNode dependencyGraph =
+                    repoSystem.collectDependencies(localOnlySession, request).getRoot();
+            if (dependencyGraph == null) {
+                markIncompleteDependencyGraph(hashes);
+                return hashes;
+            }
+            hashes.put(RESOLVED_DEPENDENCY_GRAPH_KEY, selectedDependencyGraphHash(dependencyGraph));
+            PreorderNodeListGenerator nodes = new PreorderNodeListGenerator();
+            dependencyGraph.accept(nodes);
+            for (DependencyNode node : nodes.getNodes()) {
+                if (node.getDependency() == null
+                        || (!includeTestDependencies
+                                && Artifact.SCOPE_TEST.equals(
+                                        node.getDependency().getScope()))
+                        || node.getData().get(ConflictResolver.NODE_DATA_WINNER) != null) {
+                    continue;
+                }
+                org.eclipse.aether.artifact.Artifact artifact = node.getArtifact();
+                if (artifact == null || !artifact.isSnapshot()) {
+                    continue;
+                }
+                String key = KeyUtils.getVersionlessArtifactKey(RepositoryUtils.toArtifact(artifact));
+                Optional<MavenProject> reactorProject = multiModuleSupport.tryToResolveProject(
+                        artifact.getGroupId(), artifact.getArtifactId(), artifact.getBaseVersion());
+                if (reactorProject.isPresent()) {
+                    if (!hashes.containsKey(key)) {
+                        ProjectsInputInfo reactorInput = projectInputCalculator.calculateInput(
+                                reactorProject.get(), includeTestDependencies || isTestArtifact(artifact));
+                        hashes.put(key, reactorInput.getChecksum());
+                        if (hasIncompleteDependencyGraph(reactorInput)) {
+                            markIncompleteDependencyGraph(hashes);
+                        }
+                    }
+                } else {
+                    if (!hashes.containsKey(key)) {
+                        addLocalArtifactHash(hashes, key, artifact, localOnlySession);
+                    }
+                    org.eclipse.aether.artifact.Artifact descriptor = new org.eclipse.aether.artifact.DefaultArtifact(
+                            artifact.getGroupId(), artifact.getArtifactId(), "", "pom", artifact.getBaseVersion());
+                    addLocalArtifactHash(hashes, SNAPSHOT_DESCRIPTOR_KEY_PREFIX + key, descriptor, localOnlySession);
+                }
+            }
+        } catch (DependencyCollectionException e) {
+            LOGGER.debug(
+                    "Disabling cache for {} because the transitive snapshot graph is not locally available: {}",
+                    project.getId(),
+                    e.getMessage());
+            markIncompleteDependencyGraph(hashes);
+        }
+        return hashes;
+    }
+
+    private String selectedDependencyGraphHash(DependencyNode root) {
+        StringBuilder graph = new StringBuilder("selected-dependency-graph-v1;");
+        Deque<DependencyGraphFrame> stack = new ArrayDeque<>();
+        Set<DependencyNode> activePath = Collections.newSetFromMap(new IdentityHashMap<DependencyNode, Boolean>());
+        activePath.add(root);
+        stack.push(new DependencyGraphFrame(root));
+        while (!stack.isEmpty()) {
+            DependencyGraphFrame frame = stack.peek();
+            if (frame.nextChild >= frame.children.size()) {
+                stack.pop();
+                activePath.remove(frame.node);
+                if (frame.node != root) {
+                    graph.append('E');
+                }
+                continue;
+            }
+
+            DependencyNode child = frame.children.get(frame.nextChild++);
+            if (!isSelectedDependencyNode(child)) {
+                continue;
+            }
+            org.eclipse.aether.graph.Dependency dependency = child.getDependency();
+            org.eclipse.aether.artifact.Artifact artifact = child.getArtifact();
+            graph.append('N');
+            appendGraphField(graph, artifact.getGroupId());
+            appendGraphField(graph, artifact.getArtifactId());
+            appendGraphField(graph, artifact.getExtension());
+            appendGraphField(graph, artifact.getClassifier());
+            appendGraphField(graph, artifact.getVersion());
+            appendGraphField(graph, artifact.getBaseVersion());
+            appendGraphField(graph, artifact.getProperty(ArtifactProperties.TYPE, null));
+            appendGraphField(graph, dependency.getScope());
+            appendGraphField(graph, Boolean.toString(dependency.isOptional()));
+            if (!activePath.add(child)) {
+                graph.append("CE");
+                continue;
+            }
+            stack.push(new DependencyGraphFrame(child));
+        }
+        return config.getHashFactory().createAlgorithm().hash(graph.toString().getBytes(StandardCharsets.UTF_8));
+    }
+
+    private boolean isSelectedDependencyNode(DependencyNode node) {
+        return node != null
+                && node.getDependency() != null
+                && node.getArtifact() != null
+                && (includeTestDependencies
+                        || !Artifact.SCOPE_TEST.equals(node.getDependency().getScope()))
+                && node.getData().get(ConflictResolver.NODE_DATA_WINNER) == null;
+    }
+
+    private static void appendGraphField(StringBuilder graph, String value) {
+        if (value == null) {
+            graph.append("-1:");
+        } else {
+            graph.append(value.length()).append(':').append(value);
+        }
+        graph.append(';');
+    }
+
+    private static final class DependencyGraphFrame {
+        private final DependencyNode node;
+        private final List<DependencyNode> children;
+        private int nextChild;
+
+        private DependencyGraphFrame(DependencyNode node) {
+            this.node = node;
+            this.children = node.getChildren();
+        }
+    }
+
+    private void addLocalArtifactHash(
+            SortedMap<String, String> hashes,
+            String key,
+            org.eclipse.aether.artifact.Artifact artifact,
+            RepositorySystemSession localOnlySession)
+            throws IOException {
+        if (hashes.containsKey(key)) {
+            return;
+        }
+        LocalArtifactResult localArtifact = session.getRepositorySession()
+                .getLocalRepositoryManager()
+                .find(
+                        localOnlySession,
+                        new LocalArtifactRequest(artifact, project.getRemoteProjectRepositories(), null));
+        if (localArtifact.isAvailable() && localArtifact.getFile() != null) {
+            hashes.put(
+                    key,
+                    config.getHashFactory()
+                            .createAlgorithm()
+                            .hash(localArtifact.getFile().toPath()));
+        } else {
+            markIncompleteDependencyGraph(hashes);
+        }
+    }
+
+    private boolean isRelevantDependency(Dependency dependency) {
+        return includeTestDependencies || !Artifact.SCOPE_TEST.equals(dependency.getScope());
+    }
+
+    private static void markIncompleteDependencyGraph(SortedMap<String, String> hashes) {
+        // A random value is defense in depth for callers that do not honor hasIncompleteDependencyGraph(): an
+        // incomplete key cannot match an entry written by another Maven session.
+        hashes.putIfAbsent(INCOMPLETE_DEPENDENCY_GRAPH_MARKER, UUID.randomUUID().toString());
+    }
+
+    private static boolean isTestArtifact(Dependency dependency) {
+        return "test-jar".equals(dependency.getType()) || isTestArtifact(dependency.getClassifier());
+    }
+
+    private static boolean isTestArtifact(org.eclipse.aether.artifact.Artifact artifact) {
+        return "test-jar".equals(artifact.getProperty(ArtifactProperties.TYPE, null))
+                || isTestArtifact(artifact.getClassifier());
+    }
+
+    private static boolean isTestArtifact(String classifier) {
+        return "tests".equals(classifier);
+    }
+
+    private static RepositorySystemSession localOnly(final RepositorySystemSession session) {
+        return new AbstractForwardingRepositorySystemSession() {
+            @Override
+            protected RepositorySystemSession getSession() {
+                return session;
+            }
+
+            @Override
+            public boolean isOffline() {
+                return true;
+            }
+        };
     }
 
     private SortedMap<String, String> getMutablePluginDependencies() throws IOException {
@@ -798,28 +1077,39 @@ public class MavenProjectInput {
         for (Dependency dependency : dependencies) {
 
             if (CacheUtils.isPom(dependency)) {
-                // POM dependency will be resolved by maven system to actual dependencies
-                // and will contribute to effective pom.
-                // Effective result will be recorded by #getNormalizedPom
-                // so pom dependencies must be skipped as meaningless by themselves
+                // The POM artifact itself does not contribute classpath bytes, but its transitive mutable
+                // dependencies do. External POM roots are traversed by Resolver below; for reactor POMs copy
+                // their dependency inputs without adding a meaningless hash for the POM artifact itself.
+                Optional<MavenProject> reactorPom = tryResolveDependencyProject(dependency);
+                if (reactorPom.isPresent()) {
+                    ProjectsInputInfo reactorInput = projectInputCalculator.calculateInput(
+                            reactorPom.get(), includeTestDependencies || isTestArtifact(dependency));
+                    String reactorPomPrefix =
+                            keyPrefix + KeyUtils.getVersionlessArtifactKey(createDependencyArtifact(dependency)) + "|";
+                    // A reactor POM can change the consumer's resolved graph without contributing mutable child
+                    // artifacts (for example, by replacing one release dependency with another). Keep its complete
+                    // project checksum so those effective-model changes cannot reuse a stale consumer cache entry.
+                    result.put(reactorPomPrefix + "project", reactorInput.getChecksum());
+                    for (DigestItem item : reactorInput.getItems()) {
+                        if ("dependency".equals(item.getType())) {
+                            // Keep these fallback inputs distinct from artifacts selected by the
+                            // consumer's Resolver graph. Otherwise a reactor POM dependency can
+                            // suppress the hash of a differently mediated external SNAPSHOT.
+                            result.put(reactorPomPrefix + item.getValue(), item.getHash());
+                        }
+                    }
+                    if (hasIncompleteDependencyGraph(reactorInput)) {
+                        markIncompleteDependencyGraph(result);
+                    }
+                }
                 continue;
             }
 
             final String versionSpec = dependency.getVersion();
 
             // saved to index by the end of dependency build
-            MavenProject dependencyProject = versionSpec == null
-                    ? null
-                    : multiModuleSupport
-                            .tryToResolveProject(dependency.getGroupId(), dependency.getArtifactId(), versionSpec)
-                            .orElse(null);
-
-            // for dynamic versions (LATEST/RELEASE/ranges), reactor artifacts can be part of the build
-            // but cannot be resolved yet from the workspace (not built), so Aether may try remote download.
-            // If a matching reactor module exists, treat it as multi-module dependency and use project checksum.
-            if (dependencyProject == null && isDynamicVersion(versionSpec)) {
-                dependencyProject = tryResolveReactorProjectByGA(dependency).orElse(null);
-            }
+            MavenProject dependencyProject =
+                    tryResolveDependencyProject(dependency).orElse(null);
 
             boolean isSnapshot = isSnapshot(versionSpec);
             if (dependencyProject == null && !isSnapshot) {
@@ -829,8 +1119,12 @@ public class MavenProjectInput {
             String projectHash;
             if (dependencyProject != null) // part of multi module
             {
-                projectHash =
-                        projectInputCalculator.calculateInput(dependencyProject).getChecksum();
+                ProjectsInputInfo reactorInput = projectInputCalculator.calculateInput(
+                        dependencyProject, includeTestDependencies || isTestArtifact(dependency));
+                projectHash = reactorInput.getChecksum();
+                if (hasIncompleteDependencyGraph(reactorInput)) {
+                    markIncompleteDependencyGraph(result);
+                }
             } else // this is a snapshot dependency
             {
                 try {
@@ -913,6 +1207,19 @@ public class MavenProjectInput {
         }
         // Maven version ranges: [1.0,2.0), (1.0,), etc.
         return versionSpec.startsWith("[") || versionSpec.startsWith("(") || versionSpec.contains(",");
+    }
+
+    private Optional<MavenProject> tryResolveDependencyProject(Dependency dependency) {
+        String versionSpec = dependency.getVersion();
+        Optional<MavenProject> projectMatch = versionSpec == null
+                ? Optional.empty()
+                : multiModuleSupport.tryToResolveProject(
+                        dependency.getGroupId(), dependency.getArtifactId(), versionSpec);
+        // For dynamic versions (LATEST/RELEASE/ranges), reactor artifacts can be part of the build but cannot be
+        // resolved yet from the workspace (not built), so Aether may try remote download. Match the reactor by GA.
+        return projectMatch.isPresent() || !isDynamicVersion(versionSpec)
+                ? projectMatch
+                : tryResolveReactorProjectByGA(dependency);
     }
 
     private Optional<MavenProject> tryResolveReactorProjectByGA(Dependency dependency) {

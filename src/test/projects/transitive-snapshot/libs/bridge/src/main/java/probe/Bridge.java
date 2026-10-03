@@ -16,24 +16,10 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.maven.buildcache;
+package probe;
 
-import org.apache.maven.buildcache.xml.build.ProjectsInputInfo;
-import org.apache.maven.project.MavenProject;
-
-/**
- *
- */
-public interface ProjectInputCalculator {
-
-    ProjectsInputInfo calculateInput(MavenProject project);
-
-    /**
-     * Calculates project inputs for the lifecycle being cached.
-     *
-     * @param includeTestDependencies whether test-scoped mutable dependencies can affect the cached outputs
-     */
-    default ProjectsInputInfo calculateInput(MavenProject project, boolean includeTestDependencies) {
-        return calculateInput(project);
+public class Bridge {
+    public String stable() {
+        return "stable";
     }
 }
