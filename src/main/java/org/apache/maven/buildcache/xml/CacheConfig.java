@@ -159,6 +159,8 @@ public interface CacheConfig {
      */
     boolean isMandatoryClean();
 
+    boolean isIncrementalReconciliationOnParameterMismatch();
+
     /**
      * Flag to cache compile phase outputs (classes, test-classes, generated sources).
      * When enabled (default), compile-only builds create cache entries that can be restored
