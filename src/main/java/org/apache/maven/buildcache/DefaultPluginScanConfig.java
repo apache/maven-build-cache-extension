@@ -46,7 +46,11 @@ public class DefaultPluginScanConfig implements PluginScanConfig {
     @Nonnull
     @Override
     public ScanConfigProperties getTagScanProperties(String tagName) {
-        return new ScanConfigProperties(true, "*");
+        // A null glob (matching PluginScanConfigImpl#defaultScanConfig) lets the caller fall back to the
+        // project's configured glob (see MavenProjectInput#addInputsFromPluginConfigs). A literal "*" here
+        // would always win over that fallback via `defaultIfEmpty`, silently ignoring the configured glob
+        // for every plugin-config-derived input when no explicit dir-scan config is defined.
+        return new ScanConfigProperties(true, null);
     }
 
     @Override

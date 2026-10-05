@@ -22,6 +22,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -63,7 +64,32 @@ public class ExclusionResolver {
     private final Path projectBaseDirectory;
 
     public ExclusionResolver(MavenProject project, CacheConfig config) {
+        this(project, config, Collections.emptyList());
+    }
+
+    /**
+     * @param project the project being hashed
+     * @param config the cache config
+     * @param allReactorProjects every project in the current reactor (as returned by
+     *                           {@code MavenSession.getAllProjects()}), used to also exclude sibling
+     *                           modules' own build output directories. A plugin config value (e.g. a
+     *                           {@code <directory>} tag) can point into another reactor module's tree,
+     *                           and that module's {@code target/} output is not reproducible across builds
+     *                           (jar timestamps, {@code maven-status} files that change whenever the module
+     *                           is actually compiled rather than restored from the cache). Without excluding
+     *                           it too, this project's checksum would flap even though none of its own
+     *                           inputs changed. May be {@code null} or empty when no reactor context is
+     *                           available (e.g. a single-module build, or existing callers/tests that only
+     *                           care about the current project's own excludes).
+     */
+    public ExclusionResolver(MavenProject project, CacheConfig config, List<MavenProject> allReactorProjects) {
         addDefaultExcludes(project);
+        for (MavenProject reactorProject :
+                allReactorProjects == null ? Collections.<MavenProject>emptyList() : allReactorProjects) {
+            if (reactorProject != project) {
+                addDefaultExcludes(reactorProject);
+            }
+        }
         Path baseDirectory = project.getBasedir().toPath().toAbsolutePath();
         projectBaseDirectory = baseDirectory;
 
