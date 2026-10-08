@@ -1155,6 +1155,10 @@ public class CacheControllerImpl implements CacheController {
 
     @Override
     public void saveCacheReport(MavenSession session) {
+        if (cacheResults.isEmpty()) {
+            LOGGER.debug("No cached project in this session, skipping incremental build aggregated report.");
+            return;
+        }
         try {
             CacheReport cacheReport = new CacheReport();
             for (CacheResult result : cacheResults.values()) {
