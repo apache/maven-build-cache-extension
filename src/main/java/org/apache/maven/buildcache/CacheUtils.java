@@ -26,6 +26,7 @@ import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
+import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -114,7 +115,16 @@ public class CacheUtils {
     }
 
     public static Path getMultimoduleRoot(MavenSession session) {
-        return session.getRequest().getMultiModuleProjectDirectory().toPath();
+        File multiModuleProjectDirectory = session.getRequest().getMultiModuleProjectDirectory();
+        if (multiModuleProjectDirectory != null) {
+            return multiModuleProjectDirectory.toPath();
+        }
+        // not every embedder sets it (e.g. m2e), so fall back to the execution root directory
+        String executionRootDirectory = session.getExecutionRootDirectory();
+        if (executionRootDirectory != null) {
+            return Paths.get(executionRootDirectory);
+        }
+        return Paths.get("").toAbsolutePath();
     }
 
     public static Scm readGitInfo(MavenSession session) throws IOException {
