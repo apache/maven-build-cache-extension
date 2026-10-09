@@ -101,6 +101,29 @@ under the License.
                     <defaultValue>cache</defaultValue>
                     <description>The repository id used to find authentication / mirror information in maven settings, default to 'cache'.</description>
                 </field>
+                <field xml.attribute="true">
+                    <name>cleanupEnabled</name>
+                    <type>boolean</type>
+                    <defaultValue>false</defaultValue>
+                    <description>Enable best-effort remote cache retention cleanup.</description>
+                </field>
+                <field xml.attribute="true">
+                    <name>retentionStrategy</name>
+                    <type>String</type>
+                    <description>Retention strategy provider name, e.g. 'nexus' or 'directory-listing'. Required when cleanupEnabled is true.</description>
+                </field>
+                <field>
+                    <name>maxBuildsCached</name>
+                    <type>int</type>
+                    <defaultValue>0</defaultValue>
+                    <description>Maximum remote cache builds retained per project when cleanup is enabled.</description>
+                </field>
+                <field>
+                    <name>cleanupGracePeriodSeconds</name>
+                    <type>int</type>
+                    <defaultValue>300</defaultValue>
+                    <description>Do not delete remote cache assets younger than this grace period, in seconds. Set to 0 to retain the previous immediate-cleanup behavior.</description>
+                </field>
             </fields>
         </class>
 
@@ -1524,4 +1547,3 @@ under the License.
     -->
 
 </model>
-

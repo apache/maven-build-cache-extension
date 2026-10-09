@@ -104,6 +104,22 @@ public interface CacheConfig {
 
     int getMaxLocalBuildsCached();
 
+    default boolean isRemoteCleanupEnabled() {
+        return false;
+    }
+
+    default int getMaxRemoteBuildsCached() {
+        return 0;
+    }
+
+    default int getRemoteCleanupGracePeriodSeconds() {
+        return 300;
+    }
+
+    default String getRemoteRetentionStrategy() {
+        return null;
+    }
+
     String getLocalRepositoryLocation();
 
     List<DirName> getAttachedOutputs();

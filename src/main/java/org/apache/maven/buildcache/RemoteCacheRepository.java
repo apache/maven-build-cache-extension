@@ -26,6 +26,8 @@ import java.util.Optional;
 
 import org.apache.maven.buildcache.xml.Build;
 import org.apache.maven.buildcache.xml.build.Artifact;
+import org.apache.maven.buildcache.xml.report.CacheReport;
+import org.apache.maven.execution.MavenSession;
 import org.apache.maven.project.MavenProject;
 
 /**
@@ -48,4 +50,8 @@ public interface RemoteCacheRepository extends CacheRepository {
 
     @Nonnull
     Optional<Build> findBaselineBuild(MavenProject project);
+
+    default void cleanup(CacheReport report, MavenSession session) throws IOException {
+        // Retention cleanup was added after the repository SPI; older implementations remain valid no-ops.
+    }
 }
