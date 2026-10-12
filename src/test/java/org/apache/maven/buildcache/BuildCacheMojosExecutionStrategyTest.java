@@ -20,28 +20,45 @@ package org.apache.maven.buildcache;
 
 import java.io.File;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.SystemUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.maven.buildcache.artifact.ArtifactRestorationReport;
+import org.apache.maven.buildcache.xml.Build;
 import org.apache.maven.buildcache.xml.CacheConfig;
+import org.apache.maven.buildcache.xml.CacheConfigImpl;
+import org.apache.maven.buildcache.xml.CacheSource;
+import org.apache.maven.buildcache.xml.CacheState;
 import org.apache.maven.buildcache.xml.build.CompletedExecution;
+import org.apache.maven.buildcache.xml.build.ProjectsInputInfo;
 import org.apache.maven.buildcache.xml.build.PropertyValue;
 import org.apache.maven.buildcache.xml.config.TrackedProperty;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.execution.scope.internal.MojoExecutionScope;
 import org.apache.maven.plugin.MavenPluginManager;
 import org.apache.maven.plugin.MojoExecution;
+import org.apache.maven.plugin.MojoExecutionRunner;
+import org.apache.maven.plugin.descriptor.MojoDescriptor;
 import org.apache.maven.project.MavenProject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class BuildCacheMojosExecutionStrategyTest {
@@ -202,6 +219,180 @@ class BuildCacheMojosExecutionStrategyTest {
             cache.setValue(value);
 
             return Pair.of(config, cache);
+        }
+    }
+
+    @Nested
+    class ProjectCacheStatusTest {
+
+        private CacheController cacheController;
+        private CacheConfig cacheConfig;
+        private LifecyclePhasesHelper lifecyclePhasesHelper;
+        private BuildCacheMojosExecutionStrategy strategy;
+        private MavenProject project;
+        private MavenSession session;
+        private List<MojoExecution> mojoExecutions;
+        private MojoExecutionRunner runner;
+
+        @BeforeEach
+        void setUp() {
+            cacheController = mock(CacheController.class);
+            cacheConfig = mock(CacheConfig.class);
+            lifecyclePhasesHelper = mock(LifecyclePhasesHelper.class);
+            strategy = new BuildCacheMojosExecutionStrategy(
+                    cacheController,
+                    cacheConfig,
+                    mock(MojoParametersListener.class),
+                    lifecyclePhasesHelper,
+                    mock(MavenPluginManager.class),
+                    mock(MojoExecutionScope.class));
+
+            project = new MavenProject();
+            session = mock(MavenSession.class);
+            when(session.getCurrentProject()).thenReturn(project);
+
+            MojoExecution compile = mock(MojoExecution.class);
+            when(compile.getSource()).thenReturn(MojoExecution.Source.LIFECYCLE);
+            when(compile.getLifecyclePhase()).thenReturn("compile");
+            mojoExecutions = Collections.singletonList(compile);
+            runner = mock(MojoExecutionRunner.class);
+
+            when(cacheConfig.initialize()).thenReturn(CacheState.INITIALIZED);
+            when(lifecyclePhasesHelper.isLaterPhaseThanClean("compile")).thenReturn(true);
+            when(cacheController.restoreProjectArtifacts(any())).thenReturn(restorationReport(true));
+        }
+
+        @Test
+        void fullRestoreIsHitWithSource() throws Exception {
+            lookupReturns(CacheResult.success(cachedBuild(CacheSource.REMOTE), context()));
+
+            strategy.execute(mojoExecutions, session, runner);
+
+            assertPublished("HIT", "REMOTE");
+            verify(runner, never()).run(any());
+        }
+
+        @Test
+        void hitIsVisibleToForcedMojos() throws Exception {
+            MojoExecution forced = mojoExecutions.get(0);
+            MojoDescriptor descriptor = mock(MojoDescriptor.class);
+            when(forced.getMojoDescriptor()).thenReturn(descriptor);
+            when(lifecyclePhasesHelper.getCachedSegment(eq(project), eq(mojoExecutions), any()))
+                    .thenReturn(mojoExecutions);
+            when(cacheController.isForcedExecution(project, forced)).thenReturn(true);
+            lookupReturns(CacheResult.success(cachedBuild(CacheSource.LOCAL), context()));
+            List<Object> seenByForcedMojo = new ArrayList<>();
+            doAnswer(invocation -> seenByForcedMojo.add(project.getContextValue(ProjectCacheStatus.STATUS_CONTEXT_KEY)))
+                    .when(runner)
+                    .run(forced);
+
+            strategy.execute(mojoExecutions, session, runner);
+
+            assertEquals(Collections.singletonList("HIT"), seenByForcedMojo);
+        }
+
+        @Test
+        void restoreToEarlierPhaseIsPartialHit() throws Exception {
+            lookupReturns(CacheResult.partialSuccess(cachedBuild(CacheSource.LOCAL), context()));
+
+            strategy.execute(mojoExecutions, session, runner);
+
+            assertPublished("PARTIAL_HIT", "LOCAL");
+        }
+
+        @Test
+        void noEntryIsMiss() throws Exception {
+            lookupReturns(CacheResult.empty(context()));
+
+            strategy.execute(mojoExecutions, session, runner);
+
+            assertPublished("MISS", null);
+        }
+
+        @Test
+        void unusableEntryIsRestoreFailed() throws Exception {
+            lookupReturns(CacheResult.failure(cachedBuild(CacheSource.LOCAL), context()));
+
+            strategy.execute(mojoExecutions, session, runner);
+
+            assertPublished("RESTORE_FAILED", null);
+        }
+
+        @Test
+        void failedArtifactRestoreIsRestoreFailedAndBuilds() throws Exception {
+            lookupReturns(CacheResult.success(cachedBuild(CacheSource.LOCAL), context()));
+            when(cacheController.restoreProjectArtifacts(any())).thenReturn(restorationReport(false));
+
+            strategy.execute(mojoExecutions, session, runner);
+
+            assertPublished("RESTORE_FAILED", null);
+            verify(runner).run(mojoExecutions.get(0));
+        }
+
+        @Test
+        void laterExecutionReplacesStaleSource() throws Exception {
+            lookupReturns(CacheResult.success(cachedBuild(CacheSource.REMOTE), context()));
+            strategy.execute(mojoExecutions, session, runner);
+
+            lookupReturns(CacheResult.empty(context()));
+            strategy.execute(mojoExecutions, session, runner);
+
+            assertPublished("MISS", null);
+        }
+
+        @Test
+        void skipCacheIsSkipped() throws Exception {
+            project.getProperties().setProperty(CacheConfigImpl.CACHE_SKIP, "true");
+            lookupReturns(CacheResult.empty(context()));
+
+            strategy.execute(mojoExecutions, session, runner);
+
+            assertPublished("SKIPPED", null);
+        }
+
+        @Test
+        void projectLevelDisableIsDisabled() throws Exception {
+            project.getProperties().setProperty(CacheConfigImpl.CACHE_ENABLED_PROPERTY_NAME, "false");
+
+            strategy.execute(mojoExecutions, session, runner);
+
+            assertPublished("DISABLED", null);
+        }
+
+        @Test
+        void forkInsideLifecycleBuildDoesNotOverwriteOutcome() throws Exception {
+            project.setContextValue(ProjectCacheStatus.STATUS_CONTEXT_KEY, "HIT");
+            when(lifecyclePhasesHelper.isForkedProject(project)).thenReturn(true);
+
+            strategy.execute(mojoExecutions, session, runner);
+
+            assertEquals("HIT", project.getContextValue(ProjectCacheStatus.STATUS_CONTEXT_KEY));
+        }
+
+        private void lookupReturns(CacheResult result) {
+            when(cacheController.findCachedBuild(eq(session), eq(project), eq(mojoExecutions), anyBoolean()))
+                    .thenReturn(result);
+        }
+
+        private CacheContext context() {
+            return new CacheContext(project, new ProjectsInputInfo(), session);
+        }
+
+        private Build cachedBuild(CacheSource source) {
+            Build build = mock(Build.class);
+            when(build.getSource()).thenReturn(source);
+            return build;
+        }
+
+        private ArtifactRestorationReport restorationReport(boolean success) {
+            ArtifactRestorationReport report = new ArtifactRestorationReport();
+            report.setSuccess(success);
+            return report;
+        }
+
+        private void assertPublished(String status, String source) {
+            assertEquals(status, project.getContextValue(ProjectCacheStatus.STATUS_CONTEXT_KEY));
+            assertEquals(source, project.getContextValue(ProjectCacheStatus.SOURCE_CONTEXT_KEY));
         }
     }
 }

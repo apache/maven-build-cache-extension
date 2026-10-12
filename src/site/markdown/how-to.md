@@ -314,3 +314,17 @@ fork's restore and save can be turned off independently:
 mvn jetty:run -Dmaven.build.cache.restoreForkedExecutions=false   # always recompile, don't restore
 mvn jetty:run -Dmaven.build.cache.saveForkedExecutions=false      # don't cache what the fork built
 ```
+
+### I want another extension or plugin to know whether a project was restored from cache
+
+Before running a project's mojos, the extension records its outcome as project context values. Read them with
+`MavenProject#getContextValue`, from a plugin running later in the same project, a downstream project, or an
+`ExecutionListener` in `projectSucceeded`/`projectFailed`:
+
+| Key                        | Values                                                                         |
+|----------------------------|--------------------------------------------------------------------------------|
+| `maven.build.cache.status` | `HIT`, `PARTIAL_HIT`, `MISS`, `RESTORE_FAILED`, `SKIPPED`, `DISABLED`          |
+| `maven.build.cache.source` | `LOCAL` or `REMOTE` when the status is `HIT` or `PARTIAL_HIT`, otherwise unset |
+
+No value is set when the cache does not consider the execution, e.g. a non-cacheable command-line goal or a lifecycle
+forked inside a normal build.
