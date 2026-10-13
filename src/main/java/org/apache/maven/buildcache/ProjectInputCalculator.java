@@ -26,5 +26,5 @@ import org.apache.maven.project.MavenProject;
  */
 public interface ProjectInputCalculator {
 
-    ProjectsInputInfo calculateInput(MavenProject project);
+    ProjectsInputInfo calculateInput(MavenProject project, Zone inputZone);
 }

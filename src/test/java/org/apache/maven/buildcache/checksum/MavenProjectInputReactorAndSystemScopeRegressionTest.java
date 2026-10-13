@@ -33,6 +33,7 @@ import org.apache.maven.buildcache.MultiModuleSupport;
 import org.apache.maven.buildcache.NormalizedModelProvider;
 import org.apache.maven.buildcache.ProjectInputCalculator;
 import org.apache.maven.buildcache.RemoteCacheRepository;
+import org.apache.maven.buildcache.Zone;
 import org.apache.maven.buildcache.hash.HashFactory;
 import org.apache.maven.buildcache.xml.CacheConfig;
 import org.apache.maven.buildcache.xml.build.DigestItem;
@@ -189,19 +190,20 @@ class MavenProjectInputReactorAndSystemScopeRegressionTest {
 
         ProjectsInputInfo projectInfo = mock(ProjectsInputInfo.class);
         when(projectInfo.getChecksum()).thenReturn("reactorChecksum");
-        when(projectInputCalculator.calculateInput(reactorProject)).thenReturn(projectInfo);
+        Zone zone = new Zone("default-zone");
+        when(projectInputCalculator.calculateInput(reactorProject, zone)).thenReturn(projectInfo);
 
-        Method getMutableDependenciesHashes =
-                MavenProjectInput.class.getDeclaredMethod("getMutableDependenciesHashes", String.class, List.class);
+        Method getMutableDependenciesHashes = MavenProjectInput.class.getDeclaredMethod(
+                "getMutableDependenciesHashes", String.class, List.class, Zone.class);
         getMutableDependenciesHashes.setAccessible(true);
 
         SortedMap<String, String> hashes = (SortedMap<String, String>)
-                getMutableDependenciesHashes.invoke(mavenProjectInput, "", Collections.singletonList(dependency));
+                getMutableDependenciesHashes.invoke(mavenProjectInput, "", Collections.singletonList(dependency), zone);
 
         assertEquals("reactorChecksum", hashes.get("com.example:reactor-artifact:jar"));
 
         verify(repoSystem, never())
                 .resolveArtifact(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
-        verify(projectInputCalculator).calculateInput(reactorProject);
+        verify(projectInputCalculator).calculateInput(reactorProject, zone);
     }
 }
