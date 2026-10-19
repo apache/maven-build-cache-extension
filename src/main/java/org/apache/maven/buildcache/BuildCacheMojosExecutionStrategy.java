@@ -179,6 +179,10 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                 executeExtraCleanPhaseIfNeeded(cacheRestorationStatus, cleanPhase, mojoExecutionRunner);
             }
 
+            if ((cacheEligible || forkedRestoreEligible) && !restored) {
+                ProjectCacheStatus.notRestored(cacheState, skipCache, result).publish(project, null);
+            }
+
             try {
                 if (cacheState == INITIALIZED && !restored && (!forkedExecution || forkedSaveEligible)) {
                     // Move pre-existing artifacts to staging directory to prevent caching stale files
@@ -428,6 +432,8 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                     ? CacheRestorationStatus.FAILURE_NEEDS_CLEAN
                     : CacheRestorationStatus.FAILURE;
         }
+
+        ProjectCacheStatus.restored(cacheResult).publish(project, cacheResult.getSource());
 
         // Execute mandatory mojos (forced by configuration)
         LOGGER.debug("Execute mandatory mojos in the cache segment");
