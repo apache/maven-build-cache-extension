@@ -21,12 +21,15 @@ package org.apache.maven.buildcache;
 import java.io.File;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Properties;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.SystemUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.maven.buildcache.xml.CacheConfig;
+import org.apache.maven.buildcache.xml.CacheState;
 import org.apache.maven.buildcache.xml.build.CompletedExecution;
 import org.apache.maven.buildcache.xml.build.PropertyValue;
 import org.apache.maven.buildcache.xml.config.TrackedProperty;
@@ -34,6 +37,8 @@ import org.apache.maven.execution.MavenSession;
 import org.apache.maven.execution.scope.internal.MojoExecutionScope;
 import org.apache.maven.plugin.MavenPluginManager;
 import org.apache.maven.plugin.MojoExecution;
+import org.apache.maven.plugin.MojoExecutionRunner;
+import org.apache.maven.plugin.descriptor.MojoDescriptor;
 import org.apache.maven.project.MavenProject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -41,6 +46,9 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -202,6 +210,82 @@ class BuildCacheMojosExecutionStrategyTest {
             cache.setValue(value);
 
             return Pair.of(config, cache);
+        }
+    }
+
+    /**
+     * A pure {@code mvn clean} must never write a cache report at session end (the report is written
+     * after the clean phase has already deleted {@code target/}, so a later clean could never remove
+     * it). The strategy tracks whether the session engaged caching and exposes it via
+     * {@link BuildCacheMojosExecutionStrategy#isCacheReportEligible()}.
+     */
+    @Nested
+    class CacheReportEligibilityTest {
+
+        private BuildCacheMojosExecutionStrategy strategy;
+        private CacheController cacheControllerMock;
+        private CacheConfig cacheConfigMock;
+        private MojoParametersListener mojoListenerMock;
+        private LifecyclePhasesHelper lifecyclePhasesHelperMock;
+        private MavenSession sessionMock;
+        private MojoExecutionRunner runnerMock;
+
+        @BeforeEach
+        void setUp() {
+            cacheControllerMock = mock(CacheController.class);
+            cacheConfigMock = mock(CacheConfig.class);
+            mojoListenerMock = mock(MojoParametersListener.class);
+            lifecyclePhasesHelperMock = mock(LifecyclePhasesHelper.class);
+            sessionMock = mock(MavenSession.class);
+            runnerMock = mock(MojoExecutionRunner.class);
+
+            strategy = new BuildCacheMojosExecutionStrategy(
+                    cacheControllerMock,
+                    cacheConfigMock,
+                    mojoListenerMock,
+                    lifecyclePhasesHelperMock,
+                    mock(MavenPluginManager.class),
+                    mock(MojoExecutionScope.class));
+
+            MavenProject project = mock(MavenProject.class);
+            when(project.getGroupId()).thenReturn("test");
+            when(project.getArtifactId()).thenReturn("project");
+            when(project.getProperties()).thenReturn(new Properties());
+            when(sessionMock.getCurrentProject()).thenReturn(project);
+
+            when(cacheConfigMock.isSkipCache()).thenReturn(false);
+            when(cacheConfigMock.isCacheSingleGoal()).thenReturn(false);
+            when(cacheConfigMock.isFailFast()).thenReturn(false);
+            when(cacheConfigMock.isSkipSave()).thenReturn(false);
+            when(cacheConfigMock.initialize()).thenReturn(CacheState.INITIALIZED);
+            when(lifecyclePhasesHelperMock.getCleanSegment(any(), anyList())).thenReturn(Collections.emptyList());
+            when(cacheControllerMock.findCachedBuild(any(), any(), anyList(), anyBoolean()))
+                    .thenReturn(CacheResult.empty());
+        }
+
+        private MojoExecution lifecycleExecution(String lifecyclePhase) {
+            MojoExecution execution =
+                    new MojoExecution(mock(MojoDescriptor.class), "default", MojoExecution.Source.LIFECYCLE);
+            execution.setLifecyclePhase(lifecyclePhase);
+            return execution;
+        }
+
+        @Test
+        void pureCleanSessionIsNotCacheReportEligible() throws Exception {
+            strategy.execute(Arrays.asList(lifecycleExecution("clean")), sessionMock, runnerMock);
+
+            assertFalse(strategy.isCacheReportEligible(), "A pure 'mvn clean' must not write a cache report");
+        }
+
+        @Test
+        void buildSessionIsCacheReportEligible() throws Exception {
+            strategy.execute(
+                    Arrays.asList(
+                            lifecycleExecution("clean"), lifecycleExecution("compile"), lifecycleExecution("package")),
+                    sessionMock,
+                    runnerMock);
+
+            assertTrue(strategy.isCacheReportEligible(), "A normal build must still write a cache report");
         }
     }
 }
