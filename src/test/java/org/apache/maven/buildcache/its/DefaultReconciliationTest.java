@@ -37,23 +37,23 @@ class DefaultReconciliationTest {
     void testDefaultReconciliationWithNoConfig(Verifier verifier) throws VerificationException, IOException {
         verifier.setAutoclean(false);
 
-        // First build with release=17
+        // First build with release=11
         verifier.setLogFileName("../log-build1.txt");
-        verifier.setSystemProperty("maven.compiler.release", "17");
+        verifier.setSystemProperty("maven.compiler.release", "11");
         verifier.executeGoal("verify");
         verifier.verifyErrorFreeLog();
         verifier.verifyTextInLog("Saved Build to local file");
 
-        // Second build with same release=17 should hit cache
+        // Second build with same release=11 should hit cache
         verifier.setLogFileName("../log-build2.txt");
-        verifier.setSystemProperty("maven.compiler.release", "17");
+        verifier.setSystemProperty("maven.compiler.release", "11");
         verifier.executeGoals(Arrays.asList("clean", "verify"));
         verifier.verifyErrorFreeLog();
         verifier.verifyTextInLog("Found cached build");
 
-        // Third build with different release=21 - reconciliation detects mismatch and triggers rebuild
+        // Third build with different release=17 - reconciliation detects mismatch and triggers rebuild
         verifier.setLogFileName("../log-build3.txt");
-        verifier.setSystemProperty("maven.compiler.release", "21");
+        verifier.setSystemProperty("maven.compiler.release", "17");
         verifier.executeGoals(Arrays.asList("clean", "verify"));
         verifier.verifyErrorFreeLog();
         verifier.verifyTextInLog("Plugin parameter mismatch found");
@@ -95,17 +95,17 @@ class DefaultReconciliationWithOtherPluginTest {
             throws VerificationException, IOException {
         verifier.setAutoclean(false);
 
-        // First build with release=17
+        // First build with release=11
         verifier.setLogFileName("../log-merge1.txt");
-        verifier.setSystemProperty("maven.compiler.release", "17");
+        verifier.setSystemProperty("maven.compiler.release", "11");
         verifier.executeGoal("verify");
         verifier.verifyErrorFreeLog();
         verifier.verifyTextInLog("Saved Build to local file");
 
-        // Second build with release=21 - defaults still apply, reconciliation detects mismatch
+        // Second build with release=17 - defaults still apply, reconciliation detects mismatch
         // (defaults should still apply even though executionControl configures surefire)
         verifier.setLogFileName("../log-merge2.txt");
-        verifier.setSystemProperty("maven.compiler.release", "21");
+        verifier.setSystemProperty("maven.compiler.release", "17");
         verifier.executeGoals(Arrays.asList("clean", "verify"));
         verifier.verifyErrorFreeLog();
         verifier.verifyTextInLog("Plugin parameter mismatch found");
@@ -124,28 +124,28 @@ class DefaultReconciliationOverrideTest {
     void testExplicitConfigOverridesDefaults(Verifier verifier) throws VerificationException, IOException {
         verifier.setAutoclean(false);
 
-        // First build with release=17 and source=11
+        // First build with release=11 and source=11
         verifier.setLogFileName("../log-override1.txt");
-        verifier.setSystemProperty("maven.compiler.release", "17");
+        verifier.setSystemProperty("maven.compiler.release", "11");
         verifier.setSystemProperty("maven.compiler.source", "11");
         verifier.executeGoal("verify");
         verifier.verifyErrorFreeLog();
         verifier.verifyTextInLog("Saved Build to local file");
 
-        // Second build: Change source to 17 but keep release=17
+        // Second build: Change source to 17 but keep release=11
         // Should HIT cache because explicit config only tracks 'release', not 'source'
         // This proves explicit config OVERRIDES defaults (defaults would track source)
         verifier.setLogFileName("../log-override2.txt");
-        verifier.setSystemProperty("maven.compiler.release", "17");
+        verifier.setSystemProperty("maven.compiler.release", "11");
         verifier.setSystemProperty("maven.compiler.source", "17");
         verifier.executeGoals(Arrays.asList("clean", "verify"));
         verifier.verifyErrorFreeLog();
         verifier.verifyTextInLog("Found cached build");
 
-        // Third build: Change release to 21 - reconciliation detects mismatch and triggers rebuild
+        // Third build: Change release to 17 - reconciliation detects mismatch and triggers rebuild
         // (explicit tracking of 'release' catches the change)
         verifier.setLogFileName("../log-override3.txt");
-        verifier.setSystemProperty("maven.compiler.release", "21");
+        verifier.setSystemProperty("maven.compiler.release", "17");
         verifier.setSystemProperty("maven.compiler.source", "17");
         verifier.executeGoals(Arrays.asList("clean", "verify"));
         verifier.verifyErrorFreeLog();
