@@ -39,6 +39,7 @@ import java.util.Map;
 import org.apache.maven.executor.ExecutorException;
 import org.apache.maven.executor.ExecutorRequest;
 import org.apache.maven.executor.ExecutorResult;
+import org.apache.maven.executor.embedded.EmbeddedMavenExecutor;
 import org.apache.maven.executor.forked.ForkedMavenExecutor;
 import org.codehaus.plexus.util.cli.CommandLineUtils;
 
@@ -48,9 +49,10 @@ import org.codehaus.plexus.util.cli.CommandLineUtils;
  *
  * <p>Only the subset of the 1.8.0 API actually used by this module's integration tests is provided, with
  * the same package ({@code org.apache.maven.it}), class name and method signatures, so none of the 130
- * test classes under {@code src/test/java} needed to change. Every execution forks a fresh {@code mvn}
- * process from the Maven installation pointed at by the {@code maven.home} system property (set by
- * {@code MavenSetup.configureMavenHome()} before the integration tests run); there is no embedded mode.
+ * test classes under {@code src/test/java} needed to change. Like 1.8.0, runs are embedded in the test JVM
+ * by default, using the Maven installation pointed at by the {@code maven.home} system property (set by
+ * {@code MavenSetup.configureMavenHome()}); a run with environment variables, or after
+ * {@link #setForkJvm(boolean) setForkJvm(true)}, forks {@code mvn} instead.
  */
 public class Verifier {
 
@@ -72,6 +74,15 @@ public class Verifier {
     private boolean autoClean = true;
 
     private String localRepo;
+
+    private boolean forkJvm;
+
+    /**
+     * Shared like maven-verifier 1.8.0's embedded launcher: loading Maven once is what keeps the suite fast.
+     * Created on first use, after {@code MavenSetup} has set {@code maven.home}, because the executor restores
+     * the system properties it saw at construction after every run.
+     */
+    private static EmbeddedMavenExecutor embeddedExecutor;
 
     public Verifier(String basedir) throws VerificationException {
         this.basedir = basedir;
@@ -117,12 +128,8 @@ public class Verifier {
         this.cliOptions.addAll(cliOptions);
     }
 
-    /**
-     * No-op: every execution is forked (there is no embedded mode), so there is nothing to switch.
-     * Kept only so callers written against the 1.8.0 API keep compiling.
-     */
     public void setForkJvm(boolean forkJvm) {
-        // intentionally empty
+        this.forkJvm = forkJvm;
     }
 
     public String getBasedir() {
@@ -162,22 +169,29 @@ public class Verifier {
         arguments.addAll(goals);
 
         Path cwd = Paths.get(basedir);
+        // maven-verifier 1.8.0 took the nearest .mvn above the working directory as the project root,
+        // ignoring -f; the mvn script would otherwise root "-f sub" at sub/.mvn
+        String projectRoot = findProjectBaseDirectory(new File(basedir)).getAbsolutePath();
+        boolean fork = forkJvm || (envVars != null && !envVars.isEmpty());
         String log;
         ExecutorResult result;
-        try (ForkedMavenExecutor executor = new ForkedMavenExecutor(Paths.get(mavenHome))) {
+        try {
             ExecutorRequest.Builder requestBuilder =
                     ExecutorRequest.mavenBuilder().cwd(cwd).arguments(arguments).grabOutputAsString(true);
-            // maven-verifier 1.8.0 ran embedded and took the nearest .mvn above the working directory as the
-            // project root, ignoring -f; without this, "-f sub" makes the mvn script pick sub/.mvn instead
-            Map<String, String> environment = new LinkedHashMap<>();
-            environment.put(
-                    "MAVEN_BASEDIR", findProjectBaseDirectory(new File(basedir)).getAbsolutePath());
-            if (envVars != null) {
-                environment.putAll(envVars);
+            if (fork) {
+                Map<String, String> environment = new LinkedHashMap<>();
+                environment.put("MAVEN_BASEDIR", projectRoot);
+                if (envVars != null) {
+                    environment.putAll(envVars);
+                }
+                requestBuilder.environmentVariables(environment);
+                try (ForkedMavenExecutor executor = new ForkedMavenExecutor(Paths.get(mavenHome))) {
+                    result = executor.execute(requestBuilder.build());
+                }
+            } else {
+                requestBuilder.jvmSystemProperty("maven.multiModuleProjectDirectory", projectRoot);
+                result = embeddedExecutor(mavenHome).execute(requestBuilder.build());
             }
-            requestBuilder.environmentVariables(environment);
-            ExecutorRequest request = requestBuilder.build();
-            result = executor.execute(request);
 
             StringBuilder merged = new StringBuilder(result.stdOutString().orElse(""));
             String stdErr = result.stdErrString().orElse("");
@@ -320,6 +334,13 @@ public class Verifier {
      */
     private static boolean isVelocityError(String line) {
         return line.contains("VM_global_library.vm") || (line.contains("VM #") && line.contains("macro"));
+    }
+
+    private static synchronized EmbeddedMavenExecutor embeddedExecutor(String mavenHome) {
+        if (embeddedExecutor == null) {
+            embeddedExecutor = new EmbeddedMavenExecutor(Paths.get(mavenHome));
+        }
+        return embeddedExecutor;
     }
 
     private static File findProjectBaseDirectory(File workingDirectory) {
