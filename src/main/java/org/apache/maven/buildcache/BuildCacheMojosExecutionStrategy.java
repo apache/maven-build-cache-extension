@@ -158,7 +158,6 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
 
                     // Capture validation-time properties for all mojos to ensure consistent property reading
                     // at the same lifecycle point for all builds (eliminates Maven 4 injection timing issues)
-                    // Always capture when cacheState is INITIALIZED since we may need to save
                     validationTimeEvents = captureValidationTimeProperties(session, project, mojoExecutions);
                     result = CacheResult.rebuilded(result, validationTimeEvents);
                     LOGGER.debug(
