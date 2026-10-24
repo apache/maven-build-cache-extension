@@ -614,9 +614,7 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
 
         try {
             for (MojoExecution mojoExecution : mojoExecutions) {
-                // Skip mojos that don't execute or are in clean phase
-                if (mojoExecution.getLifecyclePhase() == null
-                        || !lifecyclePhasesHelper.isLaterPhaseThanClean(mojoExecution.getLifecyclePhase())) {
+                if (!shouldCaptureValidationTimeProperties(mojoExecution)) {
                     continue;
                 }
 
@@ -667,8 +665,7 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
             List<MojoExecution> mojoExecutions,
             Map<String, MojoExecutionEvent> validationTimeEvents) {
         for (MojoExecution mojoExecution : mojoExecutions) {
-            if (mojoExecution.getLifecyclePhase() != null
-                    && lifecyclePhasesHelper.isLaterPhaseThanClean(mojoExecution.getLifecyclePhase())
+            if (shouldCaptureValidationTimeProperties(mojoExecution)
                     && (validationTimeEvents == null
                             || !validationTimeEvents.containsKey(mojoExecutionKey(mojoExecution)))) {
                 throw new AssertionError("Validation-time properties not captured for "
@@ -677,6 +674,15 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                         + projectName);
             }
         }
+    }
+
+    private boolean shouldCaptureValidationTimeProperties(MojoExecution mojoExecution) {
+        if (mojoExecution.getSource() == Source.CLI) {
+            // A cacheable command-line goal can have no lifecycle phase on its execution.
+            return true;
+        }
+        String phase = mojoExecution.getLifecyclePhase();
+        return phase != null && lifecyclePhasesHelper.isLaterPhaseThanClean(phase);
     }
 
     private enum CacheRestorationStatus {
