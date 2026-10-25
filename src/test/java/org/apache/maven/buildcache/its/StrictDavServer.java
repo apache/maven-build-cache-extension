@@ -73,6 +73,8 @@ final class StrictDavServer implements AutoCloseable {
 
     private void handle(HttpExchange exchange) throws IOException {
         try {
+            // JDK 17.0.12 drops the kept-alive connection after OPTIONS, and the client does not retry MKCOL on it
+            exchange.getResponseHeaders().add("Connection", "close");
             String method = exchange.getRequestMethod();
             Path target = resolve(exchange.getRequestURI().getPath());
             if (target == null) {
