@@ -108,8 +108,7 @@ under the License.
             <type>String</type>
             <multiplicity>*</multiplicity>
           </association>
-          <description>Compile source roots the build registered in its build directory, relative to the project base
-            directory</description>
+          <description>Compile source roots located in the build directory (e.g., target/generated-sources/annotations), relative to the project base directory</description>
         </field>
         <field>
           <name>testCompileSourceRoots</name>
@@ -118,8 +117,7 @@ under the License.
             <type>String</type>
             <multiplicity>*</multiplicity>
           </association>
-          <description>Test compile source roots the build registered in its build directory, relative to the project
-            base directory</description>
+          <description>Test compile source roots located in the build directory (e.g., target/generated-test-sources/test-annotations), relative to the project base directory</description>
         </field>
         <!--xs:element name="artifact" type="d:ArtifactType"/-->
         <field>
