@@ -185,10 +185,12 @@ under the License.
       <artifactId>commons-compress</artifactId>
       <version>1.28.0</version>
     </dependency>
+    <!-- provided: Maven core exports javax.annotation; a second copy in the extension realm breaks caching (#541) -->
     <dependency>
-      <groupId>javax.annotation</groupId>
-      <artifactId>javax.annotation-api</artifactId>
-      <version>1.3.2</version>
+      <groupId>jakarta.annotation</groupId>
+      <artifactId>jakarta.annotation-api</artifactId>
+      <version>1.3.5</version>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.eclipse.sisu</groupId>
