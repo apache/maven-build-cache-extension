@@ -101,6 +101,26 @@ under the License.
           </association>
           <description></description>
         </field>
+        <field>
+          <name>compileSourceRoots</name>
+          <version>1.0.0+</version>
+          <association>
+            <type>String</type>
+            <multiplicity>*</multiplicity>
+          </association>
+          <description>Compile source roots the build registered in its build directory, relative to the project base
+            directory</description>
+        </field>
+        <field>
+          <name>testCompileSourceRoots</name>
+          <version>1.0.0+</version>
+          <association>
+            <type>String</type>
+            <multiplicity>*</multiplicity>
+          </association>
+          <description>Test compile source roots the build registered in its build directory, relative to the project
+            base directory</description>
+        </field>
         <!--xs:element name="artifact" type="d:ArtifactType"/-->
         <field>
           <name>artifact</name>

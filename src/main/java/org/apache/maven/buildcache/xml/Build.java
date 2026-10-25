@@ -125,6 +125,20 @@ public class Build {
         return Collections.emptyList();
     }
 
+    public List<String> getCompileSourceRoots() {
+        if (dto.getCompileSourceRoots() != null) {
+            return dto.getCompileSourceRoots();
+        }
+        return Collections.emptyList();
+    }
+
+    public List<String> getTestCompileSourceRoots() {
+        if (dto.getTestCompileSourceRoots() != null) {
+            return dto.getTestCompileSourceRoots();
+        }
+        return Collections.emptyList();
+    }
+
     public org.apache.maven.buildcache.xml.build.Build getDto() {
         return dto;
     }
