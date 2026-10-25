@@ -79,6 +79,13 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
     private final LifecyclePhasesHelper lifecyclePhasesHelper;
     private final MavenPluginManager mavenPluginManager;
     private final MojoExecutionScope mojoExecutionScope;
+    /**
+     * Tracks whether this session actually engaged caching (a cache lookup happened or a project
+     * was saved). A pure {@code mvn clean} is detected via {@link #isGoalClean(List)}: the goal is
+     * skipped ({@code skipCache=true}) and the flag is never raised, even though the cache
+     * configuration still initializes, so no cache report is written at session end.
+     */
+    private volatile boolean cacheReportEligible;
 
     @Inject
     public BuildCacheMojosExecutionStrategy(
@@ -107,8 +114,8 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
             // execute clean bound goals before restoring to not interfere/slowdown clean
             CacheState cacheState = DISABLED;
             CacheResult result = CacheResult.empty();
-            boolean skipCache =
-                    cacheConfig.isSkipCache() || MavenProjectInput.isSkipCache(project) || isGoalClean(mojoExecutions);
+            boolean goalClean = isGoalClean(mojoExecutions);
+            boolean skipCache = cacheConfig.isSkipCache() || MavenProjectInput.isSkipCache(project) || goalClean;
             boolean cacheIsDisabled = MavenProjectInput.isCacheDisabled(project);
             // Forked execution should be thought as a part of originating mojo internal
             // implementation
@@ -152,6 +159,13 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                     mojoExecutionRunner.run(mojoExecution);
                 }
                 if (cacheState == INITIALIZED) {
+                    // A pure clean session (goalClean == true) has skipCache == true and never
+                    // reaches findCachedBuild with caching engaged, so the flag stays false and
+                    // no cache report is written at session end. Any other session that actually
+                    // looks up (or later saves) the cache raises it.
+                    if (!goalClean) {
+                        cacheReportEligible = true;
+                    }
                     result = cacheController.findCachedBuild(session, project, mojoExecutions, skipCache);
                 }
             } else {
@@ -574,6 +588,19 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
             }
         }
         return true;
+    }
+
+    /**
+     * Whether this session actually engaged caching (a cache lookup happened or a project was saved).
+     * A pure {@code mvn clean} session never raises it: the goal is detected as clean and skipped,
+     * even though the cache configuration still initializes. Callers use this to avoid writing an empty
+     * cache report at session end (a report that a later clean could never remove, since clean runs
+     * before {@code afterSessionEnd}).
+     *
+     * @return true if at least one project in this session engaged the cache
+     */
+    public boolean isCacheReportEligible() {
+        return cacheReportEligible;
     }
 
     private enum CacheRestorationStatus {

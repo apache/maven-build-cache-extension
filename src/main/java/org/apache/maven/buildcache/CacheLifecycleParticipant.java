@@ -27,6 +27,10 @@ import org.apache.maven.SessionScoped;
 import org.apache.maven.buildcache.xml.CacheConfig;
 import org.apache.maven.execution.MavenSession;
 
+/**
+ * Session lifecycle hooks for the build cache extension: writes the aggregated cache report at
+ * session end.
+ */
 @SessionScoped
 @Named
 @SuppressWarnings("unused")
@@ -34,16 +38,21 @@ public class CacheLifecycleParticipant extends AbstractMavenLifecycleParticipant
 
     private final CacheConfig cacheConfig;
     private final CacheController cacheController;
+    private final BuildCacheMojosExecutionStrategy executionStrategy;
 
     @Inject
-    public CacheLifecycleParticipant(CacheConfig cacheConfig, CacheController cacheController) {
+    public CacheLifecycleParticipant(
+            CacheConfig cacheConfig,
+            CacheController cacheController,
+            BuildCacheMojosExecutionStrategy executionStrategy) {
         this.cacheConfig = cacheConfig;
         this.cacheController = cacheController;
+        this.executionStrategy = executionStrategy;
     }
 
     @Override
     public void afterSessionEnd(MavenSession session) throws MavenExecutionException {
-        if (cacheConfig.isEnabled()) {
+        if (cacheConfig.isEnabled() && executionStrategy.isCacheReportEligible()) {
             cacheController.saveCacheReport(session);
         }
     }
