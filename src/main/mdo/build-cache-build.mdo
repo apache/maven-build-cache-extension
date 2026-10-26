@@ -101,6 +101,24 @@ under the License.
           </association>
           <description></description>
         </field>
+        <field>
+          <name>compileSourceRoots</name>
+          <version>1.0.0+</version>
+          <association>
+            <type>String</type>
+            <multiplicity>*</multiplicity>
+          </association>
+          <description>Compile source roots located in the build directory (e.g., target/generated-sources/annotations), relative to the project base directory</description>
+        </field>
+        <field>
+          <name>testCompileSourceRoots</name>
+          <version>1.0.0+</version>
+          <association>
+            <type>String</type>
+            <multiplicity>*</multiplicity>
+          </association>
+          <description>Test compile source roots located in the build directory (e.g., target/generated-test-sources/test-annotations), relative to the project base directory</description>
+        </field>
         <!--xs:element name="artifact" type="d:ArtifactType"/-->
         <field>
           <name>artifact</name>

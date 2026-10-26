@@ -54,8 +54,10 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.commons.io.FilenameUtils;
@@ -488,6 +490,12 @@ public class CacheControllerImpl implements CacheController {
                 }
             }
             restoredAttachedArtifacts.forEach(project::addAttachedArtifact);
+            if (cacheConfig.isRestoreGeneratedSources() && MavenProjectInput.isRestoreGeneratedSources(project)) {
+                // Plugins running after a skipped compiler (e.g. javadoc) only see generated sources through the
+                // source roots the original build registered
+                restoreSourceRoots(project, build.getCompileSourceRoots(), project::addCompileSourceRoot);
+                restoreSourceRoots(project, build.getTestCompileSourceRoots(), project::addTestCompileSourceRoot);
+            }
             restorationReport.setSuccess(true);
         } catch (Exception e) {
             LOGGER.debug("Cannot restore cache, continuing with normal build.", e);
@@ -770,6 +778,11 @@ public class CacheControllerImpl implements CacheController {
                     hashFactory.getAlgorithm());
             populateGitInfo(build, session);
             build.getDto().set_final(cacheConfig.isSaveToRemoteFinal());
+            build.getDto()
+                    .setCompileSourceRoots(relativizeBuildDirectoryRoots(project, project.getCompileSourceRoots()));
+            build.getDto()
+                    .setTestCompileSourceRoots(
+                            relativizeBuildDirectoryRoots(project, project.getTestCompileSourceRoots()));
             cacheResults.put(getVersionlessProjectKey(project), CacheResult.rebuilt(cacheResult, build));
 
             localCache.beforeSave(context);
@@ -1222,6 +1235,28 @@ public class CacheControllerImpl implements CacheController {
         }
         CacheUtils.unzip(
                 artifactFilePath, outputDir, cacheConfig.isPreservePermissions(), cacheConfig.isPreserveTimestamps());
+    }
+
+    private static List<String> relativizeBuildDirectoryRoots(MavenProject project, List<String> sourceRoots) {
+        final Path baseDir = project.getBasedir().toPath();
+        final Path buildDir = Paths.get(project.getBuild().getDirectory());
+        return sourceRoots.stream()
+                .map(Paths::get)
+                .filter(sourceRoot -> sourceRoot.startsWith(buildDir))
+                .map(sourceRoot -> FilenameUtils.separatorsToUnix(
+                        baseDir.relativize(sourceRoot).toString()))
+                .collect(Collectors.toList());
+    }
+
+    private void restoreSourceRoots(MavenProject project, List<String> sourceRoots, Consumer<String> addSourceRoot) {
+        final Path baseDir = project.getBasedir().toPath();
+        for (String sourceRoot : sourceRoots) {
+            final Path sourceRootPath = baseDir.resolve(FilenameUtils.separatorsToSystem(sourceRoot));
+            verifyRestorationInsideProject(project, sourceRootPath);
+            if (Files.isDirectory(sourceRootPath)) {
+                addSourceRoot.accept(sourceRootPath.toString());
+            }
+        }
     }
 
     // TODO: move to config
