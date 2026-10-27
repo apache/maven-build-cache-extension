@@ -23,6 +23,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.zip.ZipEntry;
+import java.util.zip.ZipException;
 import java.util.zip.ZipOutputStream;
 
 import org.junit.jupiter.api.Test;
@@ -48,7 +49,7 @@ class CacheUtilsTest {
             zipOutput.closeEntry();
         }
 
-        assertThrows(IOException.class, () -> CacheUtils.unzip(zip, output, false));
+        assertThrows(ZipException.class, () -> CacheUtils.unzip(zip, output, false));
 
         assertFalse(Files.exists(outsideFile));
     }
