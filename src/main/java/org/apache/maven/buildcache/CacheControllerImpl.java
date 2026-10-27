@@ -1013,7 +1013,11 @@ public class CacheControllerImpl implements CacheController {
             try {
                 Field field = ReflectionUtils.getFieldByNameIncludingSuperclasses(propertyName, mojo.getClass());
                 if (field != null) {
-                    final Object value = ReflectionUtils.getValueIncludingSuperclasses(propertyName, mojo);
+                    final Object value = normalizeMojoProperty(
+                            propertyName,
+                            ReflectionUtils.getValueIncludingSuperclasses(propertyName, mojo),
+                            mojoExecution,
+                            executionEvent.getProject());
                     CacheUtils.addProperty(execution, propertyName, value, baseDirPath, tracked);
                     continue;
                 }
@@ -1053,6 +1057,30 @@ public class CacheControllerImpl implements CacheController {
                 }
             }
         }
+    }
+
+    private Object normalizeMojoProperty(
+            String propertyName, Object value, MojoExecution mojoExecution, MavenProject project) {
+        if (!(value instanceof List)
+                || !"compilerArgs".equals(propertyName)
+                || mojoExecution.getPlugin() == null
+                || !"maven-compiler-plugin".equals(mojoExecution.getPlugin().getArtifactId())) {
+            return value;
+        }
+
+        List<?> compilerArguments = (List<?>) value;
+        List<Object> normalizedArguments = new ArrayList<>(compilerArguments.size());
+        for (int i = 0; i < compilerArguments.size(); i++) {
+            Object argument = compilerArguments.get(i);
+            if ("--module-version".equals(argument)
+                    && i + 1 < compilerArguments.size()
+                    && Objects.equals(project.getVersion(), compilerArguments.get(i + 1))) {
+                i++;
+            } else {
+                normalizedArguments.add(argument);
+            }
+        }
+        return normalizedArguments.isEmpty() ? null : normalizedArguments;
     }
 
     private static Method getGetter(String fieldName, Class<?> clazz) {
