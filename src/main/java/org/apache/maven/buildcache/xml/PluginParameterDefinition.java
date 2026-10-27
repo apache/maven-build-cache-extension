@@ -25,103 +25,103 @@ import java.util.Map;
  * Represents the complete parameter definition for a Maven plugin loaded from XML.
  * Contains all goals and their parameters with cache-key metadata.
  */
-public class PluginParameterDefinition {
+class PluginParameterDefinition {
 
     private final String groupId;
     private final String artifactId;
     private final String minVersion;
     private final Map<String, GoalParameterDefinition> goals;
 
-    public PluginParameterDefinition(String groupId, String artifactId, String minVersion) {
+    PluginParameterDefinition(String groupId, String artifactId, String minVersion) {
         this.groupId = groupId;
         this.artifactId = artifactId;
         this.minVersion = minVersion;
         this.goals = new HashMap<>();
     }
 
-    public String getGroupId() {
+    String getGroupId() {
         return groupId;
     }
 
-    public String getArtifactId() {
+    String getArtifactId() {
         return artifactId;
     }
 
-    public String getMinVersion() {
+    String getMinVersion() {
         return minVersion;
     }
 
-    public void addGoal(String goalName, GoalParameterDefinition goal) {
+    void addGoal(String goalName, GoalParameterDefinition goal) {
         goals.put(goalName, goal);
     }
 
-    public GoalParameterDefinition getGoal(String goalName) {
+    GoalParameterDefinition getGoal(String goalName) {
         return goals.get(goalName);
     }
 
-    public Map<String, GoalParameterDefinition> getGoals() {
+    Map<String, GoalParameterDefinition> getGoals() {
         return goals;
     }
 
     /**
      * Represents parameters for a single goal
      */
-    public static class GoalParameterDefinition {
+    static class GoalParameterDefinition {
         private final String name;
         private final Map<String, ParameterDefinition> parameters;
 
-        public GoalParameterDefinition(String name) {
+        GoalParameterDefinition(String name) {
             this.name = name;
             this.parameters = new HashMap<>();
         }
 
-        public String getName() {
+        String getName() {
             return name;
         }
 
-        public void addParameter(ParameterDefinition parameter) {
+        void addParameter(ParameterDefinition parameter) {
             parameters.put(parameter.getName(), parameter);
         }
 
-        public ParameterDefinition getParameter(String paramName) {
-            return parameters.get(paramName);
+        ParameterDefinition getParameter(String parameterName) {
+            return parameters.get(parameterName);
         }
 
-        public Map<String, ParameterDefinition> getParameters() {
+        Map<String, ParameterDefinition> getParameters() {
             return parameters;
         }
 
-        public boolean hasParameter(String paramName) {
-            return parameters.containsKey(paramName);
+        boolean hasParameter(String parameterName) {
+            return parameters.containsKey(parameterName);
         }
     }
 
     /**
      * Represents a single parameter definition
      */
-    public static class ParameterDefinition {
+    static class ParameterDefinition {
         private final String name;
         private final boolean cacheKey;
         private final String description;
 
-        public ParameterDefinition(String name, boolean cacheKey, String description) {
+        ParameterDefinition(String name, boolean cacheKey, String description) {
             this.name = name;
             this.cacheKey = cacheKey;
             this.description = description;
         }
 
-        public String getName() {
+        String getName() {
             return name;
         }
 
-        public String getDescription() {
+        String getDescription() {
             return description;
         }
 
         /**
          * Whether changing this parameter must cause a cache miss.
          */
-        public boolean isCacheKey() {
+        boolean isCacheKey() {
             return cacheKey;
         }
     }

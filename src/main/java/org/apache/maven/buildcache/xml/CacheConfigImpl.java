@@ -40,6 +40,8 @@ import org.apache.maven.buildcache.DefaultPluginScanConfig;
 import org.apache.maven.buildcache.PluginScanConfig;
 import org.apache.maven.buildcache.PluginScanConfigImpl;
 import org.apache.maven.buildcache.hash.HashFactory;
+import org.apache.maven.buildcache.xml.PluginParameterDefinition.GoalParameterDefinition;
+import org.apache.maven.buildcache.xml.PluginParameterDefinition.ParameterDefinition;
 import org.apache.maven.buildcache.xml.config.AttachedOutputs;
 import org.apache.maven.buildcache.xml.config.CacheConfig;
 import org.apache.maven.buildcache.xml.config.Configuration;
@@ -303,9 +305,9 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
         String pluginVersion = plugin.getVersion();
 
         // Load parameter definition for this plugin with version
-        PluginParameterDefinition pluginDef = parameterLoader.load(artifactId, pluginVersion);
+        PluginParameterDefinition pluginDefinition = parameterLoader.load(artifactId, pluginVersion);
 
-        if (pluginDef == null) {
+        if (pluginDefinition == null) {
             LOGGER.warn(
                     "No parameter definition found for plugin {}:{} version {}. "
                             + "Cannot validate reconciliation configuration. "
@@ -318,8 +320,8 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
         }
 
         // Get goal definition
-        PluginParameterDefinition.GoalParameterDefinition goalDef = pluginDef.getGoal(goal);
-        if (goalDef == null) {
+        GoalParameterDefinition goalDefinition = pluginDefinition.getGoal(goal);
+        if (goalDefinition == null) {
             LOGGER.warn(
                     "Goal '{}' not found in parameter definition for plugin {} version {}. "
                             + "Cannot validate reconciliation configuration.",
@@ -335,7 +337,7 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
         for (TrackedProperty property : properties) {
             String propertyName = property.getPropertyName();
 
-            if (!goalDef.hasParameter(propertyName)) {
+            if (!goalDefinition.hasParameter(propertyName)) {
                 LOGGER.warn(
                         "Unknown parameter '{}' in reconciliation config for {}:{} version {}. "
                                 + "This may indicate a plugin version mismatch or renamed parameter. "
@@ -345,8 +347,8 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
                         goal,
                         pluginVersion != null ? pluginVersion : "unknown");
             } else {
-                PluginParameterDefinition.ParameterDefinition paramDef = goalDef.getParameter(propertyName);
-                if (!paramDef.isCacheKey()) {
+                ParameterDefinition parameterDefinition = goalDefinition.getParameter(propertyName);
+                if (!parameterDefinition.isCacheKey()) {
                     LOGGER.warn(
                             "Parameter '{}' in reconciliation config for {}:{} is not marked as a cache key. "
                                     + "Changing it will not invalidate the cache according to the plugin definition.",
@@ -378,15 +380,15 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
                 pluginVersion);
 
         // Load parameter definition for this plugin
-        PluginParameterDefinition pluginDef = parameterLoader.load(artifactId, pluginVersion);
-        if (pluginDef == null) {
+        PluginParameterDefinition pluginDefinition = parameterLoader.load(artifactId, pluginVersion);
+        if (pluginDefinition == null) {
             LOGGER.debug("No parameter definition found for {}:{}", artifactId, pluginVersion);
             return null;
         }
 
         // Get goal definition
-        PluginParameterDefinition.GoalParameterDefinition goalDef = pluginDef.getGoal(goal);
-        if (goalDef == null) {
+        GoalParameterDefinition goalDefinition = pluginDefinition.getGoal(goal);
+        if (goalDefinition == null) {
             LOGGER.debug("No goal definition found for goal '{}' in plugin {}", goal, artifactId);
             return null;
         }
@@ -395,16 +397,16 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
                 "Found goal definition for {}:{} with {} total parameters",
                 artifactId,
                 goal,
-                goalDef.getParameters().size());
+                goalDefinition.getParameters().size());
 
         // Collect all cache-key parameters
         List<TrackedProperty> cacheKeyProperties = new ArrayList<>();
-        for (PluginParameterDefinition.ParameterDefinition param :
-                goalDef.getParameters().values()) {
-            if (param.isCacheKey()) {
-                LOGGER.debug("Adding cache-key parameter '{}' to auto-generated config", param.getName());
+        for (ParameterDefinition parameterDefinition :
+                goalDefinition.getParameters().values()) {
+            if (parameterDefinition.isCacheKey()) {
+                LOGGER.debug("Adding cache-key parameter '{}' to auto-generated config", parameterDefinition.getName());
                 TrackedProperty property = new TrackedProperty();
-                property.setPropertyName(param.getName());
+                property.setPropertyName(parameterDefinition.getName());
                 cacheKeyProperties.add(property);
             }
         }

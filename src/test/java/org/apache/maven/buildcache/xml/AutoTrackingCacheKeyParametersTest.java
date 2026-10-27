@@ -21,6 +21,9 @@ package org.apache.maven.buildcache.xml;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.apache.maven.buildcache.xml.PluginParameterDefinition.GoalParameterDefinition;
+import org.apache.maven.buildcache.xml.PluginParameterDefinition.ParameterDefinition;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -32,49 +35,55 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class AutoTrackingCacheKeyParametersTest {
 
+    private PluginParameterLoader loader;
+
+    @BeforeEach
+    void setUp() {
+        loader = new PluginParameterLoader();
+    }
+
     @Test
     void testMavenCompilerPluginAutoTracksAllCacheKeyParameters() {
         // This test verifies that the auto-generation tracks ALL cache-key parameters,
         // not just the 3 that were in the old defaults.xml (source, target, release)
 
-        PluginParameterLoader loader = new PluginParameterLoader();
-        PluginParameterDefinition def = loader.load("maven-compiler-plugin");
+        PluginParameterDefinition definition = loader.load("maven-compiler-plugin");
 
-        assertNotNull(def, "Should load maven-compiler-plugin definition");
+        assertNotNull(definition, "Should load maven-compiler-plugin definition");
 
-        PluginParameterDefinition.GoalParameterDefinition compileGoal = def.getGoal("compile");
+        GoalParameterDefinition compileGoal = definition.getGoal("compile");
         assertNotNull(compileGoal, "compile goal should exist");
 
         // Get all cache-key parameter names from the XML definition
-        Set<String> cacheKeyParams = compileGoal.getParameters().values().stream()
-                .filter(PluginParameterDefinition.ParameterDefinition::isCacheKey)
-                .map(PluginParameterDefinition.ParameterDefinition::getName)
+        Set<String> cacheKeyParameters = compileGoal.getParameters().values().stream()
+                .filter(ParameterDefinition::isCacheKey)
+                .map(ParameterDefinition::getName)
                 .collect(Collectors.toSet());
 
         // Verify we have more than just the original 3 from defaults.xml
         assertTrue(
-                cacheKeyParams.size() > 3,
-                "Should have more than 3 cache-key parameters (was: " + cacheKeyParams.size() + ")");
+                cacheKeyParameters.size() > 3,
+                "Should have more than 3 cache-key parameters (was: " + cacheKeyParameters.size() + ")");
 
         // Verify the original 3 are included
-        assertTrue(cacheKeyParams.contains("source"), "Should include 'source' parameter");
-        assertTrue(cacheKeyParams.contains("target"), "Should include 'target' parameter");
-        assertTrue(cacheKeyParams.contains("release"), "Should include 'release' parameter");
+        assertTrue(cacheKeyParameters.contains("source"), "Should include 'source' parameter");
+        assertTrue(cacheKeyParameters.contains("target"), "Should include 'target' parameter");
+        assertTrue(cacheKeyParameters.contains("release"), "Should include 'release' parameter");
 
         // Verify additional cache-key parameters are included (these were NOT in defaults.xml)
         assertTrue(
-                cacheKeyParams.contains("encoding"),
+                cacheKeyParameters.contains("encoding"),
                 "Should include 'encoding' parameter (auto-tracked, not in old defaults.xml)");
         assertTrue(
-                cacheKeyParams.contains("debug"),
+                cacheKeyParameters.contains("debug"),
                 "Should include 'debug' parameter (auto-tracked, not in old defaults.xml)");
         assertTrue(
-                cacheKeyParams.contains("compilerArgs"),
+                cacheKeyParameters.contains("compilerArgs"),
                 "Should include 'compilerArgs' parameter (auto-tracked, not in old defaults.xml)");
         assertTrue(
-                cacheKeyParams.contains("annotationProcessorPaths"),
+                cacheKeyParameters.contains("annotationProcessorPaths"),
                 "Should include 'annotationProcessorPaths' parameter (auto-tracked, not in old defaults.xml)");
-        for (String paramName : new String[] {
+        for (String parameterName : new String[] {
             "showWarnings",
             "showDeprecation",
             "fork",
@@ -87,56 +96,54 @@ class AutoTrackingCacheKeyParametersTest {
             "useIncrementalCompilation"
         }) {
             assertTrue(
-                    cacheKeyParams.contains(paramName),
-                    "Should include '" + paramName + "' because changing it can cause a cache miss");
+                    cacheKeyParameters.contains(parameterName),
+                    "Should include '" + parameterName + "' because changing it can cause a cache miss");
         }
     }
 
     @Test
     void testMavenInstallPluginAutoTracksAllCacheKeyParameters() {
-        PluginParameterLoader loader = new PluginParameterLoader();
-        PluginParameterDefinition def = loader.load("maven-install-plugin");
+        PluginParameterDefinition definition = loader.load("maven-install-plugin");
 
-        assertNotNull(def, "Should load maven-install-plugin definition");
+        assertNotNull(definition, "Should load maven-install-plugin definition");
 
-        PluginParameterDefinition.GoalParameterDefinition installGoal = def.getGoal("install");
+        GoalParameterDefinition installGoal = definition.getGoal("install");
         assertNotNull(installGoal, "install goal should exist");
 
         // Get all cache-key parameter names
-        Set<String> cacheKeyParams = installGoal.getParameters().values().stream()
-                .filter(PluginParameterDefinition.ParameterDefinition::isCacheKey)
-                .map(PluginParameterDefinition.ParameterDefinition::getName)
+        Set<String> cacheKeyParameters = installGoal.getParameters().values().stream()
+                .filter(ParameterDefinition::isCacheKey)
+                .map(ParameterDefinition::getName)
                 .collect(Collectors.toSet());
 
         // The old defaults.xml had NO properties listed for maven-install-plugin
         // Now auto-tracking should track all cache-key parameters
-        assertTrue(cacheKeyParams.size() > 0, "Should auto-track cache-key parameters (old defaults.xml had 0)");
+        assertTrue(cacheKeyParameters.size() > 0, "Should auto-track cache-key parameters (old defaults.xml had 0)");
 
         // Coordinates are parameters of install-file; install exposes its output-affecting controls.
-        assertTrue(cacheKeyParams.contains("skip"), "Should track 'skip' parameter");
-        assertTrue(cacheKeyParams.contains("installAtEnd"), "Should track 'installAtEnd' parameter");
+        assertTrue(cacheKeyParameters.contains("skip"), "Should track 'skip' parameter");
+        assertTrue(cacheKeyParameters.contains("installAtEnd"), "Should track 'installAtEnd' parameter");
     }
 
     @Test
     void testNonCacheKeyParametersNotAutoTracked() {
-        PluginParameterLoader loader = new PluginParameterLoader();
-        PluginParameterDefinition def = loader.load("maven-compiler-plugin");
+        PluginParameterDefinition definition = loader.load("maven-compiler-plugin");
 
-        assertNotNull(def);
+        assertNotNull(definition);
 
-        PluginParameterDefinition.GoalParameterDefinition compileGoal = def.getGoal("compile");
+        GoalParameterDefinition compileGoal = definition.getGoal("compile");
         assertNotNull(compileGoal);
 
         // Get all non-cache-key parameter names
-        Set<String> nonCacheKeyParams = compileGoal.getParameters().values().stream()
-                .filter(param -> !param.isCacheKey())
-                .map(PluginParameterDefinition.ParameterDefinition::getName)
+        Set<String> nonCacheKeyParameters = compileGoal.getParameters().values().stream()
+                .filter(parameter -> !parameter.isCacheKey())
+                .map(ParameterDefinition::getName)
                 .collect(Collectors.toSet());
 
         // Verify non-cache-key parameters exist in the definition
-        assertTrue(nonCacheKeyParams.contains("verbose"), "Definition should include 'verbose' as non-cache-key");
+        assertTrue(nonCacheKeyParameters.contains("verbose"), "Definition should include 'verbose' as non-cache-key");
         assertTrue(
-                nonCacheKeyParams.contains("compilerReuseStrategy"),
+                nonCacheKeyParameters.contains("compilerReuseStrategy"),
                 "Definition should include 'compilerReuseStrategy' as non-cache-key");
 
         // Note: auto-generation only includes cache-key parameters, so these won't be tracked.

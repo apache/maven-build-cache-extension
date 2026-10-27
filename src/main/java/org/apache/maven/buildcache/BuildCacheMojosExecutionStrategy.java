@@ -568,7 +568,7 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
             } catch (IllegalAccessException e) {
                 LOGGER.error("Cannot extract plugin property {} from mojo {}", propertyName, mojo, e);
                 return false;
-            } catch (Exception e) {
+            } catch (IllegalArgumentException | SecurityException e) {
                 LOGGER.warn("Cannot extract plugin property {} from mojo {}", propertyName, mojo, e);
                 return false;
             }

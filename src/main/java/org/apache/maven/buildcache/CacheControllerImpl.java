@@ -1068,19 +1068,19 @@ public class CacheControllerImpl implements CacheController {
             return value;
         }
 
-        List<?> args = (List<?>) value;
-        List<Object> normalized = new ArrayList<>(args.size());
-        for (int i = 0; i < args.size(); i++) {
-            Object arg = args.get(i);
-            if ("--module-version".equals(arg)
-                    && i + 1 < args.size()
-                    && Objects.equals(project.getVersion(), args.get(i + 1))) {
+        List<?> compilerArguments = (List<?>) value;
+        List<Object> normalizedArguments = new ArrayList<>(compilerArguments.size());
+        for (int i = 0; i < compilerArguments.size(); i++) {
+            Object argument = compilerArguments.get(i);
+            if ("--module-version".equals(argument)
+                    && i + 1 < compilerArguments.size()
+                    && Objects.equals(project.getVersion(), compilerArguments.get(i + 1))) {
                 i++;
             } else {
-                normalized.add(arg);
+                normalizedArguments.add(argument);
             }
         }
-        return normalized.isEmpty() ? null : normalized;
+        return normalizedArguments.isEmpty() ? null : normalizedArguments;
     }
 
     private static Method getGetter(String fieldName, Class<?> clazz) {

@@ -21,8 +21,12 @@ package org.apache.maven.buildcache.xml;
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 
+import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -33,12 +37,13 @@ import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
 
 /**
  * Loads plugin parameter definitions from classpath resources.
  * Definitions are stored in src/main/resources/plugin-parameters/{artifactId}.xml
  */
-public class PluginParameterLoader {
+class PluginParameterLoader {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PluginParameterLoader.class);
     private static final String PARAMETER_DIR = "plugin-parameters/";
@@ -48,7 +53,7 @@ public class PluginParameterLoader {
     /**
      * Load parameter definitions for a plugin by artifact ID only (no version matching)
      */
-    public PluginParameterDefinition load(String artifactId) {
+    PluginParameterDefinition load(String artifactId) {
         return load(artifactId, null);
     }
 
@@ -57,7 +62,7 @@ public class PluginParameterLoader {
      * If version is provided, finds the best matching definition (highest minVersion &lt;= actual version).
      * If version is null, returns any definition for the artifactId.
      */
-    public PluginParameterDefinition load(String artifactId, String pluginVersion) {
+    PluginParameterDefinition load(String artifactId, String pluginVersion) {
         String cacheKey = artifactId + (pluginVersion != null ? ":" + pluginVersion : "");
 
         if (definitions.containsKey(cacheKey)) {
@@ -65,15 +70,15 @@ public class PluginParameterLoader {
         }
 
         String resourcePath = PARAMETER_DIR + artifactId + ".xml";
-        InputStream is = getClass().getClassLoader().getResourceAsStream(resourcePath);
+        InputStream resourceStream = getClass().getClassLoader().getResourceAsStream(resourcePath);
 
-        if (is == null) {
+        if (resourceStream == null) {
             LOGGER.debug("No parameter definition found for plugin: {}", artifactId);
             return null;
         }
 
-        try (InputStream inputStream = is) {
-            java.util.List<PluginParameterDefinition> allDefinitions = parseDefinitions(inputStream, artifactId);
+        try (InputStream inputStream = resourceStream) {
+            List<PluginParameterDefinition> allDefinitions = parseDefinitions(inputStream);
 
             PluginParameterDefinition bestMatch = findBestMatch(allDefinitions, pluginVersion);
 
@@ -86,12 +91,13 @@ public class PluginParameterLoader {
                         bestMatch.getMinVersion() != null ? bestMatch.getMinVersion() : "none",
                         bestMatch.getGoals().size(),
                         bestMatch.getGoals().values().stream()
-                                .mapToInt(g -> g.getParameters().size())
+                                .mapToInt(goalDefinition ->
+                                        goalDefinition.getParameters().size())
                                 .sum());
             }
 
             return bestMatch;
-        } catch (Exception e) {
+        } catch (ParserConfigurationException | SAXException | IOException e) {
             LOGGER.warn("Failed to load parameter definition for {}: {}", artifactId, e.getMessage(), e);
             return null;
         }
@@ -102,8 +108,7 @@ public class PluginParameterLoader {
      * Returns the definition with the highest minVersion that is <= pluginVersion.
      * If pluginVersion is null, returns the first definition (or the one without minVersion).
      */
-    private PluginParameterDefinition findBestMatch(
-            java.util.List<PluginParameterDefinition> definitions, String pluginVersion) {
+    private PluginParameterDefinition findBestMatch(List<PluginParameterDefinition> definitions, String pluginVersion) {
         if (definitions.isEmpty()) {
             return null;
         }
@@ -111,7 +116,7 @@ public class PluginParameterLoader {
         if (pluginVersion == null) {
             // No version specified, prefer definition without minVersion, otherwise return first
             return definitions.stream()
-                    .filter(d -> d.getMinVersion() == null)
+                    .filter(definition -> definition.getMinVersion() == null)
                     .findFirst()
                     .orElse(definitions.get(0));
         }
@@ -120,13 +125,13 @@ public class PluginParameterLoader {
         PluginParameterDefinition bestMatch = null;
         String bestMinVersion = null;
 
-        for (PluginParameterDefinition def : definitions) {
-            String minVersion = def.getMinVersion();
+        for (PluginParameterDefinition definition : definitions) {
+            String minVersion = definition.getMinVersion();
 
             // Definition without minVersion applies to all versions
             if (minVersion == null) {
                 if (bestMatch == null) {
-                    bestMatch = def;
+                    bestMatch = definition;
                 }
                 continue;
             }
@@ -136,7 +141,7 @@ public class PluginParameterLoader {
                 // minVersion <= pluginVersion, so this definition applies
                 if (bestMinVersion == null || compareVersions(minVersion, bestMinVersion) > 0) {
                     // This is a better match (higher minVersion)
-                    bestMatch = def;
+                    bestMatch = definition;
                     bestMinVersion = minVersion;
                 }
             }
@@ -147,20 +152,20 @@ public class PluginParameterLoader {
 
     /**
      * Compare two version strings.
-     * Returns: negative if v1 < v2, zero if v1 == v2, positive if v1 > v2
+     * Returns: negative if the first version is older, zero if equal, positive if newer.
      */
-    private int compareVersions(String v1, String v2) {
-        String[] parts1 = v1.split("\\.");
-        String[] parts2 = v2.split("\\.");
+    private int compareVersions(String firstVersion, String secondVersion) {
+        String[] firstVersionParts = firstVersion.split("\\.");
+        String[] secondVersionParts = secondVersion.split("\\.");
 
-        int maxLength = Math.max(parts1.length, parts2.length);
+        int maxLength = Math.max(firstVersionParts.length, secondVersionParts.length);
 
         for (int i = 0; i < maxLength; i++) {
-            int num1 = i < parts1.length ? parseVersionPart(parts1[i]) : 0;
-            int num2 = i < parts2.length ? parseVersionPart(parts2[i]) : 0;
+            int firstPart = i < firstVersionParts.length ? parseVersionPart(firstVersionParts[i]) : 0;
+            int secondPart = i < secondVersionParts.length ? parseVersionPart(secondVersionParts[i]) : 0;
 
-            if (num1 != num2) {
-                return Integer.compare(num1, num2);
+            if (firstPart != secondPart) {
+                return Integer.compare(firstPart, secondPart);
             }
         }
 
@@ -184,9 +189,9 @@ public class PluginParameterLoader {
      * Parse plugin parameter definitions from XML.
      * Supports multiple <plugin> elements in a single file for version-specific definitions.
      */
-    private java.util.List<PluginParameterDefinition> parseDefinitions(InputStream is, String artifactId)
-            throws Exception {
-        java.util.List<PluginParameterDefinition> definitions = new java.util.ArrayList<>();
+    private List<PluginParameterDefinition> parseDefinitions(InputStream inputStream)
+            throws ParserConfigurationException, SAXException, IOException {
+        List<PluginParameterDefinition> definitions = new ArrayList<>();
 
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         factory.setNamespaceAware(true);
@@ -200,9 +205,9 @@ public class PluginParameterLoader {
         factory.setXIncludeAware(false);
         factory.setExpandEntityReferences(false);
         DocumentBuilder builder = factory.newDocumentBuilder();
-        Document doc = builder.parse(is);
+        Document document = builder.parse(inputStream);
 
-        Element root = doc.getDocumentElement();
+        Element root = document.getDocumentElement();
 
         // Check if root is a single <plugin> or if we need to look for multiple
         if ("plugin".equals(root.getLocalName())) {
@@ -251,19 +256,19 @@ public class PluginParameterLoader {
             NodeList parameterNodes = parametersElement.getElementsByTagNameNS("*", "parameter");
 
             for (int i = 0; i < parameterNodes.getLength(); i++) {
-                Element paramElement = (Element) parameterNodes.item(i);
-                ParameterDefinition param = parseParameter(paramElement);
-                goal.addParameter(param);
+                Element parameterElement = (Element) parameterNodes.item(i);
+                ParameterDefinition parameterDefinition = parseParameter(parameterElement);
+                goal.addParameter(parameterDefinition);
             }
         }
 
         definition.addGoal(goalName, goal);
     }
 
-    private ParameterDefinition parseParameter(Element paramElement) {
-        String name = getTextContent(paramElement, "name");
-        boolean cacheKey = Boolean.parseBoolean(getTextContent(paramElement, "cache-key"));
-        String description = getTextContent(paramElement, "description");
+    private ParameterDefinition parseParameter(Element parameterElement) {
+        String name = getTextContent(parameterElement, "name");
+        boolean cacheKey = Boolean.parseBoolean(getTextContent(parameterElement, "cache-key"));
+        String description = getTextContent(parameterElement, "description");
 
         return new ParameterDefinition(name, cacheKey, description);
     }

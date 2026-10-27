@@ -20,6 +20,7 @@ package org.apache.maven.buildcache.xml;
 
 import org.apache.maven.buildcache.xml.PluginParameterDefinition.GoalParameterDefinition;
 import org.apache.maven.buildcache.xml.PluginParameterDefinition.ParameterDefinition;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -31,17 +32,23 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class PluginParameterValidationTest {
 
+    private PluginParameterLoader loader;
+
+    @BeforeEach
+    void setUp() {
+        loader = new PluginParameterLoader();
+    }
+
     @Test
     void testLoadMavenCompilerPlugin() {
-        PluginParameterLoader loader = new PluginParameterLoader();
-        PluginParameterDefinition def = loader.load("maven-compiler-plugin");
+        PluginParameterDefinition definition = loader.load("maven-compiler-plugin");
 
-        assertNotNull(def, "Should load maven-compiler-plugin definition");
-        assertEquals("org.apache.maven.plugins", def.getGroupId());
-        assertEquals("maven-compiler-plugin", def.getArtifactId());
+        assertNotNull(definition, "Should load maven-compiler-plugin definition");
+        assertEquals("org.apache.maven.plugins", definition.getGroupId());
+        assertEquals("maven-compiler-plugin", definition.getArtifactId());
 
         // Verify compile goal exists
-        GoalParameterDefinition compileGoal = def.getGoal("compile");
+        GoalParameterDefinition compileGoal = definition.getGoal("compile");
         assertNotNull(compileGoal, "compile goal should exist");
 
         // Verify cache-key parameters
@@ -49,137 +56,127 @@ class PluginParameterValidationTest {
         assertTrue(compileGoal.hasParameter("target"), "Should have 'target' parameter");
         assertTrue(compileGoal.hasParameter("release"), "Should have 'release' parameter");
 
-        ParameterDefinition sourceParam = compileGoal.getParameter("source");
-        assertTrue(sourceParam.isCacheKey());
+        ParameterDefinition sourceParameter = compileGoal.getParameter("source");
+        assertTrue(sourceParameter.isCacheKey());
 
         // Parameters without cache-key metadata default to false
         assertTrue(compileGoal.hasParameter("verbose"), "Should have 'verbose' parameter");
-        ParameterDefinition verboseParam = compileGoal.getParameter("verbose");
-        assertTrue(!verboseParam.isCacheKey());
+        ParameterDefinition verboseParameter = compileGoal.getParameter("verbose");
+        assertTrue(!verboseParameter.isCacheKey());
     }
 
     @Test
     void testLoadMavenInstallPlugin() {
-        PluginParameterLoader loader = new PluginParameterLoader();
-        PluginParameterDefinition def = loader.load("maven-install-plugin");
+        PluginParameterDefinition definition = loader.load("maven-install-plugin");
 
-        assertNotNull(def, "Should load maven-install-plugin definition");
-        assertEquals("org.apache.maven.plugins", def.getGroupId());
-        assertEquals("maven-install-plugin", def.getArtifactId());
+        assertEquals("org.apache.maven.plugins", definition.getGroupId());
+        assertEquals("maven-install-plugin", definition.getArtifactId());
 
         // Verify install goal exists
-        GoalParameterDefinition installGoal = def.getGoal("install");
+        GoalParameterDefinition installGoal = definition.getGoal("install");
         assertNotNull(installGoal, "install goal should exist");
 
         // The lifecycle install goal exposes cache-key parameters.
         assertTrue(installGoal.hasParameter("skip"), "Should have 'skip' parameter");
-        ParameterDefinition skipParam = installGoal.getParameter("skip");
-        assertTrue(skipParam.isCacheKey());
+        ParameterDefinition skipParameter = installGoal.getParameter("skip");
+        assertTrue(skipParameter.isCacheKey());
     }
 
     @Test
     void testDefaultReconciliationParametersAreValid() {
-        PluginParameterLoader loader = new PluginParameterLoader();
-
         // Verify that default reconciliation parameters for maven-compiler-plugin are valid
-        PluginParameterDefinition compilerDef = loader.load("maven-compiler-plugin");
-        assertNotNull(compilerDef);
+        PluginParameterDefinition compilerDefinition = loader.load("maven-compiler-plugin");
+        assertNotNull(compilerDefinition);
 
-        GoalParameterDefinition compileGoal = compilerDef.getGoal("compile");
+        GoalParameterDefinition compileGoal = compilerDefinition.getGoal("compile");
         assertNotNull(compileGoal);
 
         // All default parameters should exist and be cache keys
-        String[] defaultParams = {"source", "target", "release"};
-        for (String paramName : defaultParams) {
+        String[] defaultParameters = {"source", "target", "release"};
+        for (String parameterName : defaultParameters) {
             assertTrue(
-                    compileGoal.hasParameter(paramName),
-                    "Default parameter '" + paramName + "' should exist in compile goal");
+                    compileGoal.hasParameter(parameterName),
+                    "Default parameter '" + parameterName + "' should exist in compile goal");
 
-            ParameterDefinition param = compileGoal.getParameter(paramName);
-            assertTrue(param.isCacheKey(), "Default parameter '" + paramName + "' should be a cache key");
+            ParameterDefinition parameter = compileGoal.getParameter(parameterName);
+            assertTrue(parameter.isCacheKey(), "Default parameter '" + parameterName + "' should be a cache key");
         }
 
         // Verify testCompile goal has same parameters
-        GoalParameterDefinition testCompileGoal = compilerDef.getGoal("testCompile");
+        GoalParameterDefinition testCompileGoal = compilerDefinition.getGoal("testCompile");
         assertNotNull(testCompileGoal);
 
-        for (String paramName : defaultParams) {
+        for (String parameterName : defaultParameters) {
             assertTrue(
-                    testCompileGoal.hasParameter(paramName),
-                    "Default parameter '" + paramName + "' should exist in testCompile goal");
+                    testCompileGoal.hasParameter(parameterName),
+                    "Default parameter '" + parameterName + "' should exist in testCompile goal");
         }
     }
 
     @Test
     void testVersionSpecificParameterLoading() {
-        PluginParameterLoader loader = new PluginParameterLoader();
-
         // Load for version 1.5.0 - should get 1.0.0 definition (highest minVersion <= 1.5.0)
-        PluginParameterDefinition def1 = loader.load("maven-versioned-plugin", "1.5.0");
-        assertNotNull(def1, "Should load definition for version 1.5.0");
-        assertEquals("1.0.0", def1.getMinVersion());
+        PluginParameterDefinition versionOneDefinition = loader.load("maven-versioned-plugin", "1.5.0");
+        assertNotNull(versionOneDefinition, "Should load definition for version 1.5.0");
+        assertEquals("1.0.0", versionOneDefinition.getMinVersion());
 
-        GoalParameterDefinition goal1 = def1.getGoal("execute");
-        assertNotNull(goal1);
-        assertTrue(goal1.hasParameter("legacyParameter"), "Version 1.5.0 should have legacyParameter");
-        assertTrue(goal1.hasParameter("commonParameter"), "Version 1.5.0 should have commonParameter");
-        assertTrue(!goal1.hasParameter("newParameter"), "Version 1.5.0 should NOT have newParameter");
+        GoalParameterDefinition versionOneGoal = versionOneDefinition.getGoal("execute");
+        assertNotNull(versionOneGoal);
+        assertTrue(versionOneGoal.hasParameter("legacyParameter"), "Version 1.5.0 should have legacyParameter");
+        assertTrue(versionOneGoal.hasParameter("commonParameter"), "Version 1.5.0 should have commonParameter");
+        assertTrue(!versionOneGoal.hasParameter("newParameter"), "Version 1.5.0 should NOT have newParameter");
 
         // Load for version 3.0.0 - should get 3.0.0 definition
-        PluginParameterDefinition def3 = loader.load("maven-versioned-plugin", "3.0.0");
-        assertNotNull(def3, "Should load definition for version 3.0.0");
-        assertEquals("3.0.0", def3.getMinVersion());
+        PluginParameterDefinition versionThreeDefinition = loader.load("maven-versioned-plugin", "3.0.0");
+        assertNotNull(versionThreeDefinition, "Should load definition for version 3.0.0");
+        assertEquals("3.0.0", versionThreeDefinition.getMinVersion());
 
-        GoalParameterDefinition goal3 = def3.getGoal("execute");
-        assertNotNull(goal3);
-        assertTrue(!goal3.hasParameter("legacyParameter"), "Version 3.0.0 should NOT have legacyParameter");
-        assertTrue(goal3.hasParameter("commonParameter"), "Version 3.0.0 should have commonParameter");
-        assertTrue(goal3.hasParameter("newParameter"), "Version 3.0.0 should have newParameter");
+        GoalParameterDefinition versionThreeGoal = versionThreeDefinition.getGoal("execute");
+        assertNotNull(versionThreeGoal);
+        assertTrue(!versionThreeGoal.hasParameter("legacyParameter"), "Version 3.0.0 should NOT have legacyParameter");
+        assertTrue(versionThreeGoal.hasParameter("commonParameter"), "Version 3.0.0 should have commonParameter");
+        assertTrue(versionThreeGoal.hasParameter("newParameter"), "Version 3.0.0 should have newParameter");
 
         // Load for version 4.0.0 - should still get 3.0.0 definition (highest available)
-        PluginParameterDefinition def4 = loader.load("maven-versioned-plugin", "4.0.0");
-        assertNotNull(def4, "Should load definition for version 4.0.0");
-        assertEquals("3.0.0", def4.getMinVersion(), "Version 4.0.0 should use 3.0.0 definition");
+        PluginParameterDefinition versionFourDefinition = loader.load("maven-versioned-plugin", "4.0.0");
+        assertNotNull(versionFourDefinition, "Should load definition for version 4.0.0");
+        assertEquals("3.0.0", versionFourDefinition.getMinVersion(), "Version 4.0.0 should use 3.0.0 definition");
     }
 
     @Test
     void testVersionComparisonLogic() {
-        PluginParameterLoader loader = new PluginParameterLoader();
-
         // Load for version with SNAPSHOT qualifier
-        PluginParameterDefinition defSnapshot = loader.load("maven-versioned-plugin", "1.5.0-SNAPSHOT");
-        assertNotNull(defSnapshot, "Should handle SNAPSHOT versions");
-        assertEquals("1.0.0", defSnapshot.getMinVersion());
+        PluginParameterDefinition snapshotDefinition = loader.load("maven-versioned-plugin", "1.5.0-SNAPSHOT");
+        assertNotNull(snapshotDefinition, "Should handle SNAPSHOT versions");
+        assertEquals("1.0.0", snapshotDefinition.getMinVersion());
 
         // Load for version 2.9.9 - still in 1.x range
-        PluginParameterDefinition def2 = loader.load("maven-versioned-plugin", "2.9.9");
-        assertNotNull(def2);
-        assertEquals("1.0.0", def2.getMinVersion(), "Version 2.9.9 should use 1.0.0 definition");
+        PluginParameterDefinition versionTwoDefinition = loader.load("maven-versioned-plugin", "2.9.9");
+        assertNotNull(versionTwoDefinition);
+        assertEquals("1.0.0", versionTwoDefinition.getMinVersion(), "Version 2.9.9 should use 1.0.0 definition");
 
         // Exact version match
-        PluginParameterDefinition defExact = loader.load("maven-versioned-plugin", "3.0.0");
-        assertNotNull(defExact);
-        assertEquals("3.0.0", defExact.getMinVersion());
+        PluginParameterDefinition exactVersionDefinition = loader.load("maven-versioned-plugin", "3.0.0");
+        assertNotNull(exactVersionDefinition);
+        assertEquals("3.0.0", exactVersionDefinition.getMinVersion());
     }
 
     @Test
     void testLoadWithoutVersion() {
-        PluginParameterLoader loader = new PluginParameterLoader();
-
         // Load without version - should return first definition or one without minVersion
-        PluginParameterDefinition def = loader.load("maven-versioned-plugin", null);
-        assertNotNull(def, "Should load definition without version");
+        PluginParameterDefinition definition = loader.load("maven-versioned-plugin", null);
+        assertNotNull(definition, "Should load definition without version");
 
         // For maven-compiler-plugin (which has no minVersion), should work fine
-        PluginParameterDefinition compilerDef = loader.load("maven-compiler-plugin", null);
-        assertNotNull(compilerDef);
+        PluginParameterDefinition compilerDefinition = loader.load("maven-compiler-plugin", null);
+        assertNotNull(compilerDefinition);
     }
 
     @Test
     void testLoadPrefixedNamespaceDefinition() {
-        PluginParameterDefinition def = new PluginParameterLoader().load("maven-prefixed-plugin", "1.0.0");
+        PluginParameterDefinition definition = loader.load("maven-prefixed-plugin", "1.0.0");
 
-        assertNotNull(def);
-        assertNotNull(def.getGoal("execute").getParameter("source"));
+        assertNotNull(definition);
+        assertNotNull(definition.getGoal("execute").getParameter("source"));
     }
 }
