@@ -29,40 +29,36 @@ import org.junit.jupiter.api.Test;
 class XmlServiceTest {
 
     @Test
-    @Disabled("cache-build-1.0.0.xsd not found")
     void testConfig() throws Exception {
         SchemaFactory sf = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
-        Schema schema = sf.newSchema(getClass().getResource("/build-cache-config-1.0.0.xsd"));
+        Schema schema = sf.newSchema(getClass().getResource("/build-cache-config-1.4.0.xsd"));
         DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
         dbf.setNamespaceAware(true);
         dbf.setSchema(schema);
     }
 
     @Test
-    @Disabled("cache-build-1.0.0.xsd not found")
     void testReport() throws Exception {
         SchemaFactory sf = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
-        Schema schema = sf.newSchema(getClass().getResource("/build-cache-report-1.0.0.xsd"));
+        Schema schema = sf.newSchema(getClass().getResource("/build-cache-report-1.4.0.xsd"));
         DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
         dbf.setNamespaceAware(true);
         dbf.setSchema(schema);
     }
 
     @Test
-    @Disabled("cache-build-1.0.0.xsd not found")
     void testBuild() throws Exception {
         SchemaFactory sf = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
-        Schema schema = sf.newSchema(getClass().getResource("/build-cache-build-1.0.0.xsd"));
+        Schema schema = sf.newSchema(getClass().getResource("/build-cache-build-1.4.0.xsd"));
         DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
         dbf.setNamespaceAware(true);
         dbf.setSchema(schema);
     }
 
     @Test
-    @Disabled("cache-build-1.0.0.xsd not found")
     void testDiff() throws Exception {
         SchemaFactory sf = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
-        Schema schema = sf.newSchema(getClass().getResource("/build-cache-diff-1.0.0.xsd"));
+        Schema schema = sf.newSchema(getClass().getResource("/build-cache-diff-1.4.0.xsd"));
         DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
         dbf.setNamespaceAware(true);
         dbf.setSchema(schema);
