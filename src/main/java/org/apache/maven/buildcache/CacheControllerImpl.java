@@ -487,7 +487,13 @@ public class CacheControllerImpl implements CacheController {
                     project.addLifecyclePhase("package");
                 }
             }
-            restoredAttachedArtifacts.forEach(project::addAttachedArtifact);
+            for (org.apache.maven.artifact.Artifact attachedArtifact : restoredAttachedArtifacts) {
+                projectHelper.attachArtifact(
+                        project,
+                        attachedArtifact.getType(),
+                        attachedArtifact.getClassifier(),
+                        attachedArtifact.getFile());
+            }
             restorationReport.setSuccess(true);
         } catch (Exception e) {
             LOGGER.debug("Cannot restore cache, continuing with normal build.", e);
