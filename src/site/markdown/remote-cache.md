@@ -62,6 +62,10 @@ change `remote@enabled` to true:
 </remote>
 ```
 
+`cleanupGracePeriodSeconds` is measured in seconds and defaults to `300`. Remote cache assets and reports newer than
+this period are never deleted. Set it to `0` only when immediate cleanup is explicitly desired. The equivalent JVM
+property is `-Dmaven.build.cache.remote.cleanup.gracePeriodSeconds=<seconds>`.
+
 If proxy or authentication is required to access the remote cache, add server record to settings.xml as described
 in [Servers](https://maven.apache.org/settings.html#Servers). Reference the server in the cache config:
 
@@ -162,6 +166,74 @@ used -- so no Wagon WebDAV provider is required on the classpath:
 Earlier versions required `-Daether.transport.http.supportWebDav=true` (Maven 3.10 and later),
 `-Daether.connector.http.supportWebDav=true` (Maven 3.9) or `-Dmaven.resolver.transport=wagon`. None of those are
 needed any more.
+
+### Remote retention
+
+Remote retention is separate from local `local/maxBuildsCached` and is disabled by default. A positive limit, the
+explicit `cleanupEnabled="true"` attribute, and a `retentionStrategy` are required. The default grace period is 300
+seconds and can be changed with `cleanupGracePeriodSeconds` or
+`-Dmaven.build.cache.remote.cleanup.gracePeriodSeconds=<seconds>`:
+
+```xml
+<remote enabled="true" saveToRemote="true" cleanupEnabled="true" retentionStrategy="nexus">
+    <url>https://nexus.example/repository/build-cache/</url>
+    <maxBuildsCached>1</maxBuildsCached>
+</remote>
+```
+
+`retentionStrategy` selects the provider by its stable `name()`: `nexus`, `directory-listing`, or `unsupported`. The
+JVM override `-Dmaven.build.cache.remote.retention.strategy=<name>` takes precedence over the XML attribute. An
+unknown name fails configuration, and so does enabling cleanup without configuring a strategy -- retention never
+guesses the strategy from the remote URL.
+
+Retention is an extension SPI. Plexus/Sisu discovers implementations of the public
+`RemoteCacheRetentionStrategyProvider` interface; each provider exposes a stable `name()` key and creates a public `RemoteCacheRetentionStrategy`.
+Providers receive the URL, a `RemoteCacheHttpClient`, `CacheConfig`, and `XmlService`. The client exposes authenticated
+`get(URI)` and `delete(URI)` operations; strategies never construct authorization headers. The core implementation uses
+the Maven session repository authentication and proxy settings (including the existing Basic authentication behavior).
+Built-in providers remain in the core
+extension and no separate strategy JAR is needed. Existing XML and property names remain unchanged.
+
+For supported HTTP(S) remotes, retention enumerates the exact `<cache-version>/<groupId>/<artifactId>/` namespace,
+reads each `buildinfo.xml`, retains the newest entries by build timestamp, and deletes stale entry assets. A 404 during
+deletion is treated as success. Generic non-HTTP Resolver transports remain unsupported and are never guessed at. If
+listing or deletion is unavailable, cleanup is reported as unsupported; best-effort mode preserves the build, while
+`failFast` fails it.
+
+Cleanup has no distributed lock. Concurrent Maven processes can observe and delete the same entries, so concurrency
+safety is best effort. A grace period protects newly uploaded assets while concurrent builds finish. The default is 300
+seconds and can be overridden with `cleanupGracePeriodSeconds` or
+`-Dmaven.build.cache.remote.cleanup.gracePeriodSeconds=<seconds>`.
+
+### Generic HTTP/WebDAV retention
+
+The generic strategy uses authenticated HTTP directory listings and DELETE requests. It is suitable only for servers
+that expose stable directory listings and permit deletion of the listed files.
+
+Directory listings do not provide reliable per-entry timestamps, so cache-entry ordering falls back to the timestamps in
+`buildinfo.xml`. Remote build-report retention is not supported for this strategy because report age cannot be determined
+safely. When the required listing or deletion behavior is unavailable, cleanup remains best effort unless `failFast` is
+enabled.
+
+### Nexus Raw retention
+
+Nexus Raw repositories use the Nexus Assets REST API rather than directory listings:
+
+```text
+GET    /service/rest/v1/assets?repository=<repository>
+DELETE /service/rest/v1/assets/{assetId}
+```
+
+The Nexus strategy paginates through assets, filters them to the cache namespace, and uses Nexus asset IDs for deletion.
+It uses Nexus `lastModified` or `blobCreated` metadata for grace-period checks and revalidates the asset ID and timestamp
+before deleting it. Cache entries and `build-cache-report.xml` assets are retained independently using the configured
+remote limit.
+
+The configured Maven server must have permission to read the Assets API and delete assets from the hosted repository.
+Nexus does not expose real folders for Raw paths, so the strategy deletes files/assets only. Any remaining folder-looking
+paths in the Nexus UI are virtual browse paths or repository metadata, not cache files that the extension can delete.
+
+Use `-Dmaven.build.cache.remote.cleanup.enabled=false` to disable cleanup for one run.
 
 ## Common issues
 

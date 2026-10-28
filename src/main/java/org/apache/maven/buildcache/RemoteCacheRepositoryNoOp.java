@@ -68,4 +68,7 @@ public class RemoteCacheRepositoryNoOp implements RemoteCacheRepository {
     public Optional<Build> findBaselineBuild(MavenProject project) {
         return Optional.empty();
     }
+
+    @Override
+    public void cleanup(CacheReport report, MavenSession session) throws IOException {}
 }

@@ -92,6 +92,11 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
     public static final String SAVE_TO_REMOTE_PROPERTY_NAME = "maven.build.cache.remote.save.enabled";
     public static final String SAVE_NON_OVERRIDEABLE_NAME = "maven.build.cache.remote.save.final";
     public static final String FAIL_FAST_PROPERTY_NAME = "maven.build.cache.failFast";
+    public static final String MAX_REMOTE_BUILDS_CACHED_PROPERTY_NAME = "maven.build.cache.maxRemoteBuildsCached";
+    public static final String REMOTE_CLEANUP_ENABLED_PROPERTY_NAME = "maven.build.cache.remote.cleanup.enabled";
+    public static final String REMOTE_CLEANUP_GRACE_PERIOD_SECONDS_PROPERTY_NAME =
+            "maven.build.cache.remote.cleanup.gracePeriodSeconds";
+    public static final String REMOTE_RETENTION_STRATEGY_PROPERTY_NAME = "maven.build.cache.remote.retention.strategy";
     public static final String BASELINE_BUILD_URL_PROPERTY_NAME = "maven.build.cache.baselineUrl";
     public static final String LAZY_RESTORE_PROPERTY_NAME = "maven.build.cache.lazyRestore";
     public static final String RESTORE_ON_DISK_ARTIFACTS_PROPERTY_NAME = "maven.build.cache.restoreOnDiskArtifacts";
@@ -593,6 +598,41 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
             throw new IllegalArgumentException("maxLocalBuildsCached must be greater than 0");
         }
         return maxLocalBuildsCached;
+    }
+
+    @Override
+    public boolean isRemoteCleanupEnabled() {
+        checkInitializedState();
+        return getProperty(REMOTE_CLEANUP_ENABLED_PROPERTY_NAME, getRemote().isCleanupEnabled());
+    }
+
+    @Override
+    public int getMaxRemoteBuildsCached() {
+        checkInitializedState();
+        int value =
+                getProperty(MAX_REMOTE_BUILDS_CACHED_PROPERTY_NAME, getRemote().getMaxBuildsCached());
+        if (isRemoteCleanupEnabled() && value <= 0) {
+            throw new IllegalArgumentException(
+                    "remote maxBuildsCached must be greater than 0 when remote cleanup is enabled");
+        }
+        return value;
+    }
+
+    @Override
+    public int getRemoteCleanupGracePeriodSeconds() {
+        checkInitializedState();
+        int value = getProperty(
+                REMOTE_CLEANUP_GRACE_PERIOD_SECONDS_PROPERTY_NAME, getRemote().getCleanupGracePeriodSeconds());
+        if (value < 0) {
+            throw new IllegalArgumentException("remote cleanupGracePeriodSeconds must not be negative");
+        }
+        return value;
+    }
+
+    @Override
+    public String getRemoteRetentionStrategy() {
+        checkInitializedState();
+        return getProperty(REMOTE_RETENTION_STRATEGY_PROPERTY_NAME, getRemote().getRetentionStrategy());
     }
 
     @Override
