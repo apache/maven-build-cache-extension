@@ -60,7 +60,6 @@ under the License.
 
   <properties>
     <project.build.outputTimestamp>2026-08-13T11:18:57Z</project.build.outputTimestamp>
-    <javaVersion>8</javaVersion>
     <minimalMavenBuildVersion>3.9.0</minimalMavenBuildVersion>
     <minimalJavaBuildVersion>11</minimalJavaBuildVersion>
     <classWorldsVersion>2.6.0</classWorldsVersion>
@@ -402,7 +401,6 @@ under the License.
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
-        <version>3.11.0</version>
         <executions>
           <execution>
             <id>copy-maven-distribution</id>
