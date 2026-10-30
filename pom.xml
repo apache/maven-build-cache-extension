@@ -95,25 +95,16 @@ under the License.
         <type>pom</type>
         <scope>import</scope>
       </dependency>
-      <!-- wiremock 3.13.2 brings in jackson 2.20.1, handlebars 4.3.1 and httpcore5 5.3.6, which have known
-           vulnerabilities. Force newer versions for the test classpath. Testcontainers 2.x also needs
-           jackson-annotations >= 2.15 (JsonFormat.Feature.READ_UNKNOWN_ENUM_VALUES_USING_DEFAULT_VALUE). -->
+      <!-- wiremock 3.13.2 brings in jackson 2.20.1 and httpcore5 5.3.6, which have known vulnerabilities.
+           Force newer versions for the test classpath. Testcontainers 2.x also needs
+           jackson-annotations >= 2.15 (JsonFormat.Feature.READ_UNKNOWN_ENUM_VALUES_USING_DEFAULT_VALUE).
+           handlebars stays at wiremock's 4.3.1: the fixed 4.5.x no longer has the NumberHelper wiremock uses. -->
       <dependency>
         <groupId>com.fasterxml.jackson</groupId>
         <artifactId>jackson-bom</artifactId>
         <version>2.22.4</version>
         <type>pom</type>
         <scope>import</scope>
-      </dependency>
-      <dependency>
-        <groupId>com.github.jknack</groupId>
-        <artifactId>handlebars</artifactId>
-        <version>4.5.8</version>
-      </dependency>
-      <dependency>
-        <groupId>com.github.jknack</groupId>
-        <artifactId>handlebars-helpers</artifactId>
-        <version>4.5.8</version>
       </dependency>
       <dependency>
         <groupId>org.apache.httpcomponents.core5</groupId>
