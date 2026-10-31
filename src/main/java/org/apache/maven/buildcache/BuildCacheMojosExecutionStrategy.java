@@ -447,6 +447,11 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                 LOGGER.info(
                         "Skipping plugin execution (cached): {}",
                         cacheCandidate.getMojoDescriptor().getFullGoalName());
+                // Record the phase as Maven does for executed mojos. The reactor only resolves a module's
+                // target/classes or target/test-classes when its compile or test-compile phase is recorded.
+                if (cacheCandidate.getLifecyclePhase() != null) {
+                    project.addLifecyclePhase(cacheCandidate.getLifecyclePhase());
+                }
                 // Need to populate cached candidate executions for the build cache save result
                 Mojo mojo = null;
                 mojoExecutionScope.enter();
