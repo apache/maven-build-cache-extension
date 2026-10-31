@@ -18,12 +18,12 @@
  */
 package org.apache.maven.caching.test.p19;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class AppTest {
     @Test
     public void testGreet() {
-        Assert.assertNotNull(App.greet());
+        Assertions.assertNotNull(App.greet());
     }
 }
