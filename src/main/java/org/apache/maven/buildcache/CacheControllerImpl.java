@@ -492,7 +492,12 @@ public class CacheControllerImpl implements CacheController {
                 // resolution can locate this module's compiled output. Don't replace the artifact:
                 // RestoredArtifact.getFile() always re-routes through restoreToDiskConsumer, which would
                 // break later phases (e.g. jar:jar) that update the file via setFile().
-                project.getArtifact().setFile(restoredProjectArtifact.getFile());
+                File restoredFile = restoredProjectArtifact.getFile();
+                // Without restoreOnDiskArtifacts the file is the cached archive, not a directory, and
+                // setting it would make jar:jar treat the main artifact as already packaged.
+                if (restoredFile.isDirectory()) {
+                    project.getArtifact().setFile(restoredFile);
+                }
             }
             restoredAttachedArtifacts.forEach(project::addAttachedArtifact);
             restorationReport.setSuccess(true);
