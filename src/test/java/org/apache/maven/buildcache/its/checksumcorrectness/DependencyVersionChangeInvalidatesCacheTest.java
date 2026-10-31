@@ -58,7 +58,7 @@ class DependencyVersionChangeInvalidatesCacheTest {
 
         // Bump the JUnit dependency version in the POM
         Path pomFile = Paths.get(verifier.getBasedir(), "pom.xml");
-        replaceInFile(pomFile, "<version>4.13.2</version>", "<version>4.12</version>");
+        replaceInFile(pomFile, "<version>5.11.0</version>", "<version>5.10.0</version>");
 
         // Build 2: dependency changed → cache miss
         verifier.setLogFileName("../log-2.txt");
