@@ -1468,8 +1468,9 @@ public class CacheControllerImpl implements CacheController {
      * <p>This includes:
      * <ul>
      *     <li>the main project artifact file (for example, the built JAR), if it has been produced, and</li>
-     *     <li>any attached output directories configured via {@code cacheConfig.getAttachedOutputs()} under the
-     *         project's target directory, when {@code cacheConfig.isCacheCompile()} is enabled.</li>
+     *     <li>the compile output directory (for example, {@code target/classes}) and any attached output
+     *         directories configured via {@code cacheConfig.getAttachedOutputs()} under the project's target
+     *         directory, when {@code cacheConfig.isCacheCompile()} is enabled.</li>
      * </ul>
      * Only paths that currently exist on disk are included in the returned set; non-existent files or directories
      * are ignored.
@@ -1487,8 +1488,15 @@ public class CacheControllerImpl implements CacheController {
             paths.add(projectArtifact.getFile().toPath());
         }
 
-        // 2. Attached outputs from configuration (if cacheCompile enabled)
+        // 2. Compile output directory and attached outputs from configuration (if cacheCompile enabled)
         if (cacheConfig.isCacheCompile()) {
+            // The project artifact file is not set yet at the start of a session, so step 1 misses
+            // target/classes. Stage it explicitly so the compiler cannot keep classes compiled against
+            // a different version of an upstream module.
+            Path classesDir = Paths.get(project.getBuild().getOutputDirectory());
+            if (Files.exists(classesDir)) {
+                paths.add(classesDir);
+            }
             List<DirName> attachedDirs = cacheConfig.getAttachedOutputs();
             for (DirName dir : attachedDirs) {
                 Path outputDir = targetDir.resolve(dir.getValue());
