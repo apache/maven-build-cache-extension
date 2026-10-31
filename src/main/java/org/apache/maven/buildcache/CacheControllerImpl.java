@@ -486,18 +486,6 @@ public class CacheControllerImpl implements CacheController {
                 if (!project.hasLifecyclePhase("package")) {
                     project.addLifecyclePhase("package");
                 }
-            } else if (restoredProjectArtifact != null) {
-                // Directory artifact (target/classes from compile-only build).
-                // Point the existing project artifact at the restored directory so reactor dependency
-                // resolution can locate this module's compiled output. Don't replace the artifact:
-                // RestoredArtifact.getFile() always re-routes through restoreToDiskConsumer, which would
-                // break later phases (e.g. jar:jar) that update the file via setFile().
-                File restoredFile = restoredProjectArtifact.getFile();
-                // Without restoreOnDiskArtifacts the file is the cached archive, not a directory, and
-                // setting it would make jar:jar treat the main artifact as already packaged.
-                if (restoredFile.isDirectory()) {
-                    project.getArtifact().setFile(restoredFile);
-                }
             }
             restoredAttachedArtifacts.forEach(project::addAttachedArtifact);
             restorationReport.setSuccess(true);
