@@ -35,15 +35,15 @@ import org.apache.maven.model.Dependency;
  */
 public interface LocalCacheRepository extends CacheRepository {
 
-    void beforeSave(CacheContext environment) throws IOException;
+    void beforeSave(CacheContext environment, Zone outputZone) throws IOException;
 
-    Path getArtifactFile(CacheContext context, CacheSource source, Artifact artifact) throws IOException;
+    Path getArtifactFile(CacheContext context, CacheSource source, Zone zone, Artifact artifact) throws IOException;
 
-    void clearCache(CacheContext context);
+    void clearCache(CacheContext context, Zone zone);
 
     @Nonnull
     Optional<Build> findBestMatchingBuild(MavenSession session, Dependency dependency) throws IOException;
 
     @Nonnull
-    Optional<Build> findLocalBuild(CacheContext context) throws IOException;
+    Optional<Build> findLocalBuild(CacheContext context, Zone zone) throws IOException;
 }
