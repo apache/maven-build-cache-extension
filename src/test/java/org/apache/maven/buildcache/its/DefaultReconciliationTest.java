@@ -34,6 +34,25 @@ import org.junit.jupiter.api.Test;
 class DefaultReconciliationTest {
 
     @Test
+    void changingOnlyTestReleaseRebuildsTestBytecode(Verifier verifier) throws VerificationException {
+        verifier.setAutoclean(false);
+        verifier.setSystemProperty("maven.compiler.release", "11");
+
+        verifier.setLogFileName("../log-test-release-11.txt");
+        verifier.setSystemProperty("maven.compiler.testRelease", "11");
+        verifier.executeGoals(Arrays.asList("clean", "verify"));
+        verifier.verifyErrorFreeLog();
+        verifier.verifyTextInLog("Saved Build to local file");
+
+        verifier.setLogFileName("../log-test-release-17.txt");
+        verifier.setSystemProperty("maven.compiler.testRelease", "17");
+        verifier.executeGoals(Arrays.asList("clean", "verify"));
+        verifier.verifyErrorFreeLog();
+        verifier.verifyTextInLog("Plugin parameter mismatch found. Parameter: testRelease");
+        verifier.verifyFilePresent("target/test-classes/org/apache/maven/buildcache/TestInput.class");
+    }
+
+    @Test
     void testDefaultReconciliationWithNoConfig(Verifier verifier) throws VerificationException, IOException {
         verifier.setAutoclean(false);
 

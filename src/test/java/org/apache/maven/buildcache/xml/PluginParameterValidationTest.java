@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -63,6 +64,21 @@ class PluginParameterValidationTest {
         assertTrue(compileGoal.hasParameter("verbose"), "Should have 'verbose' parameter");
         ParameterDefinition verboseParameter = compileGoal.getParameter("verbose");
         assertTrue(!verboseParameter.isCacheKey());
+    }
+
+    @Test
+    void testDescriptorMatchesFullPluginCoordinates() {
+        assertNotNull(loader.load("org.apache.maven.plugins", "maven-compiler-plugin", "3.14.0"));
+        assertNull(loader.load("com.example", "maven-compiler-plugin", "3.14.0"));
+    }
+
+    @Test
+    void testXmlBooleanSpellings() {
+        GoalParameterDefinition goal = loader.load("maven-boolean-plugin").getGoal("execute");
+        assertTrue(goal.getParameter("numericTrue").isCacheKey());
+        assertTrue(goal.getParameter("literalTrue").isCacheKey());
+        assertTrue(!goal.getParameter("numericFalse").isCacheKey());
+        assertTrue(!goal.getParameter("literalFalse").isCacheKey());
     }
 
     @Test
@@ -110,6 +126,10 @@ class PluginParameterValidationTest {
             assertTrue(
                     testCompileGoal.hasParameter(parameterName),
                     "Default parameter '" + parameterName + "' should exist in testCompile goal");
+        }
+        for (String parameterName : new String[] {"testSource", "testTarget", "testRelease"}) {
+            assertTrue(testCompileGoal.hasParameter(parameterName));
+            assertTrue(testCompileGoal.getParameter(parameterName).isCacheKey());
         }
     }
 

@@ -54,7 +54,7 @@ class PluginParameterLoader {
      * Load parameter definitions for a plugin by artifact ID only (no version matching)
      */
     PluginParameterDefinition load(String artifactId) {
-        return load(artifactId, null);
+        return load("org.apache.maven.plugins", artifactId, null);
     }
 
     /**
@@ -63,7 +63,12 @@ class PluginParameterLoader {
      * If version is null, returns any definition for the artifactId.
      */
     PluginParameterDefinition load(String artifactId, String pluginVersion) {
-        String cacheKey = artifactId + (pluginVersion != null ? ":" + pluginVersion : "");
+        return load("org.apache.maven.plugins", artifactId, pluginVersion);
+    }
+
+    PluginParameterDefinition load(String groupId, String artifactId, String pluginVersion) {
+        String resolvedGroupId = groupId != null ? groupId : "org.apache.maven.plugins";
+        String cacheKey = resolvedGroupId + ":" + artifactId + (pluginVersion != null ? ":" + pluginVersion : "");
 
         if (definitions.containsKey(cacheKey)) {
             return definitions.get(cacheKey);
@@ -80,6 +85,8 @@ class PluginParameterLoader {
         try (InputStream inputStream = resourceStream) {
             List<PluginParameterDefinition> allDefinitions = parseDefinitions(inputStream);
 
+            allDefinitions.removeIf(definition -> !resolvedGroupId.equals(definition.getGroupId())
+                    || !artifactId.equals(definition.getArtifactId()));
             PluginParameterDefinition bestMatch = findBestMatch(allDefinitions, pluginVersion);
 
             if (bestMatch != null) {
@@ -267,7 +274,14 @@ class PluginParameterLoader {
 
     private ParameterDefinition parseParameter(Element parameterElement) {
         String name = getTextContent(parameterElement, "name");
-        boolean cacheKey = Boolean.parseBoolean(getTextContent(parameterElement, "cache-key"));
+        String cacheKeyText = getTextContent(parameterElement, "cache-key");
+        boolean cacheKey = "true".equals(cacheKeyText) || "1".equals(cacheKeyText);
+        if (cacheKeyText != null
+                && !cacheKey
+                && !"false".equals(cacheKeyText)
+                && !"0".equals(cacheKeyText)) {
+            throw new IllegalArgumentException("Invalid XML boolean for cache-key: " + cacheKeyText);
+        }
         String description = getTextContent(parameterElement, "description");
 
         return new ParameterDefinition(name, cacheKey, description);

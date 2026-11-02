@@ -305,7 +305,8 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
         String pluginVersion = plugin.getVersion();
 
         // Load parameter definition for this plugin with version
-        PluginParameterDefinition pluginDefinition = parameterLoader.load(artifactId, pluginVersion);
+        PluginParameterDefinition pluginDefinition =
+                parameterLoader.load(plugin.getGroupId(), artifactId, pluginVersion);
 
         if (pluginDefinition == null) {
             LOGGER.warn(
@@ -380,7 +381,8 @@ public class CacheConfigImpl implements org.apache.maven.buildcache.xml.CacheCon
                 pluginVersion);
 
         // Load parameter definition for this plugin
-        PluginParameterDefinition pluginDefinition = parameterLoader.load(artifactId, pluginVersion);
+        PluginParameterDefinition pluginDefinition =
+                parameterLoader.load(plugin.getGroupId(), artifactId, pluginVersion);
         if (pluginDefinition == null) {
             LOGGER.debug("No parameter definition found for {}:{}", artifactId, pluginVersion);
             return null;

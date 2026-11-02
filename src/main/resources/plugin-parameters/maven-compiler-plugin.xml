@@ -175,6 +175,21 @@
       <parameters>
         <!-- Same parameters as compile goal -->
         <parameter>
+          <name>testSource</name>
+          <cache-key>true</cache-key>
+          <description>Test source JDK version, overriding source when set</description>
+        </parameter>
+        <parameter>
+          <name>testTarget</name>
+          <cache-key>true</cache-key>
+          <description>Test target JDK version, overriding target when set</description>
+        </parameter>
+        <parameter>
+          <name>testRelease</name>
+          <cache-key>true</cache-key>
+          <description>Test release JDK version, overriding release when set</description>
+        </parameter>
+        <parameter>
           <name>source</name>
           <cache-key>true</cache-key>
           <description>Source JDK version for test compilation; changing it can change generated test bytecode or compilation success</description>
