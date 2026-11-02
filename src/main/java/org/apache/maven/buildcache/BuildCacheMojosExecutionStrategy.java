@@ -23,6 +23,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.List;
@@ -53,7 +54,6 @@ import org.apache.maven.plugin.MojosExecutionStrategy;
 import org.apache.maven.plugin.PluginConfigurationException;
 import org.apache.maven.plugin.PluginContainerException;
 import org.apache.maven.project.MavenProject;
-import org.codehaus.plexus.util.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -268,7 +268,7 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
         } else if (forkedExecution && !cacheController.canSaveForkedBuild(result, project, mojoExecutions)) {
             LOGGER.debug("Skipping fork save: a cache entry already covers a later phase for {}.", projectName);
         } else {
-            final Map<String, MojoExecutionEvent> executionEvents = mojoListener.getProjectExecutions(project);
+            final Map<String, CompletedExecution> executionEvents = mojoListener.getProjectExecutions(project);
             cacheController.save(result, mojoExecutions, executionEvents);
         }
     }
@@ -539,6 +539,14 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
             CompletedExecution completedExecution) {
         List<TrackedProperty> tracked = cacheConfig.getTrackedProperties(mojoExecution);
 
+        if (mojoExecution.getPlugin() != null) {
+            LOGGER.debug(
+                    "Checking parameter match for {}:{} - tracking {} properties",
+                    mojoExecution.getPlugin().getArtifactId(),
+                    mojoExecution.getGoal(),
+                    tracked.size());
+        }
+
         for (TrackedProperty trackedProperty : tracked) {
             final String propertyName = trackedProperty.getPropertyName();
 
@@ -547,20 +555,26 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                 expectedValue = trackedProperty.getDefaultValue() != null ? trackedProperty.getDefaultValue() : "null";
             }
 
-            final String currentValue;
+            String currentValue;
             try {
                 Object value;
                 if (trackedProperty.getExpression() != null) {
                     value = CacheUtils.interpolateExpression(trackedProperty.getExpression(), session, mojoExecution);
                 } else {
-                    value = ReflectionUtils.getValueIncludingSuperclasses(propertyName, mojo);
+                    value = MojoPropertySnapshot.readProperty(propertyName, mojo);
                 }
                 Path baseDirPath = project.getBasedir().toPath();
                 currentValue = CacheUtils.normalizeValue(value, baseDirPath);
-            } catch (IllegalAccessException e) {
+            } catch (IllegalAccessException | InvocationTargetException e) {
                 LOGGER.error("Cannot extract plugin property {} from mojo {}", propertyName, mojo, e);
                 return false;
+            } catch (IllegalArgumentException | SecurityException e) {
+                LOGGER.warn("Cannot extract plugin property {} from mojo {}", propertyName, mojo, e);
+                return false;
             }
+
+            LOGGER.debug(
+                    "Checking property '{}': expected='{}', actual='{}'", propertyName, expectedValue, currentValue);
 
             if (!Strings.CS.equals(currentValue, expectedValue)) {
                 if (!Strings.CS.equals(currentValue, trackedProperty.getSkipValue())) {
