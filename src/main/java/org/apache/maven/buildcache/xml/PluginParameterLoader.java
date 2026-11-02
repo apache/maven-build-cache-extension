@@ -85,8 +85,8 @@ class PluginParameterLoader {
         try (InputStream inputStream = resourceStream) {
             List<PluginParameterDefinition> allDefinitions = parseDefinitions(inputStream);
 
-            allDefinitions.removeIf(definition -> !resolvedGroupId.equals(definition.getGroupId())
-                    || !artifactId.equals(definition.getArtifactId()));
+            allDefinitions.removeIf(definition ->
+                    !resolvedGroupId.equals(definition.getGroupId()) || !artifactId.equals(definition.getArtifactId()));
             PluginParameterDefinition bestMatch = findBestMatch(allDefinitions, pluginVersion);
 
             if (bestMatch != null) {
@@ -276,10 +276,7 @@ class PluginParameterLoader {
         String name = getTextContent(parameterElement, "name");
         String cacheKeyText = getTextContent(parameterElement, "cache-key");
         boolean cacheKey = "true".equals(cacheKeyText) || "1".equals(cacheKeyText);
-        if (cacheKeyText != null
-                && !cacheKey
-                && !"false".equals(cacheKeyText)
-                && !"0".equals(cacheKeyText)) {
+        if (cacheKeyText != null && !cacheKey && !"false".equals(cacheKeyText) && !"0".equals(cacheKeyText)) {
             throw new IllegalArgumentException("Invalid XML boolean for cache-key: " + cacheKeyText);
         }
         String description = getTextContent(parameterElement, "description");

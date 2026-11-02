@@ -26,8 +26,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import org.apache.maven.buildcache.xml.CacheState;
 import org.apache.maven.buildcache.xml.CacheConfig;
+import org.apache.maven.buildcache.xml.CacheState;
 import org.apache.maven.buildcache.xml.build.CompletedExecution;
 import org.apache.maven.execution.MojoExecutionEvent;
 import org.apache.maven.execution.MojoExecutionListener;

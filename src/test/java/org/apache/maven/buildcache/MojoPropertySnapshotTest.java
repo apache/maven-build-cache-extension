@@ -57,7 +57,8 @@ class MojoPropertySnapshotTest {
         ArgsMojo mojo = new ArgsMojo(new ArrayList<>());
         CompletedExecution snapshot = capture(mojo);
 
-        assertEquals(CacheUtils.normalizeValue(mojo.compilerArgs, new File(".").toPath()),
+        assertEquals(
+                CacheUtils.normalizeValue(mojo.compilerArgs, new File(".").toPath()),
                 DtoUtils.findPropertyValue("compilerArgs", snapshot));
     }
 
