@@ -75,6 +75,7 @@ class RemoteParentVersionBumpInvalidatesTest {
         Verifier corpInstallV1 = new Verifier(corpParentDir);
         corpInstallV1.setAutoclean(false);
         corpInstallV1.setSystemProperty("projectVersion", System.getProperty("projectVersion"));
+        corpInstallV1.setSystemProperty("maven.build.cache.alwaysRunPlugins", "maven-install-plugin:install");
         corpInstallV1.setLocalRepo(System.getProperty("localRepo"));
         corpInstallV1.setLogFileName("log-corp-v10-install.txt");
         corpInstallV1.executeGoal("install");
@@ -100,6 +101,7 @@ class RemoteParentVersionBumpInvalidatesTest {
         Verifier corpInstallV11 = new Verifier(corpParentDir);
         corpInstallV11.setAutoclean(false);
         corpInstallV11.setSystemProperty("projectVersion", System.getProperty("projectVersion"));
+        corpInstallV11.setSystemProperty("maven.build.cache.alwaysRunPlugins", "maven-install-plugin:install");
         corpInstallV11.setLocalRepo(System.getProperty("localRepo"));
         corpInstallV11.setLogFileName("log-corp-v11-install.txt");
         corpInstallV11.executeGoal("install");

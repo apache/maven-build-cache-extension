@@ -18,6 +18,7 @@
  */
 package org.apache.maven.buildcache;
 
+import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
@@ -25,7 +26,9 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import org.apache.maven.buildcache.xml.CacheConfig;
 import org.apache.maven.buildcache.xml.CacheState;
+import org.apache.maven.buildcache.xml.build.CompletedExecution;
 import org.apache.maven.execution.MojoExecutionEvent;
 import org.apache.maven.execution.MojoExecutionListener;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -46,8 +49,15 @@ public class MojoParametersListener implements MojoExecutionListener {
     private static final Logger LOGGER = LoggerFactory.getLogger(MojoParametersListener.class);
 
     @SuppressWarnings("checkstyle:LineLength")
-    private final ConcurrentMap<MavenProject, Map<String, MojoExecutionEvent>> projectExecutions =
+    private final ConcurrentMap<MavenProject, Map<String, CompletedExecution>> projectExecutions =
             new ConcurrentHashMap<>();
+
+    private final CacheConfig cacheConfig;
+
+    @Inject
+    public MojoParametersListener(CacheConfig cacheConfig) {
+        this.cacheConfig = cacheConfig;
+    }
 
     private CacheState cacheState = DISABLED;
 
@@ -61,15 +71,15 @@ public class MojoParametersListener implements MojoExecutionListener {
                 cacheState);
         if (cacheState == INITIALIZED) {
             final MavenProject project = event.getProject();
-            Map<String, MojoExecutionEvent> projectEvents = projectExecutions.get(project);
+            Map<String, CompletedExecution> projectEvents = projectExecutions.get(project);
             if (projectEvents == null) {
-                Map<String, MojoExecutionEvent> candidate = new ConcurrentHashMap<>();
+                Map<String, CompletedExecution> candidate = new ConcurrentHashMap<>();
                 projectEvents = projectExecutions.putIfAbsent(project, candidate);
                 if (projectEvents == null) {
                     projectEvents = candidate;
                 }
             }
-            projectEvents.put(executionKey, event);
+            projectEvents.put(executionKey, MojoPropertySnapshot.capture(cacheConfig, event));
         }
     }
 
@@ -83,7 +93,7 @@ public class MojoParametersListener implements MojoExecutionListener {
         // do nothing
     }
 
-    public Map<String, MojoExecutionEvent> getProjectExecutions(MavenProject project) {
+    public Map<String, CompletedExecution> getProjectExecutions(MavenProject project) {
         return projectExecutions.get(project);
     }
 

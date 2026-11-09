@@ -26,9 +26,6 @@ import javax.inject.Provider;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileVisitResult;
@@ -60,7 +57,6 @@ import java.util.stream.Stream;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.Strings;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.maven.SessionScoped;
 import org.apache.maven.artifact.handler.ArtifactHandler;
@@ -82,18 +78,14 @@ import org.apache.maven.buildcache.xml.build.DigestItem;
 import org.apache.maven.buildcache.xml.build.ProjectsInputInfo;
 import org.apache.maven.buildcache.xml.build.Scm;
 import org.apache.maven.buildcache.xml.config.DirName;
-import org.apache.maven.buildcache.xml.config.PropertyName;
 import org.apache.maven.buildcache.xml.config.TrackedProperty;
 import org.apache.maven.buildcache.xml.diff.Diff;
 import org.apache.maven.buildcache.xml.report.CacheReport;
 import org.apache.maven.buildcache.xml.report.ProjectReport;
 import org.apache.maven.execution.MavenSession;
-import org.apache.maven.execution.MojoExecutionEvent;
 import org.apache.maven.plugin.MojoExecution;
-import org.apache.maven.plugin.descriptor.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.MavenProjectHelper;
-import org.codehaus.plexus.util.ReflectionUtils;
 import org.eclipse.aether.RepositorySystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -684,7 +676,7 @@ public class CacheControllerImpl implements CacheController {
     public void save(
             CacheResult cacheResult,
             List<MojoExecution> mojoExecutions,
-            Map<String, MojoExecutionEvent> executionEvents) {
+            Map<String, CompletedExecution> executionEvents) {
         CacheContext context = cacheResult.getContext();
 
         if (context == null || context.getInputInfo() == null) {
@@ -974,139 +966,21 @@ public class CacheControllerImpl implements CacheController {
     }
 
     private List<CompletedExecution> buildExecutionInfo(
-            List<MojoExecution> mojoExecutions, Map<String, MojoExecutionEvent> executionEvents) {
+            List<MojoExecution> mojoExecutions, Map<String, CompletedExecution> executionEvents) {
         List<CompletedExecution> list = new ArrayList<>();
         for (MojoExecution mojoExecution : mojoExecutions) {
             final String executionKey = CacheUtils.mojoExecutionKey(mojoExecution);
-            final MojoExecutionEvent executionEvent =
-                    executionEvents != null ? executionEvents.get(executionKey) : null;
-            CompletedExecution executionInfo = new CompletedExecution();
-            executionInfo.setExecutionKey(executionKey);
-            executionInfo.setMojoClassName(mojoExecution.getMojoDescriptor().getImplementation());
-            if (executionEvent != null) {
-                recordMojoProperties(executionInfo, executionEvent);
+            CompletedExecution snapshot = executionEvents != null ? executionEvents.get(executionKey) : null;
+            if (snapshot != null) {
+                list.add(snapshot);
+            } else {
+                CompletedExecution executionInfo = new CompletedExecution();
+                executionInfo.setExecutionKey(executionKey);
+                executionInfo.setMojoClassName(mojoExecution.getMojoDescriptor().getImplementation());
+                list.add(executionInfo);
             }
-            list.add(executionInfo);
         }
         return list;
-    }
-
-    private void recordMojoProperties(CompletedExecution execution, MojoExecutionEvent executionEvent) {
-        final MojoExecution mojoExecution = executionEvent.getExecution();
-
-        final boolean logAll = cacheConfig.isLogAllProperties(mojoExecution);
-        List<TrackedProperty> trackedProperties = cacheConfig.getTrackedProperties(mojoExecution);
-        List<PropertyName> noLogProperties = cacheConfig.getNologProperties(mojoExecution);
-        List<PropertyName> forceLogProperties = cacheConfig.getLoggedProperties(mojoExecution);
-        final Object mojo = executionEvent.getMojo();
-
-        final File baseDir = executionEvent.getProject().getBasedir();
-        final Path baseDirPath = baseDir.toPath();
-
-        final List<Parameter> parameters = mojoExecution.getMojoDescriptor().getParameters();
-        for (Parameter parameter : parameters) {
-            // editable parameters could be configured by user
-            if (!parameter.isEditable()) {
-                continue;
-            }
-
-            final String propertyName = parameter.getName();
-            final boolean tracked = isTracked(propertyName, trackedProperties);
-            if (!tracked && isExcluded(propertyName, logAll, noLogProperties, forceLogProperties)) {
-                continue;
-            }
-
-            try {
-                Field field = ReflectionUtils.getFieldByNameIncludingSuperclasses(propertyName, mojo.getClass());
-                if (field != null) {
-                    final Object value = ReflectionUtils.getValueIncludingSuperclasses(propertyName, mojo);
-                    CacheUtils.addProperty(execution, propertyName, value, baseDirPath, tracked);
-                    continue;
-                }
-                // no field but maybe there is a getter with standard naming and no args
-                Method getter = getGetter(propertyName, mojo.getClass());
-                if (getter != null) {
-                    Object value = getter.invoke(mojo);
-                    CacheUtils.addProperty(execution, propertyName, value, baseDirPath, tracked);
-                    continue;
-                }
-
-                if (LOGGER.isWarnEnabled()) {
-                    LOGGER.warn(
-                            "Cannot find a Mojo parameter '{}' to read for Mojo {}. This parameter should be ignored.",
-                            propertyName,
-                            mojoExecution);
-                }
-
-            } catch (IllegalAccessException | InvocationTargetException e) {
-                LOGGER.info("Cannot get property {} value from {}: {}", propertyName, mojo, e.getMessage());
-                if (tracked) {
-                    throw new IllegalArgumentException("Property configured in cache introspection config " + "for "
-                            + mojo + " is not accessible: " + propertyName);
-                }
-            }
-        }
-        // add properties with expressions
-        for (TrackedProperty trackedProperty : trackedProperties) {
-            if (trackedProperty.getExpression() != null) {
-                String propertyName = trackedProperty.getPropertyName();
-                if (!isExcluded(propertyName, logAll, noLogProperties, forceLogProperties)) {
-                    Object value = CacheUtils.interpolateExpression(
-                            trackedProperty.getExpression(),
-                            executionEvent.getSession(),
-                            executionEvent.getExecution());
-                    CacheUtils.addProperty(execution, propertyName, value, baseDirPath, true);
-                }
-            }
-        }
-    }
-
-    private static Method getGetter(String fieldName, Class<?> clazz) {
-        String getterMethodName = "get" + org.codehaus.plexus.util.StringUtils.capitalizeFirstLetter(fieldName);
-        Method[] methods = clazz.getMethods();
-        for (Method method : methods) {
-            if (method.getName().equals(getterMethodName)
-                    && !method.getReturnType().equals(Void.TYPE)
-                    && method.getParameterCount() == 0) {
-                return method;
-            }
-        }
-        return null;
-    }
-
-    private boolean isExcluded(
-            String propertyName,
-            boolean logAll,
-            List<PropertyName> excludedProperties,
-            List<PropertyName> forceLogProperties) {
-        if (!forceLogProperties.isEmpty()) {
-            for (PropertyName logProperty : forceLogProperties) {
-                if (Strings.CS.equals(propertyName, logProperty.getPropertyName())) {
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        if (!excludedProperties.isEmpty()) {
-            for (PropertyName excludedProperty : excludedProperties) {
-                if (Strings.CS.equals(propertyName, excludedProperty.getPropertyName())) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        return !logAll;
-    }
-
-    private boolean isTracked(String propertyName, List<TrackedProperty> trackedProperties) {
-        for (TrackedProperty trackedProperty : trackedProperties) {
-            if (Strings.CS.equals(propertyName, trackedProperty.getPropertyName())) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private boolean isCachedSegmentPropertiesPresent(
