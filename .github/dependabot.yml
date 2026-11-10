@@ -27,6 +27,9 @@ updates:
       # Maven 3 so use SLF4J 1.7.x
       - dependency-name: "org.slf4j:*"
         versions: [">= 2.0.0"]
+      # Keep Maven Resolver 1.x in sync with Maven 3.9 line
+      - dependency-name: "org.apache.maven.resolver:*"
+        versions: [">= 2.0.0"]
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
