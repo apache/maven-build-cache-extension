@@ -30,6 +30,9 @@ updates:
       # Keep Maven Resolver 1.x in sync with Maven 3.9 line
       - dependency-name: "org.apache.maven.resolver:*"
         versions: [">= 2.0.0"]
+      # Keep Jakarta Annotations 1.x (javax) for the Maven 3.9 line
+      - dependency-name: "jakarta.annotation:jakarta.annotation-api"
+        versions: [">= 2.0.0"]
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
