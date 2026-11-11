@@ -41,6 +41,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.stream.Stream;
+import java.util.zip.ZipException;
 
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
@@ -286,7 +287,7 @@ public class CacheUtils {
                 ZipArchiveEntry entry = entries.nextElement();
                 Path file = out.resolve(entry.getName());
                 if (!file.normalize().startsWith(out.normalize())) {
-                    throw new RuntimeException("Bad zip entry");
+                    throw new ZipException("Bad zip entry");
                 }
                 if (entry.isDirectory()) {
                     Files.createDirectories(file);
