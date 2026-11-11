@@ -34,6 +34,7 @@ import org.apache.maven.project.MavenProject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import static java.util.Collections.singletonList;
@@ -67,6 +68,46 @@ class LifecyclePhasesHelperTest {
         lifecyclePhasesHelper = new LifecyclePhasesHelper(session, defaultLifecycles, cleanLifecycle);
 
         projectMock = mock(MavenProject.class);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "process-resources, after:resources",
+        "generate-sources, sources",
+        "generate-resources, resources",
+        "generate-test-sources, test-sources",
+        "process-test-resources, after:test-resources",
+        "generate-test-resources, test-resources",
+        "process-classes, after:compile",
+        "prepare-package, before:package"
+    })
+    void resolvesLegacyAliasesAgainstMaven4Phases(String alias, String canonical) {
+        Lifecycle lifecycle = mock(Lifecycle.class);
+        List<String> phases = new ArrayList<>(cleanLifecycle.getPhases());
+        phases.add(canonical);
+        phases.add("verify");
+        when(lifecycle.getPhases()).thenReturn(phases);
+        DefaultLifecycles lifecycles = mock(DefaultLifecycles.class);
+        when(lifecycles.getLifeCycles()).thenReturn(Arrays.asList(lifecycle));
+        LifecyclePhasesHelper helper = new LifecyclePhasesHelper(mock(MavenSession.class), lifecycles, cleanLifecycle);
+        List<MojoExecution> executions = Arrays.asList(mockedMojoExecution(alias));
+        assertTrue(helper.isSupportedPhase(alias));
+        assertTrue(helper.isLaterPhaseThanClean(alias));
+        assertTrue(helper.isLaterPhase("verify", alias));
+        assertFalse(helper.isLaterPhase(alias, canonical));
+        assertEquals(canonical, helper.resolveHighestLifecyclePhase(projectMock, executions));
+        assertTrue(helper.getCleanSegment(projectMock, executions).isEmpty());
+        assertEquals(Arrays.asList(canonical), helper.getCoveredPhases(projectMock, executions));
+    }
+
+    @Test
+    void preservesLegacyPhaseWhenLifecycleAlreadyContainsIt() {
+        List<MojoExecution> executions = Arrays.asList(mockedMojoExecution("process-resources"));
+        assertEquals("process-resources", lifecyclePhasesHelper.resolveHighestLifecyclePhase(projectMock, executions));
+        assertTrue(lifecyclePhasesHelper.isSupportedPhase("process-resources"));
+        assertFalse(lifecyclePhasesHelper.isSupportedPhase("unknown-phase"));
+        assertThrows(
+                IllegalArgumentException.class, () -> lifecyclePhasesHelper.isLaterPhaseThanClean("unknown-phase"));
     }
 
     /**
