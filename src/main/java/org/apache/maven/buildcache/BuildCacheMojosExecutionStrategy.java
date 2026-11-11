@@ -24,10 +24,14 @@ import javax.inject.Named;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.lang3.Strings;
 import org.apache.maven.SessionScoped;
@@ -39,6 +43,9 @@ import org.apache.maven.buildcache.xml.CacheState;
 import org.apache.maven.buildcache.xml.DtoUtils;
 import org.apache.maven.buildcache.xml.build.CompletedExecution;
 import org.apache.maven.buildcache.xml.config.TrackedProperty;
+import org.apache.maven.execution.AbstractExecutionListener;
+import org.apache.maven.execution.ExecutionEvent;
+import org.apache.maven.execution.MavenExecutionRequest;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.execution.MojoExecutionEvent;
 import org.apache.maven.execution.scope.internal.MojoExecutionScope;
@@ -96,9 +103,70 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
         this.mojoExecutionScope = mojoExecutionScope;
     }
 
+    private final ConcurrentMap<MavenProject, ConcurrentProject> concurrentProjects = new ConcurrentHashMap<>();
+    private boolean listenerRegistered;
+
+    private static class ConcurrentProject {
+        final Map<String, MojoExecution> executions = new LinkedHashMap<>();
+        CacheResult result;
+        boolean dirty;
+    }
+
+    private void recordConcurrentStep(
+            MavenProject project, List<MojoExecution> mojoExecutions, CacheResult result, boolean restored) {
+        ConcurrentProject state = concurrentProjects.computeIfAbsent(project, key -> new ConcurrentProject());
+        for (MojoExecution execution : mojoExecutions) {
+            state.executions.put(mojoExecutionKey(execution), execution);
+        }
+        if (state.result == null || !restored) {
+            state.result = result;
+        }
+        state.dirty |= !restored;
+    }
+
+    private void registerConcurrentListener(MavenSession session) {
+        synchronized (this) {
+            if (listenerRegistered) {
+                return;
+            }
+            MavenExecutionRequest request = session.getRequest();
+            ChainedListener listener = new ChainedListener(request.getExecutionListener());
+            listener.chainListener(new AbstractExecutionListener() {
+                @Override
+                public void sessionEnded(ExecutionEvent event) {
+                    if (!event.getSession().getResult().getExceptions().isEmpty()) {
+                        concurrentProjects.clear();
+                        return;
+                    }
+                    concurrentProjects.forEach((project, state) -> {
+                        synchronized (project) {
+                            if (state.dirty) {
+                                saveToCache(
+                                        state.result,
+                                        project,
+                                        new ArrayList<>(state.executions.values()),
+                                        getVersionlessProjectKey(project),
+                                        false,
+                                        false,
+                                        false);
+                            }
+                        }
+                    });
+                    concurrentProjects.clear();
+                }
+            });
+            request.setExecutionListener(listener);
+            listenerRegistered = true;
+        }
+    }
+
     public void execute(
             List<MojoExecution> mojoExecutions, MavenSession session, MojoExecutionRunner mojoExecutionRunner)
             throws LifecycleExecutionException {
+        if (session.getRequest() != null
+                && "concurrent".equals(session.getRequest().getBuilderId())) {
+            registerConcurrentListener(session);
+        }
         synchronized (session.getCurrentProject()) {
             executeProject(mojoExecutions, session, mojoExecutionRunner);
         }
@@ -216,7 +284,12 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                     }
                 }
 
-                if (cacheState == INITIALIZED) {
+                if (cacheState == INITIALIZED
+                        && !forkedExecution
+                        && session.getRequest() != null
+                        && "concurrent".equals(session.getRequest().getBuilderId())) {
+                    recordConcurrentStep(project, mojoExecutions, result, restored);
+                } else if (cacheState == INITIALIZED) {
                     saveToCache(
                             result,
                             project,
