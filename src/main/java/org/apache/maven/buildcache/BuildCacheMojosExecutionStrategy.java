@@ -43,9 +43,6 @@ import org.apache.maven.buildcache.xml.CacheState;
 import org.apache.maven.buildcache.xml.DtoUtils;
 import org.apache.maven.buildcache.xml.build.CompletedExecution;
 import org.apache.maven.buildcache.xml.config.TrackedProperty;
-import org.apache.maven.execution.AbstractExecutionListener;
-import org.apache.maven.execution.ExecutionEvent;
-import org.apache.maven.execution.MavenExecutionRequest;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.execution.MojoExecutionEvent;
 import org.apache.maven.execution.scope.internal.MojoExecutionScope;
@@ -76,7 +73,8 @@ import static org.apache.maven.buildcache.xml.CacheState.INITIALIZED;
 @Named
 @Priority(10)
 @SuppressWarnings("unused")
-public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy {
+public class BuildCacheMojosExecutionStrategy
+        implements MojosExecutionStrategy, org.apache.maven.execution.ProjectExecutionListener {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BuildCacheMojosExecutionStrategy.class);
 
@@ -104,7 +102,6 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
     }
 
     private final ConcurrentMap<MavenProject, ConcurrentProject> concurrentProjects = new ConcurrentHashMap<>();
-    private boolean listenerRegistered;
 
     private static class ConcurrentProject {
         final Map<String, MojoExecution> executions = new LinkedHashMap<>();
@@ -124,49 +121,38 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
         state.dirty |= !restored;
     }
 
-    private void registerConcurrentListener(MavenSession session) {
-        synchronized (this) {
-            if (listenerRegistered) {
-                return;
+    @Override
+    public void beforeProjectExecution(org.apache.maven.execution.ProjectExecutionEvent event) {}
+
+    @Override
+    public void beforeProjectLifecycleExecution(org.apache.maven.execution.ProjectExecutionEvent event) {}
+
+    @Override
+    public void afterProjectExecutionSuccess(org.apache.maven.execution.ProjectExecutionEvent event) {
+        MavenProject project = event.getProject();
+        synchronized (project) {
+            ConcurrentProject state = concurrentProjects.remove(project);
+            if (state != null && state.dirty) {
+                saveToCache(
+                        state.result,
+                        project,
+                        new ArrayList<>(state.executions.values()),
+                        getVersionlessProjectKey(project),
+                        false,
+                        false,
+                        false);
             }
-            MavenExecutionRequest request = session.getRequest();
-            ChainedListener listener = new ChainedListener(request.getExecutionListener());
-            listener.chainListener(new AbstractExecutionListener() {
-                @Override
-                public void sessionEnded(ExecutionEvent event) {
-                    if (!event.getSession().getResult().getExceptions().isEmpty()) {
-                        concurrentProjects.clear();
-                        return;
-                    }
-                    concurrentProjects.forEach((project, state) -> {
-                        synchronized (project) {
-                            if (state.dirty) {
-                                saveToCache(
-                                        state.result,
-                                        project,
-                                        new ArrayList<>(state.executions.values()),
-                                        getVersionlessProjectKey(project),
-                                        false,
-                                        false,
-                                        false);
-                            }
-                        }
-                    });
-                    concurrentProjects.clear();
-                }
-            });
-            request.setExecutionListener(listener);
-            listenerRegistered = true;
         }
+    }
+
+    @Override
+    public void afterProjectExecutionFailure(org.apache.maven.execution.ProjectExecutionEvent event) {
+        concurrentProjects.remove(event.getProject());
     }
 
     public void execute(
             List<MojoExecution> mojoExecutions, MavenSession session, MojoExecutionRunner mojoExecutionRunner)
             throws LifecycleExecutionException {
-        if (session.getRequest() != null
-                && "concurrent".equals(session.getRequest().getBuilderId())) {
-            registerConcurrentListener(session);
-        }
         synchronized (session.getCurrentProject()) {
             executeProject(mojoExecutions, session, mojoExecutionRunner);
         }

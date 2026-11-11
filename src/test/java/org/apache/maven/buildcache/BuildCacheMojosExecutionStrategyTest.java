@@ -274,7 +274,7 @@ class BuildCacheMojosExecutionStrategyTest {
         }
 
         @Test
-        void concurrentStepsAreSavedTogetherOnlyAfterSessionSuccess() throws Exception {
+        void concurrentStepsAreSavedTogetherOnlyAfterProjectSuccess() throws Exception {
             DefaultMavenExecutionRequest request = new DefaultMavenExecutionRequest();
             request.setBuilderId("concurrent");
             request.setExecutionListener(new AbstractExecutionListener());
@@ -295,14 +295,16 @@ class BuildCacheMojosExecutionStrategyTest {
             when(event.getProject()).thenReturn(project);
             when(event.getSession()).thenReturn(session);
             when(session.getResult()).thenReturn(new DefaultMavenExecutionResult());
-            request.getExecutionListener().sessionEnded(event);
+            strategy.afterProjectExecutionSuccess(
+                    new org.apache.maven.execution.ProjectExecutionEvent(session, project));
             verify(cacheController).save(eq(result), eq(Arrays.asList(mojoExecutions.get(0), test)), any());
-            request.getExecutionListener().sessionEnded(event);
+            strategy.afterProjectExecutionSuccess(
+                    new org.apache.maven.execution.ProjectExecutionEvent(session, project));
             verify(cacheController, org.mockito.Mockito.times(1)).save(any(), any(), any());
         }
 
         @Test
-        void failedConcurrentSessionDoesNotSaveCompletedSteps() throws Exception {
+        void failedConcurrentProjectDoesNotSaveCompletedSteps() throws Exception {
             DefaultMavenExecutionRequest request = new DefaultMavenExecutionRequest();
             request.setBuilderId("concurrent");
             request.setExecutionListener(new AbstractExecutionListener());
@@ -313,8 +315,10 @@ class BuildCacheMojosExecutionStrategyTest {
             when(event.getProject()).thenReturn(project);
             when(event.getSession()).thenReturn(session);
             when(session.getResult()).thenReturn(new DefaultMavenExecutionResult());
-            session.getResult().addException(new IllegalStateException("Build failed"));
-            request.getExecutionListener().sessionEnded(event);
+            strategy.afterProjectExecutionFailure(
+                    new org.apache.maven.execution.ProjectExecutionEvent(session, project));
+            strategy.afterProjectExecutionSuccess(
+                    new org.apache.maven.execution.ProjectExecutionEvent(session, project));
             verify(cacheController, never()).save(any(), any(), any());
         }
 
