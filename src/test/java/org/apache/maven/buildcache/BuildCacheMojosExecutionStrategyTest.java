@@ -24,6 +24,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.SystemUtils;
@@ -51,6 +57,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -260,6 +267,85 @@ class BuildCacheMojosExecutionStrategyTest {
             when(cacheConfig.initialize()).thenReturn(CacheState.INITIALIZED);
             when(lifecyclePhasesHelper.isLaterPhaseThanClean("compile")).thenReturn(true);
             when(cacheController.restoreProjectArtifacts(any())).thenReturn(restorationReport(true));
+        }
+
+        @Test
+        void allowsExecutionsForDifferentProjectsToOverlap() throws Exception {
+            when(cacheConfig.initialize()).thenReturn(CacheState.DISABLED);
+            MavenSession otherSession = mock(MavenSession.class);
+            when(otherSession.getCurrentProject()).thenReturn(new MavenProject());
+            CountDownLatch entered = new CountDownLatch(2);
+            CountDownLatch release = new CountDownLatch(1);
+            ExecutorService executor = Executors.newFixedThreadPool(2);
+            MojoExecutionRunner blockingRunner = execution -> {
+                entered.countDown();
+                try {
+                    if (!release.await(5, TimeUnit.SECONDS)) {
+                        throw new AssertionError("Executions were not released");
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new AssertionError(e);
+                }
+            };
+            try {
+                Future<?> first = executor.submit(() -> {
+                    strategy.execute(mojoExecutions, session, blockingRunner);
+                    return null;
+                });
+                Future<?> second = executor.submit(() -> {
+                    strategy.execute(mojoExecutions, otherSession, blockingRunner);
+                    return null;
+                });
+                assertTrue(entered.await(5, TimeUnit.SECONDS));
+                release.countDown();
+                first.get(5, TimeUnit.SECONDS);
+                second.get(5, TimeUnit.SECONDS);
+            } finally {
+                release.countDown();
+                executor.shutdownNow();
+                assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS));
+            }
+        }
+
+        @Test
+        void serializesExecutionsForTheSameProject() throws Exception {
+            when(cacheConfig.initialize()).thenReturn(CacheState.DISABLED);
+            CountDownLatch firstEntered = new CountDownLatch(1);
+            CountDownLatch release = new CountDownLatch(1);
+            CountDownLatch secondStarted = new CountDownLatch(1);
+            ExecutorService executor = Executors.newFixedThreadPool(2);
+            try {
+                Future<?> first = executor.submit(() -> {
+                    strategy.execute(mojoExecutions, session, execution -> {
+                        firstEntered.countDown();
+                        try {
+                            if (!release.await(5, TimeUnit.SECONDS)) {
+                                throw new AssertionError("First execution was not released");
+                            }
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            throw new AssertionError(e);
+                        }
+                    });
+                    return null;
+                });
+                assertTrue(firstEntered.await(5, TimeUnit.SECONDS));
+                Future<?> second = executor.submit(() -> {
+                    secondStarted.countDown();
+                    strategy.execute(mojoExecutions, session, execution -> {});
+                    return null;
+                });
+                assertTrue(secondStarted.await(5, TimeUnit.SECONDS));
+                assertThrows(TimeoutException.class, () -> second.get(200, TimeUnit.MILLISECONDS));
+                release.countDown();
+                first.get(5, TimeUnit.SECONDS);
+                second.get(5, TimeUnit.SECONDS);
+            } finally {
+                release.countDown();
+                executor.shutdownNow();
+                assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS));
+            }
         }
 
         @Test
