@@ -40,7 +40,7 @@ under the License.
     <build>
         <extensions>
             <extension>
-                <groupId>org.apache.maven.extensions</groupId>
+                <groupId>net.detasoft.maven.extensions</groupId>
                 <artifactId>maven-build-cache-extension</artifactId>
                 <version>${projectVersion}</version>
             </extension>
