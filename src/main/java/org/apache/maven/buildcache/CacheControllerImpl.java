@@ -423,6 +423,8 @@ public class CacheControllerImpl implements CacheController {
                 final Artifact artifactInfo = build.getArtifact();
                 String originalVersion = artifactInfo.getVersion();
                 artifactInfo.setVersion(project.getVersion());
+                artifactInfo.setFilePath(
+                        buildCurrentVersionFilePath(artifactInfo.getFilePath(), originalVersion, project));
                 restoredProjectArtifactIsDirectory = artifactInfo.isIsDirectory();
                 // TODO if remote is forced, probably need to refresh or reconcile all files
                 final Future<File> downloadTask =
@@ -459,6 +461,8 @@ public class CacheControllerImpl implements CacheController {
                             state.restoredOutputClassifiers.add(attachedArtifactInfo.getClassifier());
                         }
                     } else {
+                        attachedArtifactInfo.setFilePath(buildCurrentVersionFilePath(
+                                attachedArtifactInfo.getFilePath(), originalVersion, project));
                         Future<File> downloadTask = createDownloadTask(
                                 cacheResult, context, project, attachedArtifactInfo, originalVersion);
                         final RestoredArtifact restoredAttachedArtifact = restoredArtifact(
@@ -498,6 +502,24 @@ public class CacheControllerImpl implements CacheController {
             LOGGER.debug("Cannot restore cache, continuing with normal build.", e);
         }
         return restorationReport;
+    }
+
+    /**
+     * Plugins name a module's files after its final name, which usually holds its version
+     * ({@code <finalName>[-<classifier>].<extension>}). A file saved by a build of another version is put back under
+     * the name the current build gives it, so that a plugin running again after the restore attaches the same file
+     * rather than a second one under the same coordinates.
+     */
+    private String buildCurrentVersionFilePath(String filePath, String originalVersion, MavenProject project) {
+        String currentFileNamePrefix = project.getBuild().getFinalName();
+        String originalFileNamePrefix = currentFileNamePrefix.replace(project.getVersion(), originalVersion);
+        int fileNameStart = filePath.lastIndexOf('/') + 1;
+        if (!filePath.startsWith(originalFileNamePrefix, fileNameStart)) {
+            return filePath;
+        }
+        return filePath.substring(0, fileNameStart)
+                + currentFileNamePrefix
+                + filePath.substring(fileNameStart + originalFileNamePrefix.length());
     }
 
     @Override
