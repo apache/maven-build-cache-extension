@@ -423,6 +423,8 @@ public class CacheControllerImpl implements CacheController {
                 final Artifact artifactInfo = build.getArtifact();
                 String originalVersion = artifactInfo.getVersion();
                 artifactInfo.setVersion(project.getVersion());
+                artifactInfo.setFilePath(
+                        buildCurrentVersionFilePath(artifactInfo.getFilePath(), originalVersion, project));
                 restoredProjectArtifactIsDirectory = artifactInfo.isIsDirectory();
                 // TODO if remote is forced, probably need to refresh or reconcile all files
                 final Future<File> downloadTask =
@@ -442,6 +444,8 @@ public class CacheControllerImpl implements CacheController {
                 String originalVersion = attachedArtifactInfo.getVersion();
                 attachedArtifactInfo.setVersion(project.getVersion());
                 if (isNotBlank(attachedArtifactInfo.getFileName())) {
+                    attachedArtifactInfo.setFilePath(
+                            buildCurrentVersionFilePath(attachedArtifactInfo.getFilePath(), originalVersion, project));
                     OutputType outputType = OutputType.fromClassifier(attachedArtifactInfo.getClassifier());
                     if (OutputType.ARTIFACT != outputType) {
                         // restoring generated sources / extra output might be unnecessary in CI, could be disabled for
@@ -498,6 +502,24 @@ public class CacheControllerImpl implements CacheController {
             LOGGER.debug("Cannot restore cache, continuing with normal build.", e);
         }
         return restorationReport;
+    }
+
+    /**
+     * Maven names a module's files after its version ({@code <artifactId>-<version>[-<classifier>].<extension>}). A
+     * file saved by a build of another version is put back under the name the current build gives it, so that a mojo
+     * running again after the restore attaches the same file rather than a second one under the same coordinates.
+     */
+    private String buildCurrentVersionFilePath(String filePath, String originalVersion, MavenProject project) {
+        String originalFileNamePrefix = project.getArtifactId() + "-" + originalVersion;
+        int fileNameStart = filePath.lastIndexOf('/') + 1;
+        if (!filePath.startsWith(originalFileNamePrefix, fileNameStart)) {
+            return filePath;
+        }
+        return filePath.substring(0, fileNameStart)
+                + project.getArtifactId()
+                + "-"
+                + project.getVersion()
+                + filePath.substring(fileNameStart + originalFileNamePrefix.length());
     }
 
     @Override
