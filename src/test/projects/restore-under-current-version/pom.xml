@@ -48,4 +48,18 @@ under the License.
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <profile>
+      <id>custom-final-name</id>
+      <activation>
+        <property>
+          <name>customFinalName</name>
+        </property>
+      </activation>
+      <build>
+        <finalName>custom-${project.version}</finalName>
+      </build>
+    </profile>
+  </profiles>
 </project>

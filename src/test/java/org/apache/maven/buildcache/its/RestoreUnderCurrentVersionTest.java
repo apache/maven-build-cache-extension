@@ -31,8 +31,8 @@ import static org.apache.maven.buildcache.xml.CacheConfigImpl.CACHE_LOCATION_PRO
 
 /**
  * A cache entry saved by a build of another project version holds files named after that version. Restoring it must
- * put them back under the current version's names, so that a mojo running again after the restore attaches the same
- * file again instead of a second one under the same coordinates.
+ * put them back under the current version's names, so that maven-source-plugin, running again after the restore,
+ * attaches the same file again instead of refusing a second one under the same coordinates.
  */
 @IntegrationTest("src/test/projects/restore-under-current-version")
 class RestoreUnderCurrentVersionTest {
@@ -40,37 +40,43 @@ class RestoreUnderCurrentVersionTest {
     @Test
     void forcedExecutionAfterRestoreOfAnotherVersionReattachesTheSameFiles(Verifier verifier)
             throws VerificationException {
-        buildRevision1ThenRevision2(verifier);
+        buildTwoVersions(verifier);
 
         verifier.verifyTextInLog("Mojo execution is forced by project property: source:jar-no-fork");
-        verifier.verifyFilePresent("target/probe-2.jar");
-        verifier.verifyFilePresent("target/probe-2-sources.jar");
-        verifier.verifyFileNotPresent("target/probe-1.jar");
-        verifier.verifyFileNotPresent("target/probe-1-sources.jar");
+        verifier.verifyFilePresent("target/classes/probe/Probe.class");
+        verifier.verifyFilePresent("target/probe-1.0.1-SNAPSHOT.jar");
+        verifier.verifyFilePresent("target/probe-1.0.1-SNAPSHOT-sources.jar");
+        verifier.verifyFileNotPresent("target/probe-1.0.0-SNAPSHOT.jar");
+        verifier.verifyFileNotPresent("target/probe-1.0.0-SNAPSHOT-sources.jar");
     }
 
     @Test
-    void restoreOfAnotherVersionKeepsPathsNotNamedAfterTheVersion(Verifier verifier) throws VerificationException {
-        buildRevision1ThenRevision2(verifier);
+    void forcedExecutionAfterRestoreOfAnotherVersionWithCustomFinalNameReattachesTheSameFiles(Verifier verifier)
+            throws VerificationException {
+        verifier.setSystemProperty("customFinalName", "true");
 
-        verifier.verifyFilePresent("target/classes/probe/Probe.class");
+        buildTwoVersions(verifier);
+
+        verifier.verifyFilePresent("target/custom-1.0.1-SNAPSHOT.jar");
+        verifier.verifyFilePresent("target/custom-1.0.1-SNAPSHOT-sources.jar");
+        verifier.verifyFileNotPresent("target/custom-1.0.0-SNAPSHOT.jar");
+        verifier.verifyFileNotPresent("target/custom-1.0.0-SNAPSHOT-sources.jar");
     }
 
-    private void buildRevision1ThenRevision2(Verifier verifier) throws VerificationException {
+    private void buildTwoVersions(Verifier verifier) throws VerificationException {
         verifier.setAutoclean(false);
         verifier.setSystemProperty(
                 CACHE_LOCATION_PROPERTY_NAME,
                 Paths.get(verifier.getBasedir()).resolveSibling("cache").toString());
 
         verifier.setLogFileName("../log-1.txt");
-        verifier.addCliOption("-Drevision=1");
+        verifier.addCliOption("-Drevision=1.0.0-SNAPSHOT");
         verifier.executeGoals(Arrays.asList("clean", "verify"));
         verifier.verifyErrorFreeLog();
-        verifier.verifyFilePresent("target/probe-1-sources.jar");
 
         verifier.setLogFileName("../log-2.txt");
         verifier.getCliOptions().clear();
-        verifier.addCliOption("-Drevision=2");
+        verifier.addCliOption("-Drevision=1.0.1-SNAPSHOT");
         verifier.executeGoals(Arrays.asList("clean", "verify"));
         verifier.verifyErrorFreeLog();
         verifier.verifyTextInLog(CACHE_HIT);

@@ -444,8 +444,6 @@ public class CacheControllerImpl implements CacheController {
                 String originalVersion = attachedArtifactInfo.getVersion();
                 attachedArtifactInfo.setVersion(project.getVersion());
                 if (isNotBlank(attachedArtifactInfo.getFileName())) {
-                    attachedArtifactInfo.setFilePath(
-                            buildCurrentVersionFilePath(attachedArtifactInfo.getFilePath(), originalVersion, project));
                     OutputType outputType = OutputType.fromClassifier(attachedArtifactInfo.getClassifier());
                     if (OutputType.ARTIFACT != outputType) {
                         // restoring generated sources / extra output might be unnecessary in CI, could be disabled for
@@ -463,6 +461,8 @@ public class CacheControllerImpl implements CacheController {
                             state.restoredOutputClassifiers.add(attachedArtifactInfo.getClassifier());
                         }
                     } else {
+                        attachedArtifactInfo.setFilePath(buildCurrentVersionFilePath(
+                                attachedArtifactInfo.getFilePath(), originalVersion, project));
                         Future<File> downloadTask = createDownloadTask(
                                 cacheResult, context, project, attachedArtifactInfo, originalVersion);
                         final RestoredArtifact restoredAttachedArtifact = restoredArtifact(
@@ -505,20 +505,20 @@ public class CacheControllerImpl implements CacheController {
     }
 
     /**
-     * Maven names a module's files after its version ({@code <artifactId>-<version>[-<classifier>].<extension>}). A
-     * file saved by a build of another version is put back under the name the current build gives it, so that a mojo
-     * running again after the restore attaches the same file rather than a second one under the same coordinates.
+     * Plugins name a module's files after its final name, which usually holds its version
+     * ({@code <finalName>[-<classifier>].<extension>}). A file saved by a build of another version is put back under
+     * the name the current build gives it, so that a plugin running again after the restore attaches the same file
+     * rather than a second one under the same coordinates.
      */
     private String buildCurrentVersionFilePath(String filePath, String originalVersion, MavenProject project) {
-        String originalFileNamePrefix = project.getArtifactId() + "-" + originalVersion;
+        String currentFileNamePrefix = project.getBuild().getFinalName();
+        String originalFileNamePrefix = currentFileNamePrefix.replace(project.getVersion(), originalVersion);
         int fileNameStart = filePath.lastIndexOf('/') + 1;
         if (!filePath.startsWith(originalFileNamePrefix, fileNameStart)) {
             return filePath;
         }
         return filePath.substring(0, fileNameStart)
-                + project.getArtifactId()
-                + "-"
-                + project.getVersion()
+                + currentFileNamePrefix
                 + filePath.substring(fileNameStart + originalFileNamePrefix.length());
     }
 
