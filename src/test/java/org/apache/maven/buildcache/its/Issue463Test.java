@@ -63,7 +63,8 @@ import static org.apache.maven.buildcache.xml.CacheConfigImpl.SAVE_TO_REMOTE_PRO
  *
  * <p>The test asserts the <em>correct</em> fix behavior: step 4 must be a cache hit.</p>
  */
-@IntegrationTest("src/test/projects/mbuildcache-463")
+// This test manages separate local caches for two simulated CI runners.
+@IntegrationTest(value = "src/test/projects/mbuildcache-463", isolateBuildCache = false)
 @Testcontainers(disabledWithoutDocker = true)
 class Issue463Test {
 

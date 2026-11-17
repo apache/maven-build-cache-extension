@@ -18,20 +18,18 @@
  */
 package org.apache.maven.buildcache.its;
 
-import java.nio.file.Paths;
 import java.util.List;
 
-import org.apache.maven.buildcache.its.junit.BeforeEach;
 import org.apache.maven.buildcache.its.junit.IntegrationTest;
-import org.apache.maven.buildcache.its.junit.IntegrationTestExtension;
 import org.apache.maven.it.VerificationException;
 import org.apache.maven.it.Verifier;
 import org.junit.jupiter.api.Test;
 
 /**
- * Integration tests for the reconcile expression feature.
- * This feature allows plugin execution cache to depend on arbitrary Maven expressions
- * such as ${project.version}, ${project.groupId}, or any custom property.
+ * Integration tests for Maven expression reconciliation during cache restoration.
+ *
+ * Verifies that cached builds can be restored when relevant expressions
+ * remain unchanged and are invalidated when tracked expression values change.
  */
 @IntegrationTest("src/test/projects/reconcile-expressions")
 class ReconcileExpressionsTest {
@@ -39,11 +37,6 @@ class ReconcileExpressionsTest {
     private static final String PROJECT_NAME = "org.apache.maven.caching.test.reconcile:reconcile-expressions";
     private static final String RESTORED_MESSAGE = "Found cached build, restoring " + PROJECT_NAME + " from cache";
 
-    // start every test case with clear cache
-    @BeforeEach
-    void setUp() {
-        IntegrationTestExtension.deleteDir(Paths.get("target/build-cache/"));
-    }
     /**
      * Test basic expression reconciliation - cache should be restored when expressions match.
      */
@@ -85,7 +78,7 @@ class ReconcileExpressionsTest {
 
         // Change version using versions-maven-plugin
         verifier.setLogFileName("../log-version-set.txt");
-        verifier.getCliOptions().clear();
+        verifier.clearCliOptionsExcept("-Dmaven.build.cache.location=");
         verifier.addCliOption("-DoldVersion=1.0.0-SNAPSHOT");
         verifier.addCliOption("-DnewVersion=2.0.0-SNAPSHOT");
         verifier.addCliOption("-DgenerateBackupPoms=false");
@@ -93,14 +86,14 @@ class ReconcileExpressionsTest {
         verifier.verifyErrorFreeLog();
 
         // Third build with changed version - cache should be invalidated
-        verifier.getCliOptions().clear();
+        verifier.clearCliOptionsExcept("-Dmaven.build.cache.location=");
         verifier.setLogFileName("../log-version-3.txt");
         verifier.executeGoal("compile");
         verifier.verifyErrorFreeLog();
         // The project.version expression changed, so mojo parameters don't match
         verifier.verifyTextInLog("Plugin parameter mismatch found");
 
-        // Restore original version for other tests
+        // Restore the original version in this test's project copy.
         verifier.setLogFileName("../log-version-restore.txt");
         verifier.addCliOption("-DoldVersion=2.0.0-SNAPSHOT");
         verifier.addCliOption("-DnewVersion=1.0.0-SNAPSHOT");
@@ -130,7 +123,7 @@ class ReconcileExpressionsTest {
 
         // Third build with different property value via command line
         verifier.setLogFileName("../log-prop-3.txt");
-        verifier.getCliOptions().clear();
+        verifier.clearCliOptionsExcept("-Dmaven.build.cache.location=");
         verifier.addCliOption("-Dproduct.name=DifferentProduct");
         verifier.executeGoal("compile");
         verifier.verifyErrorFreeLog();
@@ -200,7 +193,7 @@ class ReconcileExpressionsTest {
 
         // Build 3: change to production - should invalidate cache
         verifier.setLogFileName("../log-track-3.txt");
-        verifier.getCliOptions().clear();
+        verifier.clearCliOptionsExcept("-Dmaven.build.cache.location=");
         verifier.addCliOption("-Dbuild.environment=production");
         verifier.executeGoal("compile");
         verifier.verifyErrorFreeLog();
@@ -208,7 +201,7 @@ class ReconcileExpressionsTest {
 
         // Build 4: same production environment - should use cache
         verifier.setLogFileName("../log-track-4.txt");
-        verifier.getCliOptions().clear();
+        verifier.clearCliOptionsExcept("-Dmaven.build.cache.location=");
         verifier.addCliOption("-Dbuild.environment=production");
         verifier.executeGoal("compile");
         verifier.verifyErrorFreeLog();

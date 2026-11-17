@@ -132,6 +132,15 @@ class IncrementalRestoreTest {
         verifyAllExtraOutputsPresent(verifier);
 
         Path buildInfoPath = getSavedBuildInfoPath(verifier);
+        // Verify that build metadata is stored in this test's isolated cache.
+        Path expectedCacheDir = Paths.get(verifier.getBasedir())
+                .getParent()
+                .resolve("target/build-cache")
+                .toAbsolutePath()
+                .normalize();
+        Assertions.assertTrue(
+                buildInfoPath.toAbsolutePath().normalize().startsWith(expectedCacheDir),
+                "Build cache should be inside " + expectedCacheDir + ", but was found at " + buildInfoPath);
         jarCacheFile = buildInfoPath.getParent().resolve(MBUILDCACHE_INCREMENTAL_JAR);
         jarSourcesCacheFile = buildInfoPath.getParent().resolve(MBUILDCACHE_INCREMENTAL_SOURCES_JAR);
         jarJavadocCacheFile = buildInfoPath.getParent().resolve(MBUILDCACHE_INCREMENTAL_JAVADOC_JAR);

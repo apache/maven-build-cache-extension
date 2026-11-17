@@ -119,7 +119,7 @@ class MandatoryCleanTest {
                 "not expected to be loaded from the cache");
 
         verifier.setLogFileName("../log-2.txt");
-        verifier.getCliOptions().clear();
+        verifier.clearCliOptionsExcept("-D" + CACHE_LOCATION_PROPERTY_NAME + "=");
         verifier.addCliOption("-X");
         // With "true", we do not change the initially expected behaviour
         verifier.addCliOption("-D" + CacheConfigImpl.MANDATORY_CLEAN + "=true");
@@ -139,7 +139,7 @@ class MandatoryCleanTest {
                 "not expected to be loaded from the cache");
 
         // With "false", we remove the need for the clean phase
-        verifier.getCliOptions().clear();
+        verifier.clearCliOptionsExcept("-D" + CACHE_LOCATION_PROPERTY_NAME + "=");
         verifier.addCliOption("-X");
         verifier.addCliOption("-D" + CacheConfigImpl.MANDATORY_CLEAN + "=false");
         verifier.setLogFileName("../log-3.txt");
