@@ -44,13 +44,14 @@ class Issue76Test {
         verifier.verifyTextInLog("Found cached build, restoring " + PROJECT_NAME + " from cache");
 
         verifier.setLogFileName("../log-3.txt");
-        verifier.getCliOptions().clear();
+        // Preserve the isolated cache location across Maven executions.
+        verifier.clearCliOptionsExcept("-Dmaven.build.cache.location=");
         verifier.addCliOption("-DoldVersion=0.0.1-SNAPSHOT");
         verifier.addCliOption("-DnewVersion=0.0.2-SNAPSHOT");
         verifier.executeGoal("versions:set");
         verifier.verifyErrorFreeLog();
 
-        verifier.getCliOptions().clear();
+        verifier.clearCliOptionsExcept("-Dmaven.build.cache.location=");
         verifier.setLogFileName("../log-4.txt");
         verifier.executeGoal("install");
         verifier.verifyErrorFreeLog();

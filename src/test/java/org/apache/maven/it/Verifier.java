@@ -128,6 +128,15 @@ public class Verifier {
         this.cliOptions.addAll(cliOptions);
     }
 
+    /**
+     * Removes CLI options except those starting with the specified prefix.
+     *
+     * @param retainedOptionPrefix prefix identifying options to preserve
+     */
+    public void clearCliOptionsExcept(String retainedOptionPrefix) {
+        cliOptions.removeIf(option -> !option.startsWith(retainedOptionPrefix));
+    }
+
     public void setForkJvm(boolean forkJvm) {
         this.forkJvm = forkJvm;
     }

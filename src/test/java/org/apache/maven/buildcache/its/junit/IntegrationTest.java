@@ -35,4 +35,11 @@ public @interface IntegrationTest {
      * <code>@IntegrationTest("src/test/projects/my-project")</code>
      */
     String value();
+
+    /**
+     * Whether the integration test should use an isolated build-cache directory.
+     *
+     * Tests that explicitly manage their own cache location can disable automatic isolation.
+     */
+    boolean isolateBuildCache() default true;
 }

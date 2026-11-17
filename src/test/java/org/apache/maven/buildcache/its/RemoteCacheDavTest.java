@@ -51,7 +51,7 @@ import static org.apache.maven.buildcache.xml.CacheConfigImpl.REMOTE_URL_PROPERT
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@IntegrationTest("src/test/projects/remote-cache-dav")
+@IntegrationTest(value = "src/test/projects/remote-cache-dav", isolateBuildCache = false)
 @Testcontainers(disabledWithoutDocker = true)
 class RemoteCacheDavTest {
 

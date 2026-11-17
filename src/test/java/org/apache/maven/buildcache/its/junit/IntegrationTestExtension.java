@@ -45,7 +45,6 @@ public class IntegrationTestExtension implements BeforeAllCallback, BeforeEachCa
     @Override
     public void beforeAll(ExtensionContext context) throws IOException {
         MavenSetup.configureMavenHome();
-        deleteDir(Paths.get("target/build-cache/"));
     }
 
     @Override
@@ -149,11 +148,16 @@ public class IntegrationTestExtension implements BeforeAllCallback, BeforeEachCa
                     }
                 });
             }
-
             Verifier verifier = new Verifier(testExecutionDir.toString());
             verifier.setLogFileName("../log.txt");
             verifier.setSystemProperty("projectVersion", System.getProperty("projectVersion"));
             verifier.setLocalRepo(System.getProperty("localRepo"));
+
+            if (test.isolateBuildCache()) {
+                Path cacheDir = testDir.resolve("target/build-cache");
+                verifier.addCliOption("-Dmaven.build.cache.location=" + cacheDir);
+            }
+
             return verifier;
         } catch (VerificationException | IOException e) {
             throw new ParameterResolutionException("Unable to create Verifier", e);
