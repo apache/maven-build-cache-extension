@@ -41,11 +41,11 @@ public interface RemoteCacheRepository extends CacheRepository {
      * Returns <code>true</code> if success, <code>false</code> if the artifact does not exists
      * and throws an <code>IOException</code> if a problem occurs.
      */
-    boolean getArtifactContent(CacheContext context, Artifact artifact, Path target) throws IOException;
+    boolean getArtifactContent(CacheContext context, Zone zone, Artifact artifact, Path target) throws IOException;
 
     @Nonnull
-    String getResourceUrl(CacheContext context, String filename);
+    String getResourceUrl(CacheContext context, Zone zone, String filename);
 
     @Nonnull
-    Optional<Build> findBaselineBuild(MavenProject project);
+    Optional<Build> findBaselineBuild(MavenProject project, Zone zone);
 }

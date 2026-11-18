@@ -34,11 +34,11 @@ import org.apache.maven.execution.MavenSession;
 public interface CacheRepository {
 
     @Nonnull
-    Optional<Build> findBuild(CacheContext context) throws IOException;
+    Optional<Build> findBuild(CacheContext context, Zone inputZone) throws IOException;
 
-    void saveBuildInfo(CacheResult cacheResult, Build build) throws IOException;
+    void saveBuildInfo(CacheResult cacheResult, Zone outputZone, Build build) throws IOException;
 
-    void saveArtifactFile(CacheResult cacheResult, Artifact artifact) throws IOException;
+    void saveArtifactFile(CacheResult cacheResult, Zone outputZone, Artifact artifact) throws IOException;
 
     void saveCacheReport(String buildId, MavenSession session, CacheReport cacheReport) throws IOException;
 }
