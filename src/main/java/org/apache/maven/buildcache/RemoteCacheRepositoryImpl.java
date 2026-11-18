@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -78,13 +79,17 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
     private final XmlService xmlService;
     private final CacheConfig cacheConfig;
     private final Transporter transporter;
+    private final String remoteBaseUrl;
+    private final RemoteCacheHttpClient httpClient;
+    private final RemoteCacheRetentionStrategy retentionStrategy;
 
     @Inject
     public RemoteCacheRepositoryImpl(
             XmlService xmlService,
             CacheConfig cacheConfig,
             MavenSession mavenSession,
-            TransporterProvider transporterProvider)
+            TransporterProvider transporterProvider,
+            RemoteCacheRetentionStrategySelector retentionStrategySelector)
             throws Exception {
         this.xmlService = xmlService;
         this.cacheConfig = cacheConfig;
@@ -101,10 +106,34 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
                     .setProxy(proxy)
                     .setAuthentication(auth)
                     .build();
+            this.remoteBaseUrl = stripTrailingSlash(stripDavScheme(cacheConfig.getUrl()));
+            this.httpClient = new MavenSessionRemoteCacheHttpClient(session, repository);
             this.transporter = transporterProvider.newTransporter(withWebDav(session, repository.getId()), repository);
+            this.retentionStrategy =
+                    retentionStrategySelector.select(remoteBaseUrl, httpClient, cacheConfig, xmlService);
         } else {
+            this.remoteBaseUrl = null;
+            this.httpClient = null;
             this.transporter = null;
+            this.retentionStrategy = new UnsupportedRemoteRetentionStrategy(cacheConfig);
         }
+    }
+
+    RemoteCacheRepositoryImpl(
+            XmlService xmlService,
+            CacheConfig cacheConfig,
+            MavenSession mavenSession,
+            TransporterProvider transporterProvider)
+            throws Exception {
+        this(
+                xmlService,
+                cacheConfig,
+                mavenSession,
+                transporterProvider,
+                new RemoteCacheRetentionStrategySelector(Arrays.asList(
+                        new NexusRawRetentionStrategyProvider(),
+                        new DirectoryListingRetentionStrategyProvider(),
+                        new UnsupportedRemoteRetentionStrategyProvider())));
     }
 
     /**
@@ -190,7 +219,7 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
                 + "/" + rootProject.getArtifactId()
                 + "/" + buildId
                 + "/" + CACHE_REPORT_XML;
-        putToRemoteCache(xmlService.toBytes(cacheReport), resourceUrl);
+        putToRemoteCacheStrict(xmlService.toBytes(cacheReport), resourceUrl);
     }
 
     @Override
@@ -341,6 +370,37 @@ public class RemoteCacheRepositoryImpl implements RemoteCacheRepository, Closeab
             LOGGER.warn("Error restoring baseline build at url: {}, skipping diff", url, e);
             return Optional.empty();
         }
+    }
+
+    @Override
+    public void cleanup(CacheReport report, MavenSession session) throws IOException {
+        if (!cacheConfig.isRemoteCleanupEnabled()) {
+            LOGGER.debug("Remote cache cleanup skipped because it is disabled");
+            return;
+        }
+        retentionStrategy.cleanup(report, session);
+    }
+
+    RemoteCacheRetentionStrategy retentionStrategy() {
+        return retentionStrategy;
+    }
+
+    private void putToRemoteCacheStrict(byte[] bytes, String url) throws IOException {
+        Path tmp = Files.createTempFile("mbce-", ".tmp");
+        try {
+            Files.write(tmp, bytes);
+            PutTask put = new PutTask(new URI(url)).setDataFile(tmp.toFile());
+            transporter.put(put);
+            LOGGER.info("Saved to remote cache {}", getFullUrl(url));
+        } catch (Exception e) {
+            throw new IOException("Unable to save to remote cache " + getFullUrl(url), e);
+        } finally {
+            Files.deleteIfExists(tmp);
+        }
+    }
+
+    private static String stripTrailingSlash(String value) {
+        return value != null && value.endsWith("/") ? value.substring(0, value.length() - 1) : value;
     }
 
     private Optional<CacheReport> findCacheInfo() {
