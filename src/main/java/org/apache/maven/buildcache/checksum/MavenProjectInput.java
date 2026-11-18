@@ -177,7 +177,7 @@ public class MavenProjectInput {
                 Boolean.parseBoolean(properties.getProperty(CACHE_PROCESS_PLUGINS, config.isProcessPlugins()));
         this.tmpDir = System.getProperty("java.io.tmpdir");
 
-        this.exclusionResolver = new ExclusionResolver(project, config);
+        this.exclusionResolver = new ExclusionResolver(project, config, session.getAllProjects());
 
         this.fileComparator = new PathIgnoringCaseComparator();
         this.artifactHandlerManager = artifactHandlerManager;
