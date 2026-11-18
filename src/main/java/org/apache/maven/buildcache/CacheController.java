@@ -23,8 +23,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.maven.buildcache.artifact.ArtifactRestorationReport;
+import org.apache.maven.buildcache.xml.build.CompletedExecution;
 import org.apache.maven.execution.MavenSession;
-import org.apache.maven.execution.MojoExecutionEvent;
 import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.project.MavenProject;
 
@@ -67,7 +67,7 @@ public interface CacheController {
     void save(
             CacheResult cacheResult,
             List<MojoExecution> mojoExecutions,
-            Map<String, MojoExecutionEvent> executionEvents);
+            Map<String, CompletedExecution> executionEvents);
 
     boolean isForcedExecution(MavenProject project, MojoExecution execution);
 
