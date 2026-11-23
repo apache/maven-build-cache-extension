@@ -193,6 +193,10 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                 executeExtraCleanPhaseIfNeeded(cacheRestorationStatus, cleanPhase, mojoExecutionRunner);
             }
 
+            if ((cacheEligible || forkedRestoreEligible) && !restored) {
+                ProjectCacheStatus.notRestored(cacheState, skipCache, result).publish(project, null);
+            }
+
             try {
                 if (cacheState == INITIALIZED && !restored && (!forkedExecution || forkedSaveEligible)) {
                     // Move pre-existing artifacts to staging directory to prevent caching stale files
@@ -443,6 +447,8 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                     : CacheRestorationStatus.FAILURE;
         }
 
+        ProjectCacheStatus.restored(cacheResult).publish(project, cacheResult.getSource());
+
         // Execute mandatory mojos (forced by configuration)
         LOGGER.debug("Execute mandatory mojos in the cache segment");
         for (MojoExecution cacheCandidate : cachedSegment) {
@@ -455,6 +461,11 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                 LOGGER.info(
                         "Skipping plugin execution (cached): {}",
                         cacheCandidate.getMojoDescriptor().getFullGoalName());
+                // Record the phase as Maven does for executed mojos. The reactor only resolves a module's
+                // target/classes or target/test-classes when its compile or test-compile phase is recorded.
+                if (cacheCandidate.getLifecyclePhase() != null) {
+                    project.addLifecyclePhase(cacheCandidate.getLifecyclePhase());
+                }
                 // Need to populate cached candidate executions for the build cache save result
                 Mojo mojo = null;
                 mojoExecutionScope.enter();

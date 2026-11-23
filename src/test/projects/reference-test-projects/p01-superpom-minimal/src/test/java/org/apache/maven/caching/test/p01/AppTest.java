@@ -18,8 +18,8 @@
  */
 package org.apache.maven.caching.test.p01;
 
-import org.junit.Test;
-import static org.junit.Assert.assertTrue;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class AppTest {
     @Test

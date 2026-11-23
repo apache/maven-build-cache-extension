@@ -374,11 +374,10 @@ public class CacheControllerImpl implements CacheController {
         if (!Files.exists(restorationPath)) {
             Files.createDirectories(restorationPath);
         }
-        CacheUtils.unzip(
-                cachedZip.toPath(),
-                restorationPath,
-                cacheConfig.isPreservePermissions(),
-                cacheConfig.isPreserveTimestamps());
+        // Give restored files fresh timestamps, as restoreRegularFileArtifact does. Downstream compilers decide
+        // whether to recompile by comparing timestamps, so restoring an older version of these classes with its
+        // original timestamps would leave modules compiled against a different version of them.
+        CacheUtils.unzip(cachedZip.toPath(), restorationPath, cacheConfig.isPreservePermissions(), false);
         LOGGER.debug("Restored directory artifact by unzipping: {} -> {}", artifact.getFileName(), restorationPath);
     }
 
@@ -487,7 +486,13 @@ public class CacheControllerImpl implements CacheController {
                     project.addLifecyclePhase("package");
                 }
             }
-            restoredAttachedArtifacts.forEach(project::addAttachedArtifact);
+            for (org.apache.maven.artifact.Artifact attachedArtifact : restoredAttachedArtifacts) {
+                projectHelper.attachArtifact(
+                        project,
+                        attachedArtifact.getType(),
+                        attachedArtifact.getClassifier(),
+                        attachedArtifact.getFile());
+            }
             restorationReport.setSuccess(true);
         } catch (Exception e) {
             LOGGER.debug("Cannot restore cache, continuing with normal build.", e);

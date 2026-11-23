@@ -18,12 +18,12 @@
  */
 package org.example;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class AppTest {
     @Test
     public void greetingIsNotNull() {
-        Assert.assertNotNull(App.greeting());
+        Assertions.assertNotNull(App.greeting());
     }
 }
