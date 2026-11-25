@@ -331,6 +331,44 @@ public class CacheUtils {
         }
     }
 
+    /**
+     * Moves every file of {@code source} to the same relative path under {@code target}, creating the directories
+     * of {@code target} as needed, then deletes the emptied directories of {@code source}.
+     *
+     * <p>Unlike moving {@code source} as a whole, no directory changes path. IntelliJ's file watcher (fsnotifier)
+     * aborts when a watched directory is moved into a freshly created one: scanning the new directory finds the
+     * moved one before the move event is processed, and the kernel returns the watch it already holds under the old
+     * path. Moving many directories this way within one build makes IntelliJ disable its file watcher.</p>
+     *
+     * @param source directory whose files are moved, deleted afterwards
+     * @param target directory receiving the files
+     * @throws IOException if a file cannot be moved or a directory cannot be created or deleted
+     */
+    public static void moveFiles(Path source, Path target) throws IOException {
+        Files.walkFileTree(source, new SimpleFileVisitor<Path>() {
+            @Override
+            public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+                Files.createDirectories(target.resolve(source.relativize(dir)));
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                Files.move(file, target.resolve(source.relativize(file)));
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+                if (exc != null) {
+                    throw exc;
+                }
+                Files.delete(dir);
+                return FileVisitResult.CONTINUE;
+            }
+        });
+    }
+
     public static <T> void debugPrintCollection(
             Logger logger, Collection<T> values, String heading, String elementCaption) {
         if (logger.isDebugEnabled() && values != null && !values.isEmpty()) {
