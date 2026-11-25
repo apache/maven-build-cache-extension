@@ -1430,9 +1430,8 @@ public class CacheControllerImpl implements CacheController {
                     deleteDirectory(stagedPath);
                     LOGGER.debug("Removed existing staged directory: {}", stagedPath);
                 }
-                // Move entire directory to staging
-                Files.createDirectories(stagedPath.getParent());
-                Files.move(path, stagedPath);
+                // Move the directory's files, not the directory itself: see CacheUtils#moveFiles
+                CacheUtils.moveFiles(path, stagedPath);
                 movedCount++;
                 LOGGER.debug("Moved directory to staging: {} → {}", relativePath, stagedPath);
             } else if (Files.isRegularFile(path)) {
