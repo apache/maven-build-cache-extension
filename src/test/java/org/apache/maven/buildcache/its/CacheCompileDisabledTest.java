@@ -44,14 +44,8 @@ class CacheCompileDisabledTest {
     void compileDoesNotCacheWhenDisabled(Verifier verifier) throws VerificationException, IOException {
         verifier.setAutoclean(false);
 
-        // The actual cache is stored in target/build-cache (relative to the extension root, not test project)
-        Path localCache = Paths.get(System.getProperty("maven.multiModuleProjectDirectory"))
-                .resolve("target/build-cache");
-
-        // Clean cache before test
-        if (Files.exists(localCache)) {
-            deleteDirectory(localCache);
-        }
+        // Use the cache directory dedicated to this integration test.
+        Path localCache = Paths.get(verifier.getBasedir()).getParent().resolve("target/build-cache");
 
         // First compile with cacheCompile disabled - compile only the app module to avoid dependency issues
         verifier.setLogFileName("../log-compile-disabled.txt");
@@ -61,11 +55,8 @@ class CacheCompileDisabledTest {
         verifier.executeGoals(Arrays.asList("clean", "compile"));
         verifier.verifyErrorFreeLog();
 
-        // Verify NO cache entry was created (no buildinfo.xml in local cache)
-        boolean hasCacheEntry;
-        try (Stream<Path> walk = Files.walk(localCache)) {
-            hasCacheEntry = walk.anyMatch(p -> p.getFileName().toString().equals("buildinfo.xml"));
-        }
+        // Verify NO cache entry was created
+        boolean hasCacheEntry = hasBuildInfo(localCache);
         assertFalse(hasCacheEntry, "Cache entry should NOT be created when maven.build.cache.cacheCompile=false");
 
         // Clean project and run compile again
@@ -88,14 +79,8 @@ class CacheCompileDisabledTest {
     void compileCreatesCacheEntryWhenEnabled(Verifier verifier) throws VerificationException, IOException {
         verifier.setAutoclean(false);
 
-        // The actual cache is stored in target/build-cache (relative to the extension root, not test project)
-        Path localCache = Paths.get(System.getProperty("maven.multiModuleProjectDirectory"))
-                .resolve("target/build-cache");
-
-        // Clean cache before test
-        if (Files.exists(localCache)) {
-            deleteDirectory(localCache);
-        }
+        // Use the cache directory dedicated to this integration test.
+        Path localCache = Paths.get(verifier.getBasedir()).getParent().resolve("target/build-cache");
 
         // First compile with cacheCompile enabled (default) - compile only the app module
         verifier.setLogFileName("../log-compile-enabled.txt");
@@ -105,10 +90,7 @@ class CacheCompileDisabledTest {
         verifier.verifyErrorFreeLog();
 
         // Verify cache entry WAS created
-        boolean hasCacheEntry;
-        try (Stream<Path> walk = Files.walk(localCache)) {
-            hasCacheEntry = walk.anyMatch(p -> p.getFileName().toString().equals("buildinfo.xml"));
-        }
+        boolean hasCacheEntry = hasBuildInfo(localCache);
         assertTrue(hasCacheEntry, "Cache entry should be created when maven.build.cache.cacheCompile=true (default)");
 
         // Clean project and run compile again
@@ -123,17 +105,13 @@ class CacheCompileDisabledTest {
         verifier.verifyTextInLog("Skipping plugin execution (cached): compiler:compile");
     }
 
-    private void deleteDirectory(Path directory) throws IOException {
-        if (Files.exists(directory)) {
-            try (Stream<Path> walk = Files.walk(directory)) {
-                walk.sorted((a, b) -> b.compareTo(a)).forEach(path -> {
-                    try {
-                        Files.delete(path);
-                    } catch (IOException e) {
-                        // Ignore
-                    }
-                });
-            }
+    private static boolean hasBuildInfo(Path cacheDir) throws IOException {
+        if (Files.notExists(cacheDir)) {
+            return false;
+        }
+
+        try (Stream<Path> files = Files.walk(cacheDir)) {
+            return files.anyMatch(path -> path.getFileName().toString().equals("buildinfo.xml"));
         }
     }
 }

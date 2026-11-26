@@ -47,7 +47,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * repository. {@link RemoteCacheDavTest} covers the same ground against a real server, but that one creates parents
  * on PUT and so passes either way; this test is what actually pins the behaviour.
  */
-@IntegrationTest("src/test/projects/remote-cache-strict-dav")
+@IntegrationTest(value = "src/test/projects/remote-cache-strict-dav", isolateBuildCache = false)
 class RemoteCacheStrictDavTest {
 
     private static final String REPO_ID = "build-cache";
