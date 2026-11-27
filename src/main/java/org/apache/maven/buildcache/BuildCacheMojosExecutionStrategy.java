@@ -24,10 +24,14 @@ import javax.inject.Named;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.lang3.Strings;
 import org.apache.maven.SessionScoped;
@@ -69,7 +73,8 @@ import static org.apache.maven.buildcache.xml.CacheState.INITIALIZED;
 @Named
 @Priority(10)
 @SuppressWarnings("unused")
-public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy {
+public class BuildCacheMojosExecutionStrategy
+        implements MojosExecutionStrategy, org.apache.maven.execution.ProjectExecutionListener {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BuildCacheMojosExecutionStrategy.class);
 
@@ -96,7 +101,64 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
         this.mojoExecutionScope = mojoExecutionScope;
     }
 
+    private final ConcurrentMap<MavenProject, ConcurrentProject> concurrentProjects = new ConcurrentHashMap<>();
+
+    private static class ConcurrentProject {
+        final Map<String, MojoExecution> executions = new LinkedHashMap<>();
+        CacheResult result;
+        boolean dirty;
+    }
+
+    private void recordConcurrentStep(
+            MavenProject project, List<MojoExecution> mojoExecutions, CacheResult result, boolean restored) {
+        ConcurrentProject state = concurrentProjects.computeIfAbsent(project, key -> new ConcurrentProject());
+        for (MojoExecution execution : mojoExecutions) {
+            state.executions.put(mojoExecutionKey(execution), execution);
+        }
+        if (state.result == null || !restored) {
+            state.result = result;
+        }
+        state.dirty |= !restored;
+    }
+
+    @Override
+    public void beforeProjectExecution(org.apache.maven.execution.ProjectExecutionEvent event) {}
+
+    @Override
+    public void beforeProjectLifecycleExecution(org.apache.maven.execution.ProjectExecutionEvent event) {}
+
+    @Override
+    public void afterProjectExecutionSuccess(org.apache.maven.execution.ProjectExecutionEvent event) {
+        MavenProject project = event.getProject();
+        synchronized (project) {
+            ConcurrentProject state = concurrentProjects.remove(project);
+            if (state != null && state.dirty) {
+                saveToCache(
+                        state.result,
+                        project,
+                        new ArrayList<>(state.executions.values()),
+                        getVersionlessProjectKey(project),
+                        false,
+                        false,
+                        false);
+            }
+        }
+    }
+
+    @Override
+    public void afterProjectExecutionFailure(org.apache.maven.execution.ProjectExecutionEvent event) {
+        concurrentProjects.remove(event.getProject());
+    }
+
     public void execute(
+            List<MojoExecution> mojoExecutions, MavenSession session, MojoExecutionRunner mojoExecutionRunner)
+            throws LifecycleExecutionException {
+        synchronized (session.getCurrentProject()) {
+            executeProject(mojoExecutions, session, mojoExecutionRunner);
+        }
+    }
+
+    private void executeProject(
             List<MojoExecution> mojoExecutions, MavenSession session, MojoExecutionRunner mojoExecutionRunner)
             throws LifecycleExecutionException {
 
@@ -208,7 +270,12 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
                     }
                 }
 
-                if (cacheState == INITIALIZED) {
+                if (cacheState == INITIALIZED
+                        && !forkedExecution
+                        && session.getRequest() != null
+                        && "concurrent".equals(session.getRequest().getBuilderId())) {
+                    recordConcurrentStep(project, mojoExecutions, result, restored);
+                } else if (cacheState == INITIALIZED) {
                     saveToCache(
                             result,
                             project,

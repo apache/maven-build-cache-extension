@@ -30,7 +30,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -150,6 +149,10 @@ public class CacheControllerImpl implements CacheController {
          * Artifacts are moved here before mojos run and restored after save() completes.
          */
         Path stagingDirectory;
+
+        boolean stagingPerformed;
+
+        final Set<Path> stagedArtifactPaths = new HashSet<>();
     }
 
     private final ConcurrentMap<String, ProjectCacheState> projectStates = new ConcurrentHashMap<>();
@@ -1406,8 +1409,11 @@ public class CacheControllerImpl implements CacheController {
      * @param project The Maven project being built
      * @throws IOException if file move operations fail
      */
-    public void stagePreExistingArtifacts(MavenSession session, MavenProject project) throws IOException {
+    public synchronized void stagePreExistingArtifacts(MavenSession session, MavenProject project) throws IOException {
         final ProjectCacheState state = getProjectState(project);
+        if (state.stagingPerformed) {
+            return;
+        }
         final Path multimoduleRoot = CacheUtils.getMultimoduleRoot(session);
         final Path stagingDir = multimoduleRoot.resolve("target").resolve("maven-build-cache-extension");
 
@@ -1417,6 +1423,7 @@ public class CacheControllerImpl implements CacheController {
 
         // Collect all paths that will be cached
         Set<Path> pathsToProcess = collectCachedArtifactPaths(project);
+        state.stagedArtifactPaths.clear();
 
         int movedCount = 0;
         for (Path path : pathsToProcess) {
@@ -1433,6 +1440,7 @@ public class CacheControllerImpl implements CacheController {
                 // Move entire directory to staging
                 Files.createDirectories(stagedPath.getParent());
                 Files.move(path, stagedPath);
+                state.stagedArtifactPaths.add(path);
                 movedCount++;
                 LOGGER.debug("Moved directory to staging: {} → {}", relativePath, stagedPath);
             } else if (Files.isRegularFile(path)) {
@@ -1444,11 +1452,13 @@ public class CacheControllerImpl implements CacheController {
                 // Move individual file (e.g., JAR) to staging
                 Files.createDirectories(stagedPath.getParent());
                 Files.move(path, stagedPath);
+                state.stagedArtifactPaths.add(path);
                 movedCount++;
                 LOGGER.debug("Moved file to staging: {} → {}", relativePath, stagedPath);
             }
         }
 
+        state.stagingPerformed = true;
         if (movedCount > 0) {
             LOGGER.info(
                     "Moved {} pre-existing artifacts to staging directory to prevent caching stale files", movedCount);
@@ -1510,105 +1520,41 @@ public class CacheControllerImpl implements CacheController {
      *   <li>Incremental builds work correctly (unchanged files restored)
      * </ul>
      *
-     * <p>Finally, deletes the staging directory.
+     * <p>Only artifact roots staged by this project are processed. Parent directories and other projects
+     * are left untouched. Staging runs once per project and session so later lifecycle steps retain
+     * outputs produced by earlier steps.
      *
      * @param session The Maven session
      * @param project The Maven project being built
      */
-    public void restoreStagedArtifacts(MavenSession session, MavenProject project) {
+    public synchronized void restoreStagedArtifacts(MavenSession session, MavenProject project) {
         final ProjectCacheState state = getProjectState(project);
         final Path stagingDir = state.stagingDirectory;
-
-        if (stagingDir == null || !Files.exists(stagingDir)) {
-            return; // Nothing to restore
+        if (stagingDir == null) {
+            return;
         }
-
-        try {
-            final Path multimoduleRoot = CacheUtils.getMultimoduleRoot(session);
-
-            // Collect directories to delete (where fresh versions exist)
-            final List<Path> dirsToDelete = new ArrayList<>();
-
-            // Walk staging directory and process files
-            Files.walkFileTree(stagingDir, new SimpleFileVisitor<Path>() {
-                @Override
-                public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-                    if (dir.equals(stagingDir)) {
-                        return FileVisitResult.CONTINUE; // Skip root
-                    }
-
-                    Path relativePath = stagingDir.relativize(dir);
-                    Path targetPath = multimoduleRoot.resolve(relativePath);
-
-                    if (Files.exists(targetPath)) {
-                        // Fresh directory exists - mark entire tree for deletion
-                        dirsToDelete.add(dir);
-                        LOGGER.debug("Fresh directory exists, marking for recursive deletion: {}", relativePath);
-                        return FileVisitResult.SKIP_SUBTREE;
-                    }
-                    return FileVisitResult.CONTINUE;
-                }
-
-                @Override
-                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                    Path relativePath = stagingDir.relativize(file);
-                    Path targetPath = multimoduleRoot.resolve(relativePath);
-
-                    try {
-                        // Atomically move file back if destination doesn't exist
-                        Files.createDirectories(targetPath.getParent());
-                        Files.move(file, targetPath);
-                        LOGGER.debug("Restored unchanged file from staging: {}", relativePath);
-                    } catch (FileAlreadyExistsException e) {
-                        // Fresh file exists (was rebuilt) - delete stale version
-                        Files.delete(file);
-                        LOGGER.debug("Fresh file exists, deleted stale file: {}", relativePath);
-                    }
-                    return FileVisitResult.CONTINUE;
-                }
-
-                @Override
-                public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-                    if (exc != null) {
-                        throw exc;
-                    }
-                    // Try to delete empty directories bottom-up
-                    if (!dir.equals(stagingDir)) {
-                        try {
-                            Files.delete(dir);
-                            LOGGER.debug("Deleted empty directory: {}", stagingDir.relativize(dir));
-                        } catch (IOException e) {
-                            // Not empty yet - other modules may still have files here
-                        }
-                    }
-                    return FileVisitResult.CONTINUE;
-                }
-            });
-
-            // Recursively delete directories where fresh versions exist
-            for (Path dirToDelete : dirsToDelete) {
-                LOGGER.debug("Recursively deleting stale directory: {}", stagingDir.relativize(dirToDelete));
-                deleteDirectory(dirToDelete);
-            }
-
-            // Try to delete staging directory itself if now empty
+        final Path multimoduleRoot = CacheUtils.getMultimoduleRoot(session);
+        for (Path targetPath : state.stagedArtifactPaths) {
+            Path stagedPath = stagingDir.resolve(multimoduleRoot.relativize(targetPath));
             try {
-                Files.delete(stagingDir);
-                LOGGER.debug("Deleted empty staging directory: {}", stagingDir);
+                if (!Files.exists(stagedPath)) {
+                    continue;
+                }
+                if (Files.exists(targetPath)) {
+                    if (Files.isDirectory(stagedPath)) {
+                        deleteDirectory(stagedPath);
+                    } else {
+                        Files.delete(stagedPath);
+                    }
+                } else {
+                    Files.createDirectories(targetPath.getParent());
+                    Files.move(stagedPath, targetPath);
+                }
             } catch (IOException e) {
-                LOGGER.debug("Staging directory not empty, preserving for other modules");
+                LOGGER.warn("Failed to restore artifact from staging directory: {}", e.getMessage());
             }
-
-        } catch (IOException e) {
-            LOGGER.warn("Failed to restore artifacts from staging directory: {}", e.getMessage());
         }
-
-        // Clear the staging directory reference
-        state.stagingDirectory = null;
-
-        // Remove the project state from map to free memory (called after save() cleanup)
-        String key = getVersionlessProjectKey(project);
-        projectStates.remove(key);
+        state.stagedArtifactPaths.clear();
     }
 
     /**
