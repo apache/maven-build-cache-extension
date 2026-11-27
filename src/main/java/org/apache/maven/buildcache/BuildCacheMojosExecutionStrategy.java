@@ -99,6 +99,14 @@ public class BuildCacheMojosExecutionStrategy implements MojosExecutionStrategy 
     public void execute(
             List<MojoExecution> mojoExecutions, MavenSession session, MojoExecutionRunner mojoExecutionRunner)
             throws LifecycleExecutionException {
+        synchronized (session.getCurrentProject()) {
+            executeProject(mojoExecutions, session, mojoExecutionRunner);
+        }
+    }
+
+    private void executeProject(
+            List<MojoExecution> mojoExecutions, MavenSession session, MojoExecutionRunner mojoExecutionRunner)
+            throws LifecycleExecutionException {
 
         try {
             final MavenProject project = session.getCurrentProject();

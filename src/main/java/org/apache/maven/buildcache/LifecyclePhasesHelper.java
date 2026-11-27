@@ -128,6 +128,8 @@ public class LifecyclePhasesHelper extends AbstractExecutionListener {
      * Example: isLaterPhase("install", "clean") returns true;
      */
     public boolean isLaterPhase(String phase, String other) {
+        phase = normalizePhase(phase);
+        other = normalizePhase(other);
         // A goal run straight from the command line has no phase of its own (null). Treat that as
         // "earlier than everything" so it never counts as later than clean or later than a cached build.
         if (phase == null) {
@@ -147,7 +149,33 @@ public class LifecyclePhasesHelper extends AbstractExecutionListener {
      * Whether the given phase is a known lifecycle phase (non-null and part of the active lifecycles).
      */
     public boolean isSupportedPhase(String phase) {
-        return phase != null && phases.contains(phase);
+        return phase != null && phases.contains(normalizePhase(phase));
+    }
+
+    private String normalizePhase(String phase) {
+        if (phase == null || phases.contains(phase)) {
+            return phase;
+        }
+        switch (phase) {
+            case "process-resources":
+                return "after:resources";
+            case "generate-sources":
+                return "sources";
+            case "generate-resources":
+                return "resources";
+            case "generate-test-sources":
+                return "test-sources";
+            case "process-test-resources":
+                return "after:test-resources";
+            case "generate-test-resources":
+                return "test-resources";
+            case "process-classes":
+                return "after:compile";
+            case "prepare-package":
+                return "before:package";
+            default:
+                return phase;
+        }
     }
 
     /**
@@ -210,7 +238,7 @@ public class LifecyclePhasesHelper extends AbstractExecutionListener {
                 // which simply keeps them out of the cache.
                 phase = mojoExecution.getMojoDescriptor().getPhase();
             }
-            return phase;
+            return normalizePhase(phase);
         } else {
             // This mojo belongs to a forked lifecycle. If the fork was kicked off by a goal typed on the
             // command line (for example jetty:run forks test-compile via @Execute(phase=...)), its mojos have
@@ -233,7 +261,7 @@ public class LifecyclePhasesHelper extends AbstractExecutionListener {
                         phase,
                         CacheUtils.mojoExecutionKey(forkOrigin));
             }
-            return phase;
+            return normalizePhase(phase);
         }
     }
 
