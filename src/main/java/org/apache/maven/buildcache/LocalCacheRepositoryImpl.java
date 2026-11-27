@@ -396,6 +396,14 @@ public class LocalCacheRepositoryImpl implements LocalCacheRepository {
         if (cacheConfig.isSaveToRemote()) {
             LOGGER.info("Saving cache report on build completion");
             remoteRepository.saveCacheReport(buildId, session, cacheReport);
+            LOGGER.info("Remote cache report saved; cleanup enabled={}", cacheConfig.isRemoteCleanupEnabled());
+            if (cacheConfig.isRemoteCleanupEnabled()) {
+                LOGGER.info(
+                        "Starting remote cache cleanup for {} projects",
+                        cacheReport.getProjects().size());
+                remoteRepository.cleanup(cacheReport, session);
+                LOGGER.info("Remote cache cleanup completed");
+            }
         }
     }
 
