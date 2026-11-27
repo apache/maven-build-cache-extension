@@ -29,6 +29,23 @@ import org.junit.jupiter.api.Test;
 class Issue393CompileRestoreTest {
 
     @Test
+    void reusesJpmsTestCompilationAfterClean(Verifier verifier) throws VerificationException {
+        verifier.setAutoclean(false);
+
+        verifier.setLogFileName("../log-jpms-initial.txt");
+        verifier.executeGoals(Arrays.asList("clean", "verify"));
+        verifier.verifyErrorFreeLog();
+        verifier.verifyTextInLog("Saved Build to local file");
+
+        verifier.setLogFileName("../log-jpms-cached.txt");
+        verifier.executeGoals(Arrays.asList("clean", "verify"));
+        verifier.verifyErrorFreeLog();
+        verifier.verifyTextInLog("Skipping plugin execution (cached): compiler:testCompile");
+        verifier.verifyFilePresent(
+                "consumer/target/test-classes/org/apache/maven/caching/test/jpms/consumer/ConsumerTest.class");
+    }
+
+    @Test
     void restoresAttachedOutputsAfterCompileOnlyBuild(Verifier verifier) throws VerificationException {
         verifier.setAutoclean(false);
 
